@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { Ticket, TicketMessage, TicketFilters, Tag } from '@/lib/types/ticket'
 
@@ -343,7 +344,8 @@ export async function deleteTicket(id: string) {
 
 export async function getTags() {
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS and see all tags
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
       .from('tags')
@@ -362,7 +364,8 @@ export async function getTags() {
 
 export async function getManagers() {
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS and see all managers/admins
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
       .from('profiles')
