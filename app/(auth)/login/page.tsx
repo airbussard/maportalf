@@ -22,6 +22,13 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      // Debug: Check if ENV vars are loaded
+      console.log('ENV Check:', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...'
+      })
+
       const supabase = createClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -29,6 +36,7 @@ export default function LoginPage() {
       })
 
       if (error) {
+        console.error('Supabase Auth Error:', error)
         setError(error.message)
         setLoading(false)
         return
@@ -39,7 +47,9 @@ export default function LoginPage() {
         router.refresh()
       }
     } catch (err) {
-      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
+      console.error('Login Exception:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.'
+      setError(errorMessage)
       setLoading(false)
     }
   }
