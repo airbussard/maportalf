@@ -9,8 +9,10 @@ import { Button } from '@/components/ui/button'
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: { filter?: string; status?: string; page?: string }
+  searchParams: Promise<{ filter?: string; status?: string; page?: string }>
 }) {
+  const resolvedSearchParams = await searchParams
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -28,9 +30,9 @@ export default async function TicketsPage({
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
   const result = await getTickets({
-    filter: (searchParams.filter as any) || 'all',
-    status: searchParams.status as any,
-    page: parseInt(searchParams.page || '1')
+    filter: (resolvedSearchParams.filter as any) || 'all',
+    status: resolvedSearchParams.status as any,
+    page: parseInt(resolvedSearchParams.page || '1')
   })
 
   return (
@@ -51,8 +53,8 @@ export default async function TicketsPage({
       </div>
 
       <TicketFilters
-        currentFilter={searchParams.filter || 'all'}
-        currentStatus={searchParams.status}
+        currentFilter={resolvedSearchParams.filter || 'all'}
+        currentStatus={resolvedSearchParams.status}
         isManagerOrAdmin={isManagerOrAdmin}
       />
 

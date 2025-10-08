@@ -10,8 +10,10 @@ import { Card, CardContent } from '@/components/ui/card'
 export default async function TicketDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -27,7 +29,7 @@ export default async function TicketDetailPage({
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
-  const result = await getTicket(params.id)
+  const result = await getTicket(id)
 
   if (!result.success || !result.data) {
     redirect('/tickets')
