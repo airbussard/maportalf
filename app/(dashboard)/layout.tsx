@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Settings } from 'lucide-react'
+import { Settings, Ticket } from 'lucide-react'
 
 export default async function DashboardLayout({
   children,
@@ -31,6 +31,13 @@ export default async function DashboardLayout({
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/tickets"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <Ticket className="w-4 h-4" />
+                Tickets
               </Link>
               <Link
                 href="/einstellungen"

@@ -1,0 +1,381 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+import type { Ticket, TicketMessage, TicketFilters, Tag } from '@/lib/types/ticket'
+
+export async function getTickets(filters: TicketFilters = {}) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert', data: [] }
+    }
+
+    // Get user profile for role check
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
+
+    const page = filters.page || 1
+    const perPage = 10
+    const offset = (page - 1) * perPage
+
+    let query = supabase
+      .from('tickets')
+      .select(`
+        *,
+        assigned_user:profiles!tickets_assigned_to_fkey(id, first_name, last_name, email),
+        creator:profiles!tickets_created_by_fkey(id, first_name, last_name, email)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + perPage - 1)
+
+    // Apply spam filter
+    if (filters.filter === 'spam') {
+      if (!isManagerOrAdmin) {
+        return { success: false, error: 'Keine Berechtigung', data: [] }
+      }
+      query = query.eq('is_spam', true)
+    } else {
+      query = query.eq('is_spam', false)
+    }
+
+    // Apply assignment filter
+    if (filters.filter === 'assigned') {
+      query = query.eq('assigned_to', user.id)
+    }
+
+    // Apply status filter
+    if (filters.status) {
+      query = query.eq('status', filters.status)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Get tickets error:', error)
+      return { success: false, error: 'Fehler beim Laden der Tickets', data: [] }
+    }
+
+    // Fetch tags for these tickets
+    if (data && data.length > 0) {
+      const ticketIds = data.map(t => t.id)
+      const { data: ticketTagsData } = await supabase
+        .from('ticket_tags')
+        .select('ticket_id, tag:tags(id, name, color)')
+        .in('ticket_id', ticketIds)
+
+      // Group tags by ticket
+      const tagsByTicket: Record<string, Tag[]> = {}
+      ticketTagsData?.forEach((tt: any) => {
+        if (tt.tag) {
+          if (!tagsByTicket[tt.ticket_id]) {
+            tagsByTicket[tt.ticket_id] = []
+          }
+          tagsByTicket[tt.ticket_id].push(tt.tag)
+        }
+      })
+
+      // Add tags to tickets
+      data.forEach((ticket: any) => {
+        ticket.tags = tagsByTicket[ticket.id] || []
+      })
+    }
+
+    return {
+      success: true,
+      data: data as Ticket[],
+      count: count || 0,
+      page,
+      perPage,
+      totalPages: Math.ceil((count || 0) / perPage)
+    }
+  } catch (error) {
+    console.error('Get tickets error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten', data: [] }
+  }
+}
+
+export async function getTicket(id: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Get ticket with creator and assigned user
+    const { data: ticket, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        assigned_user:profiles!tickets_assigned_to_fkey(id, first_name, last_name, email),
+        creator:profiles!tickets_created_by_fkey(id, first_name, last_name, email)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error || !ticket) {
+      return { success: false, error: 'Ticket nicht gefunden' }
+    }
+
+    // Get messages
+    const { data: messages } = await supabase
+      .from('ticket_messages')
+      .select(`
+        *,
+        sender:profiles(id, first_name, last_name, email)
+      `)
+      .eq('ticket_id', id)
+      .order('created_at', { ascending: true })
+
+    // Get tags
+    const { data: ticketTags } = await supabase
+      .from('ticket_tags')
+      .select('tag:tags(id, name, color)')
+      .eq('ticket_id', id)
+
+    const tags = ticketTags?.map((tt: any) => tt.tag).filter(Boolean) || []
+
+    return {
+      success: true,
+      data: {
+        ...ticket,
+        tags,
+        messages: messages || []
+      } as Ticket & { messages: TicketMessage[] }
+    }
+  } catch (error) {
+    console.error('Get ticket error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function createTicket(data: {
+  subject: string
+  description: string
+  priority: string
+  tagIds?: string[]
+}) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Create ticket
+    const { data: ticket, error } = await supabase
+      .from('tickets')
+      .insert({
+        subject: data.subject,
+        description: data.description,
+        priority: data.priority,
+        created_by: user.id,
+        status: 'open'
+      })
+      .select()
+      .single()
+
+    if (error || !ticket) {
+      console.error('Create ticket error:', error)
+      return { success: false, error: 'Fehler beim Erstellen des Tickets' }
+    }
+
+    // Add tags if provided
+    if (data.tagIds && data.tagIds.length > 0) {
+      const tagInserts = data.tagIds.map(tagId => ({
+        ticket_id: ticket.id,
+        tag_id: tagId
+      }))
+
+      await supabase
+        .from('ticket_tags')
+        .insert(tagInserts)
+    }
+
+    revalidatePath('/tickets')
+    return { success: true, data: ticket }
+  } catch (error) {
+    console.error('Create ticket error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function updateTicket(id: string, data: {
+  status?: string
+  priority?: string
+  assigned_to?: string | null
+}) {
+  try {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+      .from('tickets')
+      .update(data)
+      .eq('id', id)
+
+    if (error) {
+      console.error('Update ticket error:', error)
+      return { success: false, error: 'Fehler beim Aktualisieren' }
+    }
+
+    revalidatePath('/tickets')
+    revalidatePath(`/tickets/${id}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Update ticket error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function updateTicketTags(ticketId: string, tagIds: string[]) {
+  try {
+    const supabase = await createClient()
+
+    // Delete existing tags
+    await supabase
+      .from('ticket_tags')
+      .delete()
+      .eq('ticket_id', ticketId)
+
+    // Add new tags
+    if (tagIds.length > 0) {
+      const tagInserts = tagIds.map(tagId => ({
+        ticket_id: ticketId,
+        tag_id: tagId
+      }))
+
+      const { error } = await supabase
+        .from('ticket_tags')
+        .insert(tagInserts)
+
+      if (error) {
+        console.error('Update tags error:', error)
+        return { success: false, error: 'Fehler beim Aktualisieren der Tags' }
+      }
+    }
+
+    revalidatePath(`/tickets/${ticketId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Update ticket tags error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function addMessage(ticketId: string, content: string, isInternal: boolean = false) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    const { error } = await supabase
+      .from('ticket_messages')
+      .insert({
+        ticket_id: ticketId,
+        content,
+        sender_id: user.id,
+        is_internal: isInternal
+      })
+
+    if (error) {
+      console.error('Add message error:', error)
+      return { success: false, error: 'Fehler beim Senden der Nachricht' }
+    }
+
+    revalidatePath(`/tickets/${ticketId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Add message error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function deleteTicket(id: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user owns this ticket
+    const { data: ticket } = await supabase
+      .from('tickets')
+      .select('created_by')
+      .eq('id', id)
+      .single()
+
+    if (!ticket || ticket.created_by !== user.id) {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    const { error } = await supabase
+      .from('tickets')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Delete ticket error:', error)
+      return { success: false, error: 'Fehler beim Löschen' }
+    }
+
+    revalidatePath('/tickets')
+    return { success: true }
+  } catch (error) {
+    console.error('Delete ticket error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function getTags() {
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('tags')
+      .select('*')
+      .order('name')
+
+    if (error) {
+      return { success: false, error: 'Fehler beim Laden der Tags', data: [] }
+    }
+
+    return { success: true, data: data as Tag[] }
+  } catch (error) {
+    return { success: false, error: 'Ein Fehler ist aufgetreten', data: [] }
+  }
+}
+
+export async function getManagers() {
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, email')
+      .in('role', ['manager', 'admin'])
+      .order('first_name')
+
+    if (error) {
+      return { success: false, error: 'Fehler beim Laden', data: [] }
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, error: 'Ein Fehler ist aufgetreten', data: [] }
+  }
+}
