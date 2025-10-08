@@ -1,6 +1,7 @@
 import type { TicketMessage } from '@/lib/types/ticket'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { FormattedContent } from '@/components/shared/formatted-content'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -51,9 +52,7 @@ export function TicketTimeline({
                     </span>
                   )}
                 </div>
-                <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {message.content}
-                </div>
+                <FormattedContent content={message.content} className="text-sm" />
               </div>
             </div>
           )

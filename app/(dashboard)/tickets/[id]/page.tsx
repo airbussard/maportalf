@@ -5,6 +5,7 @@ import { TicketHeader } from './components/ticket-header'
 import { TicketInfoBar } from './components/ticket-info-bar'
 import { TicketTimeline } from './components/ticket-timeline'
 import { TicketReplyForm } from './components/ticket-reply-form'
+import { FormattedContent } from '@/components/shared/formatted-content'
 import { Card, CardContent } from '@/components/ui/card'
 
 export default async function TicketDetailPage({
@@ -54,9 +55,7 @@ export default async function TicketDetailPage({
         <Card>
           <CardContent className="pt-6">
             <h3 className="font-semibold mb-2">Beschreibung</h3>
-            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {ticket.description}
-            </div>
+            <FormattedContent content={ticket.description} className="text-sm" />
           </CardContent>
         </Card>
 

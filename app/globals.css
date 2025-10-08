@@ -91,3 +91,48 @@
 * {
   @apply transition-colors duration-200;
 }
+
+/* Email HTML Content Styling */
+.email-html-content {
+  line-height: 1.6;
+}
+
+.email-html-content blockquote {
+  margin: 10px 0;
+  padding-left: 15px;
+  border-left: 3px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.email-html-content a {
+  color: hsl(var(--primary));
+  text-decoration: none;
+}
+
+.email-html-content a:hover {
+  text-decoration: underline;
+}
+
+.email-html-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.email-html-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.email-html-content th,
+.email-html-content td {
+  border: 1px solid hsl(var(--border));
+  padding: 8px;
+  text-align: left;
+}
+
+.email-html-content th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
