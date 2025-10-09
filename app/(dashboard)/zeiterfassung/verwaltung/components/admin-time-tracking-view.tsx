@@ -16,7 +16,8 @@ import { getTimeEntries, getMonthlyStats } from '@/app/actions/time-tracking'
 import { closeMonth, reopenMonth, getTimeReport } from '@/app/actions/time-reports'
 import type { MonthlyStats } from '@/lib/types/time-tracking'
 import { ReportExportDialog } from './report-export-dialog'
-import { Download } from 'lucide-react'
+import { CompensationConfigDialog } from './compensation-config-dialog'
+import { Download, Settings } from 'lucide-react'
 
 const MONTH_NAMES = [
   'Januar',
@@ -67,6 +68,8 @@ export function AdminTimeTrackingView({
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [compensationDialogOpen, setCompensationDialogOpen] = useState(false)
+  const [selectedEmployeeForConfig, setSelectedEmployeeForConfig] = useState<Employee | null>(null)
 
   useEffect(() => {
     loadData()
@@ -176,6 +179,16 @@ export function AdminTimeTrackingView({
   const getEmployeeName = (emp: Employee) => {
     const name = `${emp.first_name || ''} ${emp.last_name || ''}`.trim()
     return name || emp.email
+  }
+
+  const handleConfigureCompensation = (emp: Employee) => {
+    setSelectedEmployeeForConfig(emp)
+    setCompensationDialogOpen(true)
+  }
+
+  const handleCompensationSaved = () => {
+    // Reload data after compensation settings are saved
+    loadData()
   }
 
   // Generate year options (current year - 2 to current year + 1)
@@ -296,6 +309,7 @@ export function AdminTimeTrackingView({
                     <th className="text-right p-4 font-medium">Arbeitstage</th>
                     <th className="text-right p-4 font-medium">Einträge</th>
                     <th className="text-right p-4 font-medium">Status</th>
+                    <th className="text-right p-4 font-medium">Vergütung</th>
                     <th className="text-right p-4 font-medium">Aktionen</th>
                   </tr>
                 </thead>
@@ -316,6 +330,16 @@ export function AdminTimeTrackingView({
                         ) : (
                           <span className="text-muted-foreground">Offen</span>
                         )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleConfigureCompensation(stat.employee)}
+                          title="Vergütung konfigurieren"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </Button>
                       </td>
                       <td className="p-4 text-right">
                         {stat.isClosed ? (
@@ -356,6 +380,20 @@ export function AdminTimeTrackingView({
         employeeId={employee}
         monthName={MONTH_NAMES[month - 1]}
       />
+
+      {/* Compensation Config Dialog */}
+      {selectedEmployeeForConfig && (
+        <CompensationConfigDialog
+          isOpen={compensationDialogOpen}
+          onClose={() => {
+            setCompensationDialogOpen(false)
+            setSelectedEmployeeForConfig(null)
+          }}
+          employeeId={selectedEmployeeForConfig.id}
+          employeeName={getEmployeeName(selectedEmployeeForConfig)}
+          onSave={handleCompensationSaved}
+        />
+      )}
     </div>
   )
 }

@@ -68,6 +68,7 @@ export async function closeMonth(
   month: number,
   employeeId: string,
   totalMinutes: number,
+  bonusAmount?: number,
   notes?: string
 ): Promise<ActionResponse<TimeReport>> {
   try {
@@ -105,6 +106,7 @@ export async function closeMonth(
           is_closed: true,
           closed_by: user.id,
           closed_at: new Date().toISOString(),
+          bonus_amount: bonusAmount || 0,
           notes: notes || null
         })
         .eq('employee_id', employeeId)
@@ -127,6 +129,7 @@ export async function closeMonth(
           is_closed: true,
           closed_by: user.id,
           closed_at: new Date().toISOString(),
+          bonus_amount: bonusAmount || 0,
           notes: notes || null
         })
         .select()
@@ -452,14 +455,22 @@ export async function generateReportData(
       const compensationData = compensation?.[0]
       let hourlyRate = 0
       let interimSalary = 0
+      let calculatedHours = totalHours // Default to actual worked hours
+      const bonusAmount = report?.bonus_amount || 0
 
       if (compensationData) {
         if (compensationData.compensation_type === 'hourly') {
+          // Hourly compensation: salary = hours × rate + bonus
           hourlyRate = compensationData.hourly_rate || 0
-          interimSalary = totalHours * hourlyRate
+          interimSalary = (totalHours * hourlyRate) + bonusAmount
+          calculatedHours = totalHours // Use actual worked hours
         } else {
-          interimSalary = compensationData.monthly_salary || 0
+          // Salary compensation: salary = monthly salary + bonus
+          // Hours are calculated for export: (salary + bonus) / hourly rate
+          const monthlySalary = compensationData.monthly_salary || 0
           hourlyRate = compensationData.hourly_rate || 20
+          interimSalary = monthlySalary + bonusAmount
+          calculatedHours = Math.round((interimSalary / hourlyRate) * 100) / 100 // Calculate hours for export
         }
       }
 
@@ -472,9 +483,10 @@ export async function generateReportData(
         employee_name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email,
         employee_email: employee.email,
         work_days: workDays,
-        total_hours: totalHours,
+        total_hours: calculatedHours, // Use calculated hours (important for salary type!)
         hourly_rate: hourlyRate,
         interim_salary: interimSalary,
+        bonus_amount: bonusAmount,
         evaluation_count: evaluationCount,
         provision: provision,
         total_salary: totalSalary
@@ -482,7 +494,7 @@ export async function generateReportData(
 
       // Update totals
       totals.total_days += workDays
-      totals.total_hours += totalHours
+      totals.total_hours += calculatedHours // Use calculated hours for totals
       totals.total_interim += interimSalary
       totals.total_evaluations += evaluationCount
       totals.total_provision += provision

@@ -38,6 +38,7 @@ export interface TimeReport {
   closed_by: string | null
   closed_at: string | null
   evaluation_count: number
+  bonus_amount: number
   notes: string | null
   created_at: string
   updated_at: string
@@ -89,6 +90,7 @@ export interface EmployeeReportData {
   total_hours: number
   hourly_rate: number
   interim_salary: number
+  bonus_amount: number
   evaluation_count: number
   provision: number
   total_salary: number
