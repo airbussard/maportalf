@@ -5,6 +5,7 @@ import type { Ticket, Tag } from '@/lib/types/ticket'
 import { StatusBadge } from '@/components/tickets/status-badge'
 import { PriorityBadge } from '@/components/tickets/priority-badge'
 import { TagPill } from '@/components/tickets/tag-pill'
+import { TagsSelector } from './tags-selector'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { updateTicket, updateTicketTags } from '@/app/actions/tickets'
@@ -126,16 +127,26 @@ export function TicketInfoBar({
           </div>
         </div>
 
-        {ticket.tags && ticket.tags.length > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <label className="text-sm text-muted-foreground mb-2 block">Tags</label>
-            <div className="flex flex-wrap gap-1">
-              {ticket.tags.map((tag) => (
-                <TagPill key={tag.id} tag={tag} />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="mt-4 pt-4 border-t">
+          <label className="text-sm text-muted-foreground mb-2 block">Tags</label>
+          {isManagerOrAdmin ? (
+            <TagsSelector
+              ticketId={ticket.id}
+              currentTags={ticket.tags || []}
+              disabled={updating}
+            />
+          ) : (
+            ticket.tags && ticket.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {ticket.tags.map((tag) => (
+                  <TagPill key={tag.id} tag={tag} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Keine Tags zugewiesen</div>
+            )
+          )}
+        </div>
       </CardContent>
     </Card>
   )
