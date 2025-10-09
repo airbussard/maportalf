@@ -163,7 +163,7 @@ export function CompensationConfigDialog({
                     onChange={(e) => setCompensationType(e.target.value as 'salary')}
                     className="w-4 h-4 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm font-medium">Festgehalt</span>
+                  <span className="text-sm font-medium">Festgehalt + Stundenlohn</span>
                 </label>
               </div>
             </div>
