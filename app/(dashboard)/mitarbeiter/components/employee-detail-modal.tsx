@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Employee } from '@/app/actions/employees'
+import type { EmployeeSettings } from '@/lib/types/time-tracking'
 import { updateEmployeeRole, toggleEmployeeStatus } from '@/app/actions/employees'
 import { useRouter } from 'next/navigation'
 import {
@@ -13,21 +14,25 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight } from 'lucide-react'
+import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { CompensationConfigDialog } from '@/app/(dashboard)/zeiterfassung/verwaltung/components/compensation-config-dialog'
 
 interface EmployeeDetailModalProps {
   employee: Employee
+  employeeSettings: EmployeeSettings | null
   isAdmin: boolean
+  isManager: boolean
   onClose: () => void
 }
 
-export function EmployeeDetailModal({ employee, isAdmin, onClose }: EmployeeDetailModalProps) {
+export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isManager, onClose }: EmployeeDetailModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedRole, setSelectedRole] = useState<'employee' | 'manager' | 'admin'>(employee.role)
+  const [compensationDialogOpen, setCompensationDialogOpen] = useState(false)
 
   const getEmployeeName = () => {
     if (employee.first_name || employee.last_name) {
@@ -82,6 +87,21 @@ export function EmployeeDetailModal({ employee, isAdmin, onClose }: EmployeeDeta
   }
 
   const roleBadge = getRoleBadge(employee.role)
+
+  const getCompensationDisplay = () => {
+    if (!employeeSettings) return 'Nicht konfiguriert'
+
+    if (employeeSettings.compensation_type === 'hourly') {
+      return `${employeeSettings.hourly_rate?.toFixed(2) || '0.00'}€/Stunde`
+    } else {
+      return `${employeeSettings.monthly_salary?.toFixed(0) || '0'}€/Monat (Stundensatz: ${employeeSettings.hourly_rate?.toFixed(2) || '0.00'}€)`
+    }
+  }
+
+  const handleCompensationSaved = () => {
+    setCompensationDialogOpen(false)
+    router.refresh()
+  }
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -211,6 +231,23 @@ export function EmployeeDetailModal({ employee, isAdmin, onClose }: EmployeeDeta
                   )}
                 </Button>
               </div>
+
+              {/* Compensation */}
+              <div className="space-y-2">
+                <Label>Vergütung</Label>
+                <div className="p-3 bg-muted/50 rounded-md text-sm">
+                  {getCompensationDisplay()}
+                </div>
+                <Button
+                  onClick={() => setCompensationDialogOpen(true)}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full justify-start"
+                >
+                  <Euro className="w-4 h-4 mr-2" />
+                  Vergütung bearbeiten
+                </Button>
+              </div>
             </div>
           )}
 
@@ -222,6 +259,15 @@ export function EmployeeDetailModal({ employee, isAdmin, onClose }: EmployeeDeta
           </div>
         </div>
       </DialogContent>
+
+      {/* Compensation Config Dialog */}
+      <CompensationConfigDialog
+        isOpen={compensationDialogOpen}
+        onClose={() => setCompensationDialogOpen(false)}
+        employeeId={employee.id}
+        employeeName={getEmployeeName()}
+        onSave={handleCompensationSaved}
+      />
     </Dialog>
   )
 }

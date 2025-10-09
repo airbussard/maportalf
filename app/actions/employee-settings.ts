@@ -10,6 +10,44 @@ interface ActionResponse<T = any> {
   error?: string
 }
 
+// Get all employee compensation settings - Admin only
+export async function getAllEmployeeSettings(): Promise<ActionResponse<EmployeeSettings[]>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin or manager
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || !['admin', 'manager'].includes(profile.role)) {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    // Use Admin Client to fetch all settings
+    const adminSupabase = createAdminClient()
+    const { data, error } = await adminSupabase
+      .from('employee_settings')
+      .select('*')
+
+    if (error) {
+      console.error('Error fetching all employee settings:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: (data || []) as EmployeeSettings[] }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
 // Get employee compensation settings
 export async function getEmployeeSettings(
   employeeId: string

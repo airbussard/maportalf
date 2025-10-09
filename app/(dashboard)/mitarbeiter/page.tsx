@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getEmployees } from '@/app/actions/employees'
+import { getAllEmployeeSettings } from '@/app/actions/employee-settings'
 import { EmployeesTable } from './components/employees-table'
 
 export default async function MitarbeiterPage() {
@@ -20,18 +21,23 @@ export default async function MitarbeiterPage() {
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
   const isAdmin = profile?.role === 'admin'
+  const isManager = profile?.role === 'manager'
 
   if (!isManagerOrAdmin) {
     redirect('/dashboard')
   }
 
-  const result = await getEmployees()
+  // Load employees and settings in parallel
+  const [employeesResult, settingsResult] = await Promise.all([
+    getEmployees(),
+    getAllEmployeeSettings()
+  ])
 
-  if (!result.success) {
+  if (!employeesResult.success) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md">
-          {result.error}
+          {employeesResult.error}
         </div>
       </div>
     )
@@ -48,7 +54,12 @@ export default async function MitarbeiterPage() {
         </div>
       </div>
 
-      <EmployeesTable employees={result.data || []} isAdmin={isAdmin} />
+      <EmployeesTable
+        employees={employeesResult.data || []}
+        employeeSettings={settingsResult.data || []}
+        isAdmin={isAdmin}
+        isManager={isManager}
+      />
     </div>
   )
 }
