@@ -71,6 +71,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           label: 'Tags',
           icon: <Tag className="w-5 h-5" />,
         },
+        {
+          href: '/mitarbeiter',
+          label: 'Mitarbeiter',
+          icon: <Users className="w-5 h-5" />,
+        },
       ],
     },
     {
