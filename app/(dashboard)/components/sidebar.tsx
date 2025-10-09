@@ -46,11 +46,6 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           icon: <Home className="w-5 h-5" />,
         },
         {
-          href: '/tickets',
-          label: 'Tickets',
-          icon: <Ticket className="w-5 h-5" />,
-        },
-        {
           href: '/zeiterfassung',
           label: 'Zeiterfassung',
           icon: <Clock className="w-5 h-5" />,
@@ -66,6 +61,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       title: 'MANAGER',
       roles: ['manager', 'admin'],
       items: [
+        {
+          href: '/tickets',
+          label: 'Tickets',
+          icon: <Ticket className="w-5 h-5" />,
+        },
         {
           href: '/tags',
           label: 'Tags',
