@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Settings, Ticket, Tag } from 'lucide-react'
+import { Settings, Ticket, Tag, Clock } from 'lucide-react'
 
 export default async function DashboardLayout({
   children,
@@ -25,6 +25,7 @@ export default async function DashboardLayout({
     .single()
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin'
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,6 +49,22 @@ export default async function DashboardLayout({
                 <Ticket className="w-4 h-4" />
                 Tickets
               </Link>
+              <Link
+                href="/zeiterfassung"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <Clock className="w-4 h-4" />
+                Zeiterfassung
+              </Link>
+              {isAdmin && (
+                <Link
+                  href="/zeiterfassung/verwaltung"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Clock className="w-4 h-4" />
+                  Zeiterfassung Verwaltung
+                </Link>
+              )}
               {isManagerOrAdmin && (
                 <Link
                   href="/tags"
