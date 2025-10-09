@@ -70,3 +70,48 @@ export interface MonthlyStats {
   average_per_day: number
   entries_count: number
 }
+
+export interface TimeReportRecipient {
+  id: string
+  email: string
+  name: string | null
+  is_active: boolean
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface EmployeeReportData {
+  employee_id: string
+  employee_name: string
+  employee_email: string
+  work_days: number
+  total_hours: number
+  hourly_rate: number
+  interim_salary: number
+  evaluation_count: number
+  provision: number
+  total_salary: number
+}
+
+export interface MonthlyReportData {
+  year: number
+  month: number
+  month_name: string
+  employees: EmployeeReportData[]
+  totals: {
+    total_days: number
+    total_hours: number
+    total_interim: number
+    total_evaluations: number
+    total_provision: number
+    total_salary: number
+  }
+}
+
+export interface EmailReportData {
+  recipients: string[]
+  subject: string
+  body: string
+  save_recipients: boolean
+}

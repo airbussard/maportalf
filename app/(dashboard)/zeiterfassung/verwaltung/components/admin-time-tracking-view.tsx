@@ -15,6 +15,8 @@ import {
 import { getTimeEntries, getMonthlyStats } from '@/app/actions/time-tracking'
 import { closeMonth, reopenMonth, getTimeReport } from '@/app/actions/time-reports'
 import type { MonthlyStats } from '@/lib/types/time-tracking'
+import { ReportExportDialog } from './report-export-dialog'
+import { Download } from 'lucide-react'
 
 const MONTH_NAMES = [
   'Januar',
@@ -64,6 +66,7 @@ export function AdminTimeTrackingView({
   const [employeeStats, setEmployeeStats] = useState<EmployeeStats[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -207,6 +210,10 @@ export function AdminTimeTrackingView({
           <Button variant="outline" asChild>
             <Link href="/zeiterfassung/verwaltung/kategorien">Kategorien</Link>
           </Button>
+          <Button onClick={() => setExportDialogOpen(true)}>
+            <Download className="w-4 h-4 mr-2" />
+            Monatsbericht exportieren
+          </Button>
         </div>
       </div>
 
@@ -339,6 +346,16 @@ export function AdminTimeTrackingView({
           )}
         </CardContent>
       </Card>
+
+      {/* Export Dialog */}
+      <ReportExportDialog
+        isOpen={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        year={year}
+        month={month}
+        employeeId={employee}
+        monthName={MONTH_NAMES[month - 1]}
+      />
     </div>
   )
 }

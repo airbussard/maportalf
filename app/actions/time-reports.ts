@@ -2,7 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { TimeReport } from '@/lib/types/time-tracking'
+import type {
+  TimeReport,
+  TimeReportRecipient,
+  MonthlyReportData,
+  EmployeeReportData
+} from '@/lib/types/time-tracking'
 
 interface ActionResponse<T = any> {
   success: boolean
@@ -231,6 +236,271 @@ export async function getAllReportsForMonth(
 
     return { success: true, data: data as TimeReport[] }
   } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Get saved email recipients - Admin only
+export async function getSavedRecipients(): Promise<ActionResponse<TimeReportRecipient[]>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    const { data, error } = await supabase
+      .from('time_report_recipients')
+      .select('*')
+      .eq('is_active', true)
+      .order('email', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching recipients:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: data as TimeReportRecipient[] }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Save new email recipient - Admin only
+export async function saveRecipient(
+  email: string,
+  name?: string
+): Promise<ActionResponse<TimeReportRecipient>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    // Check if recipient already exists
+    const { data: existing } = await supabase
+      .from('time_report_recipients')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (existing) {
+      return { success: true, data: existing as TimeReportRecipient }
+    }
+
+    // Extract name from email if not provided
+    const recipientName = name || email.split('@')[0].replace(/[._-]/g, ' ')
+
+    const { data, error } = await supabase
+      .from('time_report_recipients')
+      .insert({
+        email,
+        name: recipientName,
+        created_by: user.id
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error saving recipient:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: data as TimeReportRecipient }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+// Generate report data for PDF/Email - Admin only
+export async function generateReportData(
+  year: number,
+  month: number,
+  employeeId: string = 'all'
+): Promise<ActionResponse<MonthlyReportData>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    const MONTH_NAMES = [
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+    ]
+
+    // Fetch employees
+    const adminSupabase = createAdminClient()
+    let employeesQuery = adminSupabase
+      .from('profiles')
+      .select('id, first_name, last_name, email')
+      .eq('is_active', true)
+
+    if (employeeId !== 'all') {
+      employeesQuery = employeesQuery.eq('id', employeeId)
+    }
+
+    const { data: employees, error: employeesError } = await employeesQuery
+
+    if (employeesError) {
+      return { success: false, error: employeesError.message }
+    }
+
+    // Fetch time entries for the month
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+
+    let entriesQuery = adminSupabase
+      .from('time_entries')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+
+    if (employeeId !== 'all') {
+      entriesQuery = entriesQuery.eq('employee_id', employeeId)
+    }
+
+    const { data: entries, error: entriesError } = await entriesQuery
+
+    if (entriesError) {
+      return { success: false, error: entriesError.message }
+    }
+
+    // Fetch time reports
+    let reportsQuery = adminSupabase
+      .from('time_reports')
+      .select('*')
+      .eq('year', year)
+      .eq('month', month)
+
+    if (employeeId !== 'all') {
+      reportsQuery = reportsQuery.eq('employee_id', employeeId)
+    }
+
+    const { data: reports } = await reportsQuery
+
+    const reportsMap = new Map()
+    reports?.forEach((report: any) => {
+      reportsMap.set(report.employee_id, report)
+    })
+
+    // Generate employee report data
+    const employeeReportData: EmployeeReportData[] = []
+    const totals = {
+      total_days: 0,
+      total_hours: 0,
+      total_interim: 0,
+      total_evaluations: 0,
+      total_provision: 0,
+      total_salary: 0
+    }
+
+    for (const employee of employees || []) {
+      const employeeEntries = entries?.filter((e: any) => e.employee_id === employee.id) || []
+      const report = reportsMap.get(employee.id)
+
+      // Calculate work days and hours
+      const workDays = new Set(employeeEntries.map((e: any) => e.date)).size
+      const totalMinutes = employeeEntries.reduce((sum: number, e: any) => sum + e.duration_minutes, 0)
+      const totalHours = Math.round((totalMinutes / 60) * 100) / 100
+
+      // Get compensation via RPC
+      const { data: compensation } = await adminSupabase
+        .rpc('get_employee_compensation', {
+          p_employee_id: employee.id,
+          p_date: startDate
+        })
+
+      const compensationData = compensation?.[0]
+      let hourlyRate = 0
+      let interimSalary = 0
+
+      if (compensationData) {
+        if (compensationData.compensation_type === 'hourly') {
+          hourlyRate = compensationData.hourly_rate || 0
+          interimSalary = totalHours * hourlyRate
+        } else {
+          interimSalary = compensationData.monthly_salary || 0
+          hourlyRate = compensationData.hourly_rate || 20
+        }
+      }
+
+      const evaluationCount = report?.evaluation_count || 0
+      const provision = evaluationCount * 50 // 50€ per evaluation
+      const totalSalary = interimSalary + provision
+
+      employeeReportData.push({
+        employee_id: employee.id,
+        employee_name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email,
+        employee_email: employee.email,
+        work_days: workDays,
+        total_hours: totalHours,
+        hourly_rate: hourlyRate,
+        interim_salary: interimSalary,
+        evaluation_count: evaluationCount,
+        provision: provision,
+        total_salary: totalSalary
+      })
+
+      // Update totals
+      totals.total_days += workDays
+      totals.total_hours += totalHours
+      totals.total_interim += interimSalary
+      totals.total_evaluations += evaluationCount
+      totals.total_provision += provision
+      totals.total_salary += totalSalary
+    }
+
+    return {
+      success: true,
+      data: {
+        year,
+        month,
+        month_name: MONTH_NAMES[month - 1],
+        employees: employeeReportData,
+        totals
+      }
+    }
+  } catch (error: any) {
+    console.error('Error generating report data:', error)
     return { success: false, error: error.message }
   }
 }
