@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { addMessage } from '@/app/actions/tickets'
+import { linkAttachmentToMessage } from '@/app/actions/attachments'
 import { useRouter } from 'next/navigation'
 import { Send } from 'lucide-react'
+import { AttachmentUpload } from '@/components/tickets/attachment-upload'
 
 export function TicketReplyForm({
   ticketId,
@@ -21,6 +23,7 @@ export function TicketReplyForm({
   const [isInternal, setIsInternal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [attachmentIds, setAttachmentIds] = useState<string[]>([])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,17 +36,37 @@ export function TicketReplyForm({
     setLoading(true)
     setError(null)
 
-    const result = await addMessage(ticketId, content, isInternal)
+    try {
+      // First, create the message
+      const result = await addMessage(ticketId, content, isInternal)
 
-    if (result.success) {
+      if (!result.success) {
+        setError(result.error || 'Fehler beim Senden')
+        setLoading(false)
+        return
+      }
+
+      // If we have attachment IDs, link them to the message
+      if (attachmentIds.length > 0 && result.data?.id) {
+        for (const attachmentId of attachmentIds) {
+          await linkAttachmentToMessage(attachmentId, result.data.id)
+        }
+      }
+
+      // Success - reset form
       setContent('')
       setIsInternal(false)
+      setAttachmentIds([])
       router.refresh()
-    } else {
-      setError(result.error || 'Fehler beim Senden')
+    } catch (error: any) {
+      setError(error.message || 'Ein Fehler ist aufgetreten')
     }
 
     setLoading(false)
+  }
+
+  const handleUploadComplete = (ids: string[]) => {
+    setAttachmentIds(ids)
   }
 
   return (
@@ -68,6 +91,12 @@ export function TicketReplyForm({
               disabled={loading}
             />
           </div>
+
+          {/* Attachment Upload */}
+          <AttachmentUpload
+            ticketId={ticketId}
+            onUploadComplete={handleUploadComplete}
+          />
 
           {isManagerOrAdmin && (
             <div className="flex items-center space-x-2">

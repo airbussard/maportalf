@@ -282,7 +282,7 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
-    const { error } = await supabase
+    const { data: message, error } = await supabase
       .from('ticket_messages')
       .insert({
         ticket_id: ticketId,
@@ -290,6 +290,8 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
         sender_id: user.id,
         is_internal: isInternal
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('Add message error:', error)
@@ -297,7 +299,7 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
     }
 
     revalidatePath(`/tickets/${ticketId}`)
-    return { success: true }
+    return { success: true, data: message }
   } catch (error) {
     console.error('Add message error:', error)
     return { success: false, error: 'Ein Fehler ist aufgetreten' }

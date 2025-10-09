@@ -1,7 +1,8 @@
-import type { TicketMessage, Ticket } from '@/lib/types/ticket'
+import type { TicketMessage, Ticket, TicketAttachment } from '@/lib/types/ticket'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { FormattedContent } from '@/components/shared/formatted-content'
+import { AttachmentList } from '@/components/tickets/attachment-list'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -47,10 +48,12 @@ function getSenderInitials(message: TicketMessage, ticket: Ticket): string {
 
 export function TicketTimeline({
   messages,
-  ticket
+  ticket,
+  attachmentsByMessage = {}
 }: {
   messages: TicketMessage[]
   ticket: Ticket
+  attachmentsByMessage?: Record<string, TicketAttachment[]>
 }) {
   if (messages.length === 0) {
     return null
@@ -65,6 +68,7 @@ export function TicketTimeline({
         {messages.map((message) => {
           const senderName = getSenderName(message, ticket)
           const initials = getSenderInitials(message, ticket)
+          const messageAttachments = attachmentsByMessage[message.id] || []
 
           return (
             <div key={message.id} className="flex gap-4">
@@ -82,12 +86,15 @@ export function TicketTimeline({
                     })}
                   </span>
                   {message.is_internal && (
-                    <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded">
+                    <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded dark:bg-yellow-900 dark:text-yellow-200">
                       Intern
                     </span>
                   )}
                 </div>
                 <FormattedContent content={message.content} className="text-sm" />
+                {messageAttachments.length > 0 && (
+                  <AttachmentList attachments={messageAttachments} />
+                )}
               </div>
             </div>
           )

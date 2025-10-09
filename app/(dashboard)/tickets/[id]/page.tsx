@@ -1,4 +1,5 @@
 import { getTicket, getManagers, getTags } from '@/app/actions/tickets'
+import { getTicketDirectAttachments } from '@/app/actions/attachments'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TicketHeader } from './components/ticket-header'
@@ -7,6 +8,7 @@ import { TicketTimeline } from './components/ticket-timeline'
 import { TicketReplyForm } from './components/ticket-reply-form'
 import { FormattedContent } from '@/components/shared/formatted-content'
 import { Card, CardContent } from '@/components/ui/card'
+import { AttachmentList } from '@/components/tickets/attachment-list'
 
 export default async function TicketDetailPage({
   params,
@@ -40,6 +42,26 @@ export default async function TicketDetailPage({
   const managersResult = await getManagers()
   const tagsResult = await getTags()
 
+  // Get attachments directly on the ticket (not linked to messages)
+  const ticketAttachmentsResult = await getTicketDirectAttachments(id)
+  const ticketAttachments = ticketAttachmentsResult.data || []
+
+  // Get all attachments for the ticket (including those linked to messages)
+  const { getTicketAttachments } = await import('@/app/actions/attachments')
+  const allAttachmentsResult = await getTicketAttachments(id)
+  const allAttachments = allAttachmentsResult.data || []
+
+  // Group attachments by message_id
+  const attachmentsByMessage = allAttachments.reduce((acc, attachment) => {
+    if (attachment.message_id) {
+      if (!acc[attachment.message_id]) {
+        acc[attachment.message_id] = []
+      }
+      acc[attachment.message_id].push(attachment)
+    }
+    return acc
+  }, {} as Record<string, typeof allAttachments>)
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-5xl">
       <TicketHeader ticket={ticket} />
@@ -56,12 +78,14 @@ export default async function TicketDetailPage({
           <CardContent className="pt-6">
             <h3 className="font-semibold mb-2">Beschreibung</h3>
             <FormattedContent content={ticket.description} className="text-sm" />
+            <AttachmentList attachments={ticketAttachments} title="Anhänge" />
           </CardContent>
         </Card>
 
         <TicketTimeline
           messages={ticket.messages || []}
           ticket={ticket}
+          attachmentsByMessage={attachmentsByMessage}
         />
 
         <TicketReplyForm
