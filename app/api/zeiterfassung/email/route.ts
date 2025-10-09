@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateReportData, saveRecipient } from '@/app/actions/time-reports'
 import nodemailer from 'nodemailer'
-import PDFDocument from 'pdfkit'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 export async function POST(request: NextRequest) {
   try {
@@ -117,7 +117,7 @@ FLIGHTHOUR`
           attachments: [
             {
               filename: filename,
-              content: pdfBuffer,
+              content: Buffer.from(pdfBuffer),
               contentType: 'application/pdf',
             },
           ],
@@ -172,153 +172,183 @@ FLIGHTHOUR`
 }
 
 // Helper function to generate PDF buffer
-async function generatePdfBuffer(reportData: any): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      size: 'A4',
-      layout: 'landscape',
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+async function generatePdfBuffer(reportData: any): Promise<Uint8Array> {
+  // Create PDF document (A4 landscape)
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([842, 595]) // A4 landscape
+
+  // Embed fonts
+  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+  const { width, height } = page.getSize()
+
+  // Colors
+  const black = rgb(0, 0, 0)
+  const gray = rgb(0.4, 0.4, 0.4)
+  const lightGray = rgb(0.94, 0.94, 0.94)
+  const veryLightGray = rgb(0.98, 0.98, 0.98)
+
+  // Header
+  page.drawText(`Zeiterfassung - ${reportData.month_name} ${reportData.year}`, {
+    x: width / 2 - 150,
+    y: height - 50,
+    size: 24,
+    font: helveticaBoldFont,
+    color: black,
+  })
+
+  page.drawText('Abrechnungsübersicht', {
+    x: width / 2 - 80,
+    y: height - 75,
+    size: 16,
+    font: helveticaFont,
+    color: gray,
+  })
+
+  // Table
+  const tableTop = height - 120
+  const rowHeight = 20
+  const colWidths = [40, 150, 60, 60, 70, 90, 60, 80, 100]
+  const colStarts = [50]
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    colStarts.push(colStarts[i] + colWidths[i])
+  }
+
+  // Header row background
+  page.drawRectangle({
+    x: 50,
+    y: tableTop - rowHeight,
+    width: width - 100,
+    height: rowHeight,
+    color: lightGray,
+  })
+
+  // Header text
+  const headers = ['Pers. Nr.', 'Name', 'Arbeitstage', 'Stunden', 'Gehalt p.H.', 'Zwischengeh.', 'Bew.', 'Provision', 'Gesamtgehalt']
+  headers.forEach((header, i) => {
+    const x = colStarts[i] + 5
+    const align = i === 0 ? 'right' : i === 1 ? 'left' : 'right'
+    const textWidth = helveticaBoldFont.widthOfTextAtSize(header, 9)
+    const xPos = align === 'right' ? colStarts[i] + colWidths[i] - textWidth - 5 : x
+
+    page.drawText(header, {
+      x: xPos,
+      y: tableTop - 14,
+      size: 9,
+      font: helveticaBoldFont,
+      color: black,
     })
+  })
 
-    const chunks: Buffer[] = []
-    doc.on('data', (chunk) => chunks.push(chunk))
-    doc.on('end', () => resolve(Buffer.concat(chunks)))
-    doc.on('error', reject)
+  // Data rows
+  let currentY = tableTop - rowHeight
+  reportData.employees.forEach((emp: any, index: number) => {
+    currentY -= rowHeight
 
-    // Header
-    doc
-      .fontSize(24)
-      .font('Helvetica-Bold')
-      .text(`Zeiterfassung - ${reportData.month_name} ${reportData.year}`, {
-        align: 'center',
+    // Alternating row background
+    if (index % 2 === 0) {
+      page.drawRectangle({
+        x: 50,
+        y: currentY,
+        width: width - 100,
+        height: rowHeight,
+        color: veryLightGray,
       })
-
-    doc.moveDown(0.5)
-
-    doc
-      .fontSize(16)
-      .font('Helvetica')
-      .fillColor('#666')
-      .text('Abrechnungsübersicht', { align: 'center' })
-
-    doc.moveDown(2)
-
-    // Table setup
-    const tableTop = doc.y
-    const columnWidths = {
-      nr: 40,
-      name: 150,
-      days: 60,
-      hours: 60,
-      rate: 70,
-      interim: 90,
-      eval: 60,
-      prov: 80,
-      total: 100,
     }
 
-    let x = 50
-    const y = tableTop
+    // Row data
+    const rowData = [
+      String(index + 1),
+      emp.employee_name.substring(0, 23),
+      String(emp.work_days),
+      emp.total_hours.toFixed(2),
+      `${emp.hourly_rate.toFixed(2)} €`,
+      `${emp.interim_salary.toFixed(2)} €`,
+      String(emp.evaluation_count),
+      `${emp.provision.toFixed(2)} €`,
+      `${emp.total_salary.toFixed(2)} €`,
+    ]
 
-    // Table header
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#000')
+    rowData.forEach((text, i) => {
+      const align = i === 1 ? 'left' : 'right'
+      const font = helveticaFont
+      const textWidth = font.widthOfTextAtSize(text, 9)
+      const xPos = align === 'right'
+        ? colStarts[i] + colWidths[i] - textWidth - 5
+        : colStarts[i] + 5
 
-    // Header background
-    doc.rect(50, y, 842 - 100, 20).fillAndStroke('#f0f0f0', '#ddd')
-
-    doc.fillColor('#000')
-
-    // Header text
-    doc.text('Pers. Nr.', x + 5, y + 6, { width: columnWidths.nr, align: 'right' })
-    x += columnWidths.nr
-    doc.text('Name', x + 5, y + 6, { width: columnWidths.name })
-    x += columnWidths.name
-    doc.text('Arbeitstage', x + 5, y + 6, { width: columnWidths.days, align: 'right' })
-    x += columnWidths.days
-    doc.text('Stunden', x + 5, y + 6, { width: columnWidths.hours, align: 'right' })
-    x += columnWidths.hours
-    doc.text('Gehalt p.H.', x + 5, y + 6, { width: columnWidths.rate, align: 'right' })
-    x += columnWidths.rate
-    doc.text('Zwischengeh.', x + 5, y + 6, { width: columnWidths.interim, align: 'right' })
-    x += columnWidths.interim
-    doc.text('Bew.', x + 5, y + 6, { width: columnWidths.eval, align: 'right' })
-    x += columnWidths.eval
-    doc.text('Provision', x + 5, y + 6, { width: columnWidths.prov, align: 'right' })
-    x += columnWidths.prov
-    doc.text('Gesamtgehalt', x + 5, y + 6, { width: columnWidths.total, align: 'right' })
-
-    doc.moveDown(1.5)
-
-    // Table rows
-    doc.fontSize(9).font('Helvetica')
-
-    reportData.employees.forEach((emp: any, index: number) => {
-      const rowY = doc.y
-      x = 50
-
-      // Row background (alternating)
-      if (index % 2 === 0) {
-        doc.rect(50, rowY, 842 - 100, 20).fill('#fafafa')
-      }
-
-      doc.fillColor('#000')
-
-      // Row data
-      doc.text(String(index + 1), x + 5, rowY + 6, { width: columnWidths.nr, align: 'right' })
-      x += columnWidths.nr
-      doc.text(emp.employee_name, x + 5, rowY + 6, { width: columnWidths.name })
-      x += columnWidths.name
-      doc.text(String(emp.work_days), x + 5, rowY + 6, { width: columnWidths.days, align: 'right' })
-      x += columnWidths.days
-      doc.text(emp.total_hours.toFixed(2), x + 5, rowY + 6, { width: columnWidths.hours, align: 'right' })
-      x += columnWidths.hours
-      doc.text(`${emp.hourly_rate.toFixed(2)} €`, x + 5, rowY + 6, { width: columnWidths.rate, align: 'right' })
-      x += columnWidths.rate
-      doc.text(`${emp.interim_salary.toFixed(2)} €`, x + 5, rowY + 6, { width: columnWidths.interim, align: 'right' })
-      x += columnWidths.interim
-      doc.text(String(emp.evaluation_count), x + 5, rowY + 6, { width: columnWidths.eval, align: 'right' })
-      x += columnWidths.eval
-      doc.text(`${emp.provision.toFixed(2)} €`, x + 5, rowY + 6, { width: columnWidths.prov, align: 'right' })
-      x += columnWidths.prov
-      doc.text(`${emp.total_salary.toFixed(2)} €`, x + 5, rowY + 6, { width: columnWidths.total, align: 'right' })
-
-      doc.moveDown(1.5)
+      page.drawText(text, {
+        x: xPos,
+        y: currentY + 6,
+        size: 9,
+        font: font,
+        color: black,
+      })
     })
-
-    // Totals row
-    const totalsY = doc.y
-    x = 50
-
-    // Totals background
-    doc.rect(50, totalsY, 842 - 100, 20).fillAndStroke('#f9f9f9', '#ddd')
-
-    doc.fillColor('#000').font('Helvetica-Bold')
-
-    x += columnWidths.nr
-    doc.text('Gesamt', x + 5, totalsY + 6, { width: columnWidths.name })
-    x += columnWidths.name
-    doc.text(String(reportData.totals.total_days), x + 5, totalsY + 6, { width: columnWidths.days, align: 'right' })
-    x += columnWidths.days
-    doc.text(reportData.totals.total_hours.toFixed(2), x + 5, totalsY + 6, { width: columnWidths.hours, align: 'right' })
-    x += columnWidths.hours
-    x += columnWidths.rate
-    doc.text(`${reportData.totals.total_interim.toFixed(2)} €`, x + 5, totalsY + 6, { width: columnWidths.interim, align: 'right' })
-    x += columnWidths.interim
-    doc.text(String(reportData.totals.total_evaluations), x + 5, totalsY + 6, { width: columnWidths.eval, align: 'right' })
-    x += columnWidths.eval
-    doc.text(`${reportData.totals.total_provision.toFixed(2)} €`, x + 5, totalsY + 6, { width: columnWidths.prov, align: 'right' })
-    x += columnWidths.prov
-    doc.text(`${reportData.totals.total_salary.toFixed(2)} €`, x + 5, totalsY + 6, { width: columnWidths.total, align: 'right' })
-
-    // Footer
-    doc.moveDown(3)
-    doc
-      .fontSize(8)
-      .font('Helvetica')
-      .fillColor('#666')
-      .text(`Exportiert am: ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE')}`, { align: 'center' })
-    doc.text('FLIGHTHOUR - Vertrauliche Informationen', { align: 'center' })
-
-    doc.end()
   })
+
+  // Totals row
+  currentY -= rowHeight
+  page.drawRectangle({
+    x: 50,
+    y: currentY,
+    width: width - 100,
+    height: rowHeight,
+    color: veryLightGray,
+  })
+
+  const totalsData = [
+    '',
+    'Gesamt',
+    String(reportData.totals.total_days),
+    reportData.totals.total_hours.toFixed(2),
+    '',
+    `${reportData.totals.total_interim.toFixed(2)} €`,
+    String(reportData.totals.total_evaluations),
+    `${reportData.totals.total_provision.toFixed(2)} €`,
+    `${reportData.totals.total_salary.toFixed(2)} €`,
+  ]
+
+  totalsData.forEach((text, i) => {
+    if (!text) return
+    const align = i === 1 ? 'left' : 'right'
+    const font = helveticaBoldFont
+    const textWidth = font.widthOfTextAtSize(text, 9)
+    const xPos = align === 'right'
+      ? colStarts[i] + colWidths[i] - textWidth - 5
+      : colStarts[i] + 5
+
+    page.drawText(text, {
+      x: xPos,
+      y: currentY + 6,
+      size: 9,
+      font: font,
+      color: black,
+    })
+  })
+
+  // Footer
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('de-DE')
+  const timeStr = now.toLocaleTimeString('de-DE')
+
+  page.drawText(`Exportiert am: ${dateStr} ${timeStr}`, {
+    x: width / 2 - 80,
+    y: 40,
+    size: 8,
+    font: helveticaFont,
+    color: gray,
+  })
+
+  page.drawText('FLIGHTHOUR - Vertrauliche Informationen', {
+    x: width / 2 - 100,
+    y: 25,
+    size: 8,
+    font: helveticaFont,
+    color: gray,
+  })
+
+  // Save and return PDF bytes
+  return await pdfDoc.save()
 }
