@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SystemStatusWidget } from './components/system-status'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -69,28 +70,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>System-Status</CardTitle>
-          <CardDescription>Das neue Next.js Portal ist live!</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <span className="text-sm">✅ Authentication funktioniert</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <span className="text-sm">✅ Supabase-Verbindung hergestellt</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
-              <span className="text-sm">⏳ Module werden schrittweise hinzugefügt</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SystemStatusWidget />
     </div>
   )
 }
