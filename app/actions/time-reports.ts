@@ -465,11 +465,11 @@ export async function generateReportData(
           interimSalary = (totalHours * hourlyRate) + bonusAmount
           calculatedHours = totalHours // Use actual worked hours
         } else {
-          // Salary compensation: salary = monthly salary + bonus
-          // Hours are calculated for export: (salary + bonus) / hourly rate
+          // Salary compensation: salary = monthly salary + (worked hours × rate) + bonus
+          // Hours are calculated for export: total salary / hourly rate
           const monthlySalary = compensationData.monthly_salary || 0
           hourlyRate = compensationData.hourly_rate || 20
-          interimSalary = monthlySalary + bonusAmount
+          interimSalary = monthlySalary + (totalHours * hourlyRate) + bonusAmount
           calculatedHours = Math.round((interimSalary / hourlyRate) * 100) / 100 // Calculate hours for export
         }
       }
