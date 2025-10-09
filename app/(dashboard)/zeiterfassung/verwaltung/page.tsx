@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { AdminTimeTrackingView } from './components/admin-time-tracking-view'
 
@@ -37,8 +38,9 @@ export default async function ZeiterfassungVerwaltungPage({
   const selectedMonth = params.month ? parseInt(params.month) : currentMonth
   const selectedEmployee = params.employee || 'all'
 
-  // Fetch all employees
-  const { data: employees } = await supabase
+  // Fetch all employees using Admin Client (bypasses RLS)
+  const adminSupabase = createAdminClient()
+  const { data: employees } = await adminSupabase
     .from('profiles')
     .select('id, first_name, last_name, email')
     .eq('is_active', true)

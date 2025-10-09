@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { TimeEntry, TimeEntryFormData, MonthlyStats } from '@/lib/types/time-tracking'
 
 interface ActionResponse<T = any> {
@@ -23,23 +24,33 @@ export async function getTimeEntries(
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = profile?.role === 'admin'
+    const targetEmployeeId = employeeId || user.id
+
+    // Use Admin Client if admin is viewing other employee's data
+    const dbClient = (isAdmin && employeeId && employeeId !== user.id)
+      ? createAdminClient()
+      : supabase
+
     // Build date range
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
 
-    let query = supabase
+    const { data, error } = await dbClient
       .from('time_entries')
       .select('*, category:time_categories(*)')
       .gte('date', startDate)
       .lte('date', endDate)
+      .eq('employee_id', targetEmployeeId)
       .order('date', { ascending: false })
       .order('start_time', { ascending: false })
-
-    // Filter by employee if provided, otherwise use current user
-    const targetEmployeeId = employeeId || user.id
-    query = query.eq('employee_id', targetEmployeeId)
-
-    const { data, error } = await query
 
     if (error) {
       console.error('Error fetching time entries:', error)

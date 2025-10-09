@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { TimeReport } from '@/lib/types/time-tracking'
 
 interface ActionResponse<T = any> {
@@ -23,7 +24,21 @@ export async function getTimeReport(
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
-    const { data, error } = await supabase
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = profile?.role === 'admin'
+
+    // Use Admin Client if admin is viewing other employee's data
+    const dbClient = (isAdmin && employeeId !== user.id)
+      ? createAdminClient()
+      : supabase
+
+    const { data, error } = await dbClient
       .from('time_reports')
       .select('*')
       .eq('employee_id', employeeId)
@@ -72,11 +87,13 @@ export async function closeMonth(
     // Check if report already exists
     const existingReport = await getTimeReport(year, month, employeeId)
 
+    // Use Admin Client to modify reports (bypasses RLS)
+    const adminSupabase = createAdminClient()
     let data, error
 
     if (existingReport.data) {
       // Update existing report
-      const response = await supabase
+      const response = await adminSupabase
         .from('time_reports')
         .update({
           total_minutes: totalMinutes,
@@ -95,7 +112,7 @@ export async function closeMonth(
       error = response.error
     } else {
       // Create new report
-      const response = await supabase
+      const response = await adminSupabase
         .from('time_reports')
         .insert({
           employee_id: employeeId,
@@ -198,7 +215,9 @@ export async function getAllReportsForMonth(
       return { success: false, error: 'Keine Berechtigung' }
     }
 
-    const { data, error } = await supabase
+    // Use Admin Client to fetch all reports (bypasses RLS)
+    const adminSupabase = createAdminClient()
+    const { data, error } = await adminSupabase
       .from('time_reports')
       .select('*')
       .eq('year', year)
