@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Settings, Ticket } from 'lucide-react'
+import { Settings, Ticket, Tag } from 'lucide-react'
 
 export default async function DashboardLayout({
   children,
@@ -16,6 +16,15 @@ export default async function DashboardLayout({
   if (!user) {
     redirect('/login')
   }
+
+  // Get user role for conditional navigation
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,6 +48,15 @@ export default async function DashboardLayout({
                 <Ticket className="w-4 h-4" />
                 Tickets
               </Link>
+              {isManagerOrAdmin && (
+                <Link
+                  href="/tags"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Tag className="w-4 h-4" />
+                  Tags
+                </Link>
+              )}
               <Link
                 href="/einstellungen"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
