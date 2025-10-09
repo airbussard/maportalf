@@ -61,7 +61,7 @@ export default async function TicketDetailPage({
 
         <TicketTimeline
           messages={ticket.messages || []}
-          ticketId={ticket.id}
+          ticket={ticket}
         />
 
         <TicketReplyForm

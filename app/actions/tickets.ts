@@ -132,7 +132,7 @@ export async function getTicket(id: string) {
       .from('ticket_messages')
       .select(`
         *,
-        sender:profiles(id, first_name, last_name, email)
+        sender:profiles(id, first_name, last_name, email, is_active)
       `)
       .eq('ticket_id', id)
       .order('created_at', { ascending: true })

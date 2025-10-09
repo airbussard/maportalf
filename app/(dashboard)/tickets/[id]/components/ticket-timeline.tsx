@@ -1,16 +1,56 @@
-import type { TicketMessage } from '@/lib/types/ticket'
+import type { TicketMessage, Ticket } from '@/lib/types/ticket'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { FormattedContent } from '@/components/shared/formatted-content'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 
+/**
+ * Get sender name with fallback logic (matches PHP version)
+ */
+function getSenderName(message: TicketMessage, ticket: Ticket): string {
+  if (message.sender) {
+    // Internal message from employee
+    let name = `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim()
+
+    // Fallback to email if no name
+    if (!name) {
+      name = message.sender.email
+    }
+
+    // Mark archived employees
+    if (message.sender.is_active === false) {
+      name += ' (Archiviert)'
+    }
+
+    return name
+  } else {
+    // External message from customer
+    return ticket.created_from_email || 'Externe E-Mail'
+  }
+}
+
+/**
+ * Get sender initials for avatar
+ */
+function getSenderInitials(message: TicketMessage, ticket: Ticket): string {
+  if (message.sender) {
+    const firstInitial = message.sender.first_name?.[0] || ''
+    const lastInitial = message.sender.last_name?.[0] || ''
+    return (firstInitial + lastInitial).toUpperCase() || message.sender.email[0].toUpperCase()
+  } else {
+    // External message - use first letter of email
+    const email = ticket.created_from_email || 'E'
+    return email[0].toUpperCase()
+  }
+}
+
 export function TicketTimeline({
   messages,
-  ticketId
+  ticket
 }: {
   messages: TicketMessage[]
-  ticketId: string
+  ticket: Ticket
 }) {
   if (messages.length === 0) {
     return null
@@ -23,13 +63,8 @@ export function TicketTimeline({
       </CardHeader>
       <CardContent className="space-y-4">
         {messages.map((message) => {
-          const senderName = message.sender
-            ? `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim() || message.sender.email
-            : 'Unbekannt'
-
-          const initials = message.sender
-            ? `${message.sender.first_name?.[0] || ''}${message.sender.last_name?.[0] || ''}`.toUpperCase() || message.sender.email[0].toUpperCase()
-            : '?'
+          const senderName = getSenderName(message, ticket)
+          const initials = getSenderInitials(message, ticket)
 
           return (
             <div key={message.id} className="flex gap-4">
