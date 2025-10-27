@@ -39,7 +39,7 @@ Beispiel-Output: `xK7mN9pQ2wR5tY8vC3bF6gH1jL4mP7sA0dE9fG2hJ5k=`
 
 **Konfiguration:**
 - **Title:** `FLIGHTHOUR Calendar Sync`
-- **URL:** `https://flighthourma.immogear.de/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE`
+- **URL:** `https://flighthour.getemergence.com/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE`
 - **Schedule:** Every 5 minutes (`*/5 * * * *`)
 - **Request Method:** `POST`
 - **Request Headers:** (keine benötigt)
@@ -55,7 +55,7 @@ Beispiel-Output: `xK7mN9pQ2wR5tY8vC3bF6gH1jL4mP7sA0dE9fG2hJ5k=`
 3. Erstelle neuen Cron Job
 
 **Konfiguration:**
-- **URL:** `https://flighthourma.immogear.de/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE`
+- **URL:** `https://flighthour.getemergence.com/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE`
 - **Cron Expression:** `*/5 * * * *` (alle 5 Minuten)
 - **HTTP Method:** `POST`
 - **HTTP Headers:** (keine benötigt)
@@ -70,7 +70,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 serve(async (req) => {
   const cronSecret = Deno.env.get('CRON_SECRET')
-  const response = await fetch(`https://flighthourma.immogear.de/api/cron/sync-calendar?key=${cronSecret}`, {
+  const response = await fetch(`https://flighthour.getemergence.com/api/cron/sync-calendar?key=${cronSecret}`, {
     method: 'POST'
   })
 
@@ -88,7 +88,7 @@ Dann in Supabase Dashboard → Edge Functions → Cron Schedule einrichten.
 ### Manueller Test
 
 ```bash
-curl -X POST "https://flighthourma.immogear.de/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE"
+curl -X POST "https://flighthour.getemergence.com/api/cron/sync-calendar?key=YOUR_CRON_SECRET_HERE"
 ```
 
 **Erwartete Antwort (Success):**

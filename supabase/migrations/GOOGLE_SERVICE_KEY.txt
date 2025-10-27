@@ -1,0 +1,66 @@
+================================================================================
+GOOGLE SERVICE ACCOUNT PRIVATE KEY
+für Google Calendar Integration
+================================================================================
+
+WICHTIG: Dieser Key muss in CapRover als Environment Variable gesetzt werden!
+
+--------------------------------------------------------------------------------
+VERWENDUNG IN CAPROVER:
+--------------------------------------------------------------------------------
+
+1. CapRover Dashboard öffnen
+2. Apps → flighthourma → App Configs → Environment Variables
+3. Variable: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+4. Wert: Die komplette Zeile unten kopieren (MIT Anführungszeichen)
+5. Speichern und App neu starten
+
+--------------------------------------------------------------------------------
+KORREKT FORMATIERTER KEY (Copy & Paste ready):
+--------------------------------------------------------------------------------
+
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQCjPdEfw76/FmahvJNLuFfKVGifmaej6U1KNHC4KWjw57+ZS7+ToIHLSjjOLOJFCvgjz+lytM5v0oCwd5qn1CKO9cBSaAnAnaNZdwyq11uuVqAfk+uISfaBP6jpWGwfAcJXvH7W1vVJ6ImiVSBEQzYDa5Uo9fyOaPUw2gXYdTXTSRsf9Rs6tlpfzPPBHknWgCIyTiVAOhvEFcOH8ygBYm9Fvr/2hzP+deu0IDlv4iRSUOCsJc0eyr+z0FPghY8TIN3eEQoiG+d/CPwTCG6+zYzhkweYf7ymnrUNE5eagXKHqqiCd480HNdEV7aaVDRgjS0BqN1CZNMkVswWRHyOVrcRAgMBAAECgf8w9+EYTR2Wng0UqbYO9WkE/WQAjrmY3VgLPw/jd+QFTe1ysSQW67qWDGuCf+/E736XLU4zZg4inTdvuEyqIoiyOd0C21vat28LN2RJ9tT1NQKYLUUBNmWZkkqW6/G6CSYzVJ7385Fl3Kc2DVe+RwaYVuslfCT201w5+1GTTTpjsijYyQIBqIbOKiOWHImBJpoxif6XCuhqwyUEmw6C8SX3//ssdrn0qbVcGm4ZsjsZJ1TdanbKQpqNpabApBAvJQo4/CCnZiFlwXbpUNZvrR0c+FQqunpNxl7dbcBtW3ZCe+P0oVJyCb7j5dRLAR/iwdcuAEiL9tlywc5ViZTUm8ECgYEA1M+zX3KUxeaxbfe8NdDMWkvm59cyZz+yogy6CDNs55xHzugUjOlqLK6pH6jF+ohfqxfWl9dJsD569l4PCx9ZGXu3ljlAJYLxFSwPEU+COh/vZ/m/GUjb+GBTYopKv8Qi0ZNBdlrnbGZuc5Q8MvGIv6O/klOE/ncRhiTPdMurmUECgYEAxF7JhmzEdRMBN9x9b7IYBuxkDa9jNOeWvpBiZWOWSchXeDORjaoOYjsaSGTa1BGziMwQ6rfy/mZ6g1E2J6wCyULs3ggkLZNYrpjkPFw6lAQ9VvTJvWvcK2CKH9DmUXZauQtrGpcupiC6uS0LNs84xY9AiPNYx9evwSjkxzI3WdECgYEAujupNXYIS8e+rgWGZ3H542tY/rqMGV7c7INGqbaXL3jMPn1KvqXljISs7E++Maj2T7vkx6xXiCylXsShVZJxXqOt3YDsaedVIroT1YpG5Kbd05fzbCUemxVw42MyVu9FqTG8r96Nd4eMUQkARXSpv0uFcoA0epuockP0aLlzygECgYBmlQ25x4ApmK/+OpTckLC0jTEHZSPyMzkwe8SrKocMLDhldqsG0luJPU7Rmr4mIskjIVeFBmtOMsK1butXdihOc0PCCYa8uEiPjRdN4PBI+p4Amwf4iCwQDPKbBEoNLELgf/KHhYq9BkQFEF7XVxFVQyx3Xoh2fVo3EeHRnY4EwQKBgC3i5MYrrCjIvpMSzmvNutStZBj11zev3SF0AnwAI6G0o4P0VxWvwjyBluNcZ5Ax2szJ5wUu/P6374meVOWrSCXJtHI3tASUpI1fxqp1IK3xSN317Z/OWW5zTBWbYUSYkDvJ3xIN8bSceZVrF4HGsPq40Ir/pjawlLflleMFVuLC\n-----END PRIVATE KEY-----\n"
+
+--------------------------------------------------------------------------------
+WICHTIGE HINWEISE:
+--------------------------------------------------------------------------------
+
+1. Der Key muss GENAU so kopiert werden (inkl. Anführungszeichen)
+2. Die \n sind LITERAL-Strings (nicht echte Zeilenumbrüche!)
+3. Alles steht in EINER ZEILE
+4. BEGIN und END Marker sind ZWINGEND erforderlich
+
+--------------------------------------------------------------------------------
+WEITERE BENÖTIGTE ENVIRONMENT VARIABLES:
+--------------------------------------------------------------------------------
+
+GOOGLE_CALENDAR_ID="flighthour.de@gmail.com"
+CRON_SECRET="u8j5Y25/FRAeQsjpMGLn70oCemyKh1C7bqhLBk11ejg="
+
+--------------------------------------------------------------------------------
+TESTEN NACH SETUP:
+--------------------------------------------------------------------------------
+
+curl -X POST "https://flighthour.getemergence.com/api/cron/sync-calendar?key=u8j5Y25/FRAeQsjpMGLn70oCemyKh1C7bqhLBk11ejg="
+
+Erwartete Antwort:
+{
+  "success": true,
+  "stats": {
+    "imported": X,
+    "exported": Y,
+    "updated": Z,
+    "errors": 0
+  }
+}
+
+================================================================================
+SERVICE ACCOUNT DETAILS:
+================================================================================
+
+Email: flighthour@macro-mender-440116-f6.iam.gserviceaccount.com
+Calendar: flighthour.de@gmail.com
+
+Der Service Account benötigt Zugriff auf den Google Calendar!
+
+================================================================================
