@@ -10,7 +10,9 @@ import {
   Users,
   Tag,
   Mail,
-  X
+  X,
+  CalendarClock,
+  CalendarCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +53,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           icon: <Clock className="w-5 h-5" />,
         },
         {
+          href: '/requests',
+          label: 'Meine Requests',
+          icon: <CalendarClock className="w-5 h-5" />,
+        },
+        {
           href: '/einstellungen',
           label: 'Einstellungen',
           icon: <Settings className="w-5 h-5" />,
@@ -75,6 +82,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/mitarbeiter',
           label: 'Mitarbeiter',
           icon: <Users className="w-5 h-5" />,
+        },
+        {
+          href: '/requests/manage',
+          label: 'Requests verwalten',
+          icon: <CalendarCheck className="w-5 h-5" />,
         },
       ],
     },
