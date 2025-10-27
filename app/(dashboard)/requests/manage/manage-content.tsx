@@ -27,6 +27,7 @@ import { RequestsTable } from './components/requests-table'
 import { ApprovalDialog } from './components/approval-dialog'
 import { RejectionDialog } from './components/rejection-dialog'
 import { DirectCreateDialog } from './components/direct-create-dialog'
+import { DetailsDialog } from './components/details-dialog'
 import { deleteWorkRequest, approveWorkRequest } from '@/app/actions/work-requests'
 import type { WorkRequestWithRelations, WorkRequestStats } from '@/lib/types/work-requests'
 
@@ -393,8 +394,11 @@ export function ManageContent({
         />
       )}
 
-      {/* Details Dialog (reuse Approval Dialog structure, just view-only) */}
-      {/* TODO: Could create a separate ViewDetailsDialog if needed */}
+      <DetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        request={selectedRequest}
+      />
     </div>
   )
 }
