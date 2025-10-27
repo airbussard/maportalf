@@ -98,10 +98,16 @@ async function getAccessToken(): Promise<string> {
   }
 
   const data = await response.json()
-  cachedAccessToken = data.access_token
+
+  if (!data.access_token) {
+    throw new Error('No access token received from Google')
+  }
+
+  const accessToken: string = data.access_token
+  cachedAccessToken = accessToken
   tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000 // 1 min buffer
 
-  return cachedAccessToken
+  return accessToken
 }
 
 /**
