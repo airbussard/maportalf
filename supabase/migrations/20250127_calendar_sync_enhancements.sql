@@ -114,7 +114,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER IF NOT EXISTS calendar_events_update_modified_at
+-- Drop existing trigger if any, then create (idempotent)
+DROP TRIGGER IF EXISTS calendar_events_update_modified_at ON calendar_events;
+CREATE TRIGGER calendar_events_update_modified_at
   BEFORE UPDATE ON calendar_events
   FOR EACH ROW
   EXECUTE FUNCTION update_calendar_event_modified_at();
