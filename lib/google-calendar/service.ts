@@ -126,7 +126,8 @@ export async function listGoogleCalendarEvents(
   const params = new URLSearchParams({
     maxResults: '250',
     singleEvents: 'true',
-    orderBy: 'startTime'
+    orderBy: 'startTime',
+    showDeleted: 'true' // Include deleted events (status: 'cancelled')
   })
 
   if (syncToken) {

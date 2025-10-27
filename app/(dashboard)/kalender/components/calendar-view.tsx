@@ -50,22 +50,28 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
-  // Group events by date
-  const eventsByDate = events.reduce((acc, event) => {
-    const date = new Date(event.start_time).toDateString()
-    if (!acc[date]) {
-      acc[date] = []
-    }
-    acc[date].push(event)
-    return acc
-  }, {} as Record<string, CalendarEvent[]>)
+  // Group events by date (exclude cancelled events)
+  const eventsByDate = events
+    .filter(event => event.status !== 'cancelled')
+    .reduce((acc, event) => {
+      const date = new Date(event.start_time).toDateString()
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(event)
+      return acc
+    }, {} as Record<string, CalendarEvent[]>)
 
-  // Get events for current month
+  // Get events for current month (exclude cancelled events)
   const currentMonth = selectedDate.getMonth()
   const currentYear = selectedDate.getFullYear()
   const eventsThisMonth = events.filter(event => {
     const eventDate = new Date(event.start_time)
-    return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear
+    return (
+      eventDate.getMonth() === currentMonth &&
+      eventDate.getFullYear() === currentYear &&
+      event.status !== 'cancelled' // Filter out cancelled/deleted events
+    )
   })
 
   // Filter events by selected day (if any)

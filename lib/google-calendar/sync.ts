@@ -77,6 +77,53 @@ export async function syncGoogleCalendarToDatabase(
 }
 
 /**
+ * Handle deleted/cancelled events from Google Calendar
+ * Soft delete: Mark event as 'cancelled' in database instead of hard delete
+ */
+async function handleDeletedEvent(
+  googleEvent: GoogleCalendarEvent,
+  supabase: any,
+  result: SyncResult
+): Promise<void> {
+  try {
+    // Check if event exists in database
+    const { data: existingEvent } = await supabase
+      .from('calendar_events')
+      .select('id, status')
+      .eq('google_event_id', googleEvent.id)
+      .single()
+
+    if (!existingEvent) {
+      // Event doesn't exist in database, nothing to do
+      return
+    }
+
+    // Only update if status is not already cancelled
+    if (existingEvent.status !== 'cancelled') {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({
+          status: 'cancelled',
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('google_event_id', googleEvent.id)
+
+      if (error) {
+        throw new Error(`Database error: ${error.message}`)
+      }
+
+      result.updated++
+      console.log(`[Sync] Soft deleted event ${googleEvent.id}`)
+    }
+  } catch (error) {
+    console.error(`[Sync] Error handling deleted event ${googleEvent.id}:`, error)
+    throw error
+  }
+}
+
+/**
  * Process a single Google Calendar event
  * Creates or updates in Supabase using UPSERT to prevent duplicates
  */
@@ -85,6 +132,12 @@ async function processGoogleEvent(
   supabase: any,
   result: SyncResult
 ): Promise<void> {
+  // Handle deleted/cancelled events (soft delete)
+  if (googleEvent.status === 'cancelled') {
+    await handleDeletedEvent(googleEvent, supabase, result)
+    return
+  }
+
   // Skip events without start time or summary
   if (!googleEvent.start || !googleEvent.summary) {
     return
