@@ -20,11 +20,15 @@ import type { GoogleCalendarEvent, CalendarEventData, SyncResult, SyncOptions } 
 /**
  * Sync events from Google Calendar to Supabase
  * Import direction: Google → Database
+ *
+ * @param options - Sync options (time range, syncToken, etc.)
+ * @param supabaseClient - Optional Supabase client (for background jobs)
  */
 export async function syncGoogleCalendarToDatabase(
-  options: SyncOptions = {}
+  options: SyncOptions = {},
+  supabaseClient?: any
 ): Promise<SyncResult> {
-  const supabase = await createClient()
+  const supabase = supabaseClient || await createClient()
   const result: SyncResult = {
     success: true,
     imported: 0,
@@ -181,9 +185,13 @@ async function processGoogleEvent(
 /**
  * Export local events to Google Calendar
  * Upload direction: Database → Google
+ *
+ * @param supabaseClient - Optional Supabase client (for background jobs)
  */
-export async function exportLocalEventsToGoogle(): Promise<SyncResult> {
-  const supabase = await createClient()
+export async function exportLocalEventsToGoogle(
+  supabaseClient?: any
+): Promise<SyncResult> {
+  const supabase = supabaseClient || await createClient()
   const result: SyncResult = {
     success: true,
     imported: 0,
@@ -262,15 +270,24 @@ export async function exportLocalEventsToGoogle(): Promise<SyncResult> {
 /**
  * Full bidirectional sync
  * Import from Google + Export local changes
+ *
+ * @param supabaseClient - Optional Supabase client (for background jobs)
+ * @param options - Sync options
  */
-export async function fullSync(options: SyncOptions = {}): Promise<SyncResult> {
+export async function fullSync(
+  supabaseClient?: any,
+  options: SyncOptions = {}
+): Promise<SyncResult> {
   console.log('[Sync] Starting full bidirectional sync...')
 
   // Step 1: Import from Google Calendar
-  const importResult = await syncGoogleCalendarToDatabase({ ...options, fullSync: true })
+  const importResult = await syncGoogleCalendarToDatabase(
+    { ...options, fullSync: true },
+    supabaseClient
+  )
 
   // Step 2: Export local events to Google
-  const exportResult = await exportLocalEventsToGoogle()
+  const exportResult = await exportLocalEventsToGoogle(supabaseClient)
 
   // Combine results
   const combinedResult: SyncResult = {
