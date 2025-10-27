@@ -137,7 +137,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     }
   }
 
-  const isReadOnly = event && event.sync_status === 'synced'
+  // All events are editable (including synced ones from Google)
+  const isReadOnly = false
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
