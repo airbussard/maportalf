@@ -48,6 +48,7 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   // Group events by date
   const eventsByDate = events.reduce((acc, event) => {
@@ -66,6 +67,14 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
     const eventDate = new Date(event.start_time)
     return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear
   })
+
+  // Filter events by selected day (if any)
+  const displayedEvents = selectedDay
+    ? eventsThisMonth.filter(event => {
+        const eventDate = new Date(event.start_time)
+        return eventDate.toDateString() === selectedDay.toDateString()
+      })
+    : eventsThisMonth
 
   // Generate calendar days
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1)
@@ -204,18 +213,25 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
               return <div key={`empty-${index}`} className="aspect-square" />
             }
 
-            const dateStr = new Date(currentYear, currentMonth, day).toDateString()
+            const dayDate = new Date(currentYear, currentMonth, day)
+            const dateStr = dayDate.toDateString()
             const dayEvents = eventsByDate[dateStr] || []
             const isToday = dateStr === new Date().toDateString()
+            const isSelected = selectedDay && dateStr === selectedDay.toDateString()
 
             return (
               <div
                 key={day}
+                onClick={() => setSelectedDay(dayDate)}
                 className={`aspect-square border rounded-lg p-2 ${
-                  isToday ? 'border-primary bg-primary/5' : 'border-border'
+                  isSelected
+                    ? 'border-primary bg-primary/20 ring-2 ring-primary'
+                    : isToday
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border'
                 } hover:bg-accent transition-colors cursor-pointer`}
               >
-                <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
+                <div className={`text-sm font-medium mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
                 {dayEvents.length > 0 && (
@@ -231,17 +247,26 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
 
       {/* Upcoming Events List */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">
-          Events diesen Monat ({eventsThisMonth.length})
-        </h2>
-        {eventsThisMonth.length === 0 ? (
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            {selectedDay
+              ? `Events am ${selectedDay.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })} (${displayedEvents.length})`
+              : `Events diesen Monat (${eventsThisMonth.length})`}
+          </h2>
+          {selectedDay && (
+            <Button variant="outline" size="sm" onClick={() => setSelectedDay(null)}>
+              Alle anzeigen
+            </Button>
+          )}
+        </div>
+        {displayedEvents.length === 0 ? (
           <Card className="p-8 text-center text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Keine Events in diesem Monat</p>
+            <p>{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {eventsThisMonth
+          <div className="space-y-2">
+            {displayedEvents
               .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
               .map((event) => (
                 <EventCard

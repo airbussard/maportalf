@@ -37,66 +37,59 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
   return (
     <Card
-      className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+      className="p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
       onClick={onClick}
     >
-      <div className="space-y-3">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <h3 className="font-semibold line-clamp-1">{event.title}</h3>
-            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-              <User className="h-3 w-3" />
-              {event.customer_first_name} {event.customer_last_name}
-            </p>
+      <div className="flex items-center gap-4">
+        {/* Time */}
+        <div className="flex items-center gap-2 text-sm min-w-[140px]">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col">
+            <span className="font-medium">
+              {startDate.toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+              {' - '}
+              {endDate.toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
           </div>
+        </div>
+
+        {/* Customer Name */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="font-semibold truncate">
+            {event.customer_first_name} {event.customer_last_name}
+          </span>
+        </div>
+
+        {/* Location */}
+        <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground min-w-[200px]">
+          <MapPin className="h-4 w-4 flex-shrink-0" />
+          <span className="truncate">{event.location}</span>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge
             variant="secondary"
-            className={statusColors[event.status as keyof typeof statusColors] || ''}
+            className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
           >
             {event.status === 'confirmed' && 'Bestätigt'}
             {event.status === 'tentative' && 'Vorläufig'}
             {event.status === 'cancelled' && 'Abgesagt'}
           </Badge>
-        </div>
-
-        {/* Time */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>
-            {startDate.toLocaleDateString('de-DE', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            })}
-            {' • '}
-            {startDate.toLocaleTimeString('de-DE', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-            {' - '}
-            {endDate.toLocaleTimeString('de-DE', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
-        </div>
-
-        {/* Location */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4" />
-          <span className="line-clamp-1">{event.location}</span>
-        </div>
-
-        {/* Sync Status */}
-        <div className="flex items-center gap-2">
           <Badge
             variant="outline"
             className={`text-xs ${syncStatusColors[event.sync_status as keyof typeof syncStatusColors] || ''}`}
           >
-            {event.sync_status === 'synced' && '✓ Synchronisiert'}
-            {event.sync_status === 'pending' && '⏳ Ausstehend'}
-            {event.sync_status === 'error' && '⚠ Fehler'}
+            {event.sync_status === 'synced' && '✓'}
+            {event.sync_status === 'pending' && '⏳'}
+            {event.sync_status === 'error' && '⚠'}
           </Badge>
         </div>
       </div>
