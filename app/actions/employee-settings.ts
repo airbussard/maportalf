@@ -160,7 +160,7 @@ export async function saveEmployeeSettings(data: {
     const historyData = {
       employee_id: data.employee_id,
       compensation_type: data.compensation_type,
-      hourly_rate: data.compensation_type === 'hourly' ? data.hourly_rate : data.hourly_rate,
+      hourly_rate: data.hourly_rate,
       monthly_salary: data.compensation_type === 'salary' ? data.monthly_salary : null,
       currency: 'EUR',
       valid_from: today,
@@ -168,9 +168,14 @@ export async function saveEmployeeSettings(data: {
       reason: 'Configuration update via admin panel'
     }
 
-    await adminSupabase
+    const { error: historyError } = await adminSupabase
       .from('employee_compensation_history')
       .insert(historyData)
+
+    if (historyError) {
+      console.error('Error saving compensation history:', historyError)
+      // Don't fail the whole operation if history insert fails
+    }
 
     return { success: true, data: result as EmployeeSettings }
   } catch (error: any) {

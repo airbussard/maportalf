@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { getAllEmployeeSettings } from '@/app/actions/employee-settings'
 import { AdminTimeTrackingView } from './components/admin-time-tracking-view'
 
 export default async function ZeiterfassungVerwaltungPage({
@@ -46,12 +47,16 @@ export default async function ZeiterfassungVerwaltungPage({
     .eq('is_active', true)
     .order('first_name', { ascending: true })
 
+  // Load employee settings in parallel
+  const settingsResult = await getAllEmployeeSettings()
+
   return (
     <AdminTimeTrackingView
       initialYear={selectedYear}
       initialMonth={selectedMonth}
       selectedEmployee={selectedEmployee}
       employees={employees || []}
+      employeeSettings={settingsResult.data || []}
     />
   )
 }

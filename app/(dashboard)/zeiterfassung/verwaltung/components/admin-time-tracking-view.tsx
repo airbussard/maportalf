@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select'
 import { getTimeEntries, getMonthlyStats } from '@/app/actions/time-tracking'
 import { closeMonth, reopenMonth, getTimeReport } from '@/app/actions/time-reports'
-import type { MonthlyStats } from '@/lib/types/time-tracking'
+import type { MonthlyStats, EmployeeSettings } from '@/lib/types/time-tracking'
 import { ReportExportDialog } from './report-export-dialog'
 import { CompensationConfigDialog } from './compensation-config-dialog'
 import { Download, Settings } from 'lucide-react'
@@ -46,6 +46,7 @@ interface AdminTimeTrackingViewProps {
   initialMonth: number
   selectedEmployee: string
   employees: Employee[]
+  employeeSettings: EmployeeSettings[]
 }
 
 interface EmployeeStats {
@@ -59,6 +60,7 @@ export function AdminTimeTrackingView({
   initialMonth,
   selectedEmployee,
   employees,
+  employeeSettings,
 }: AdminTimeTrackingViewProps) {
   const router = useRouter()
   const [year, setYear] = useState(initialYear)
@@ -70,6 +72,9 @@ export function AdminTimeTrackingView({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [compensationDialogOpen, setCompensationDialogOpen] = useState(false)
   const [selectedEmployeeForConfig, setSelectedEmployeeForConfig] = useState<Employee | null>(null)
+
+  // Create map for quick lookup
+  const settingsMap = new Map(employeeSettings.map(s => [s.employee_id, s]))
 
   useEffect(() => {
     loadData()
@@ -179,6 +184,17 @@ export function AdminTimeTrackingView({
   const getEmployeeName = (emp: Employee) => {
     const name = `${emp.first_name || ''} ${emp.last_name || ''}`.trim()
     return name || emp.email
+  }
+
+  const getCompensationDisplay = (employeeId: string) => {
+    const settings = settingsMap.get(employeeId)
+    if (!settings) return '-'
+
+    if (settings.compensation_type === 'hourly') {
+      return `${settings.hourly_rate?.toFixed(2) || '0.00'}€/Std.`
+    } else {
+      return `${settings.monthly_salary?.toFixed(0) || '0'}€/Monat`
+    }
   }
 
   const handleConfigureCompensation = (emp: Employee) => {
@@ -332,14 +348,19 @@ export function AdminTimeTrackingView({
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleConfigureCompensation(stat.employee)}
-                          title="Vergütung konfigurieren"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-sm font-medium">
+                            {getCompensationDisplay(stat.employee.id)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleConfigureCompensation(stat.employee)}
+                            title="Vergütung konfigurieren"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                       <td className="p-4 text-right">
                         {stat.isClosed ? (
