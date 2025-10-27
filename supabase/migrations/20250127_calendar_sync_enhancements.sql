@@ -66,24 +66,44 @@ CREATE INDEX IF NOT EXISTS calendar_events_last_modified_at_idx
 ALTER TABLE calendar_sync_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: All authenticated users can view sync logs
-CREATE POLICY IF NOT EXISTS "Anyone can view sync logs"
-  ON calendar_sync_logs
-  FOR SELECT
-  TO authenticated
-  USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename = 'calendar_sync_logs'
+    AND policyname = 'Anyone can view sync logs'
+  ) THEN
+    CREATE POLICY "Anyone can view sync logs"
+      ON calendar_sync_logs
+      FOR SELECT
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
 
 -- RLS Policy: Only admins can insert sync logs (for manual testing)
-CREATE POLICY IF NOT EXISTS "Only admins can create sync logs"
-  ON calendar_sync_logs
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename = 'calendar_sync_logs'
+    AND policyname = 'Only admins can create sync logs'
+  ) THEN
+    CREATE POLICY "Only admins can create sync logs"
+      ON calendar_sync_logs
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM profiles
+          WHERE profiles.id = auth.uid()
+          AND profiles.role = 'admin'
+        )
+      );
+  END IF;
+END $$;
 
 -- Add trigger to update last_modified_at on calendar_events
 CREATE OR REPLACE FUNCTION update_calendar_event_modified_at()
