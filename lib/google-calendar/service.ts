@@ -54,10 +54,13 @@ function createJWT(): string {
   const signatureInput = `${encodedHeader}.${encodedPayload}`
 
   // Sign with private key using crypto
+  // Convert literal \n strings to actual newlines (for CapRover env vars)
+  const privateKey = GOOGLE_SERVICE_ACCOUNT.private_key.replace(/\\n/g, '\n')
+
   const crypto = require('crypto')
   const sign = crypto.createSign('RSA-SHA256')
   sign.update(signatureInput)
-  const signature = sign.sign(GOOGLE_SERVICE_ACCOUNT.private_key, 'base64')
+  const signature = sign.sign(privateKey, 'base64')
   const encodedSignature = signature
     .replace(/=/g, '')
     .replace(/\+/g, '-')
