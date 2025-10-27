@@ -107,9 +107,34 @@ async function processGoogleEvent(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
-  // Prepare event data
+  // Try to get current user, but don't fail if none (for background sync)
+  // For background syncs, we'll use a system user ID or the first admin
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let userId = user?.id
+  if (!userId) {
+    // Background sync: Get first admin user as fallback
+    const { data: adminUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .limit(1)
+      .single()
+
+    userId = adminUser?.id
+    if (!userId) {
+      console.error('[Sync] No user available for sync - skipping event')
+      return
+    }
+  }
+
+  // Prepare event data matching existing schema
   const eventData = {
+    id: googleEvent.id, // Use Google event ID as primary key (schema uses TEXT)
+    user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
+    title: googleEvent.summary,
+    description: googleEvent.description || '',
     customer_first_name: firstName,
     customer_last_name: lastName,
     customer_phone: parsedData.customer_phone,
@@ -117,14 +142,16 @@ async function processGoogleEvent(
     start_time: startTime,
     end_time: endTime,
     duration,
-    attendee_count: parsedData.attendee_count,
+    attendee_count: parsedData.attendee_count || 1,
     remarks: parsedData.remarks,
     location: googleEvent.location || 'FLIGHTHOUR Flugsimulator',
     status: googleEvent.status,
+    attendees: [], // Required jsonb field
     etag: googleEvent.etag,
     last_synced_at: new Date().toISOString(),
     sync_status: 'synced',
-    last_modified_at: googleEvent.updated
+    last_modified_at: googleEvent.updated,
+    updated_at: new Date().toISOString()
   }
 
   // UPSERT: Insert or update on conflict (prevents duplicates)
