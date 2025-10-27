@@ -23,22 +23,15 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // 1. Verify Cron Secret for security
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
+    // 1. Verify Cron Secret via query parameter
+    const { searchParams } = new URL(request.url)
+    const key = searchParams.get('key')
+    const cronSecret = process.env.CRON_SECRET || 'geheim123'
 
-    if (!cronSecret) {
-      console.error('[Cron] CRON_SECRET not configured')
+    if (key !== cronSecret) {
+      console.warn('[Cron] Unauthorized sync attempt - Invalid key')
       return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.warn('[Cron] Unauthorized sync attempt')
-      return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Invalid key' },
         { status: 401 }
       )
     }
@@ -113,14 +106,14 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/cron/sync-calendar
  *
- * Manual trigger for testing (requires auth)
- * Use: curl -X POST ... (POST is the main method)
+ * Info endpoint - shows how to use the cron job
  */
 export async function GET(request: NextRequest) {
   return NextResponse.json({
     message: 'Google Calendar Cron Job',
     method: 'POST',
-    auth: 'Authorization: Bearer CRON_SECRET',
+    auth: 'Query parameter: ?key=CRON_SECRET',
+    example: 'POST /api/cron/sync-calendar?key=YOUR_SECRET',
     schedule: 'Every 5 minutes (*/5 * * * *)',
     endpoint: '/api/cron/sync-calendar'
   })
