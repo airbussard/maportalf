@@ -18,7 +18,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { StatusBadge } from '../../../components/status-badge'
+import { StatusBadge } from '../../components/status-badge'
 import {
   type WorkRequestWithRelations,
   formatRequestDateShort,

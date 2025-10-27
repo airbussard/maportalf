@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import {
   WorkRequest,
+  WorkRequestStatus,
   WorkRequestWithRelations,
   WorkRequestWithEmployee,
   CreateWorkRequestInput,
@@ -328,8 +329,8 @@ export async function getAllWorkRequests(
       .order('request_date', { ascending: false })
 
     // Apply filters
-    if (filters?.status && filters.status !== '') {
-      query = query.eq('status', filters.status)
+    if (filters?.status && filters.status.length > 0) {
+      query = query.eq('status', filters.status as WorkRequestStatus)
     }
     if (filters?.fromDate) {
       query = query.gte('request_date', filters.fromDate)
@@ -864,7 +865,14 @@ export async function checkWorkRequestConflicts(
       return []
     }
 
-    return data as WorkRequestConflict[]
+    // Map Supabase response to WorkRequestConflict type
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      employee: Array.isArray(item.employee) ? item.employee[0] : item.employee,
+      is_full_day: item.is_full_day,
+      start_time: item.start_time,
+      end_time: item.end_time
+    })) as WorkRequestConflict[]
   } catch (error) {
     console.error('checkWorkRequestConflicts error:', error)
     return []
