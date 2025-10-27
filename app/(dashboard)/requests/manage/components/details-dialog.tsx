@@ -157,9 +157,9 @@ export function DetailsDialog({ open, onOpenChange, request }: DetailsDialogProp
                   <strong>Aktualisiert:</strong> {new Date(request.updated_at).toLocaleString('de-DE')}
                 </div>
               )}
-              {request.processed_by && request.processed_at && (
+              {request.approved_by && request.approved_at && (
                 <div>
-                  <strong>Bearbeitet:</strong> {new Date(request.processed_at).toLocaleString('de-DE')}
+                  <strong>Bearbeitet:</strong> {new Date(request.approved_at).toLocaleString('de-DE')}
                 </div>
               )}
             </div>
