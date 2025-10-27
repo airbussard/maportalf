@@ -116,9 +116,9 @@ export function RequestsTable({
 
   const allSelected = sortedRequests.length > 0 && selectedIds.length === sortedRequests.length
 
-  // Helper to check if a request has conflicts
+  // Helper to check if a request has conflicts (regardless of status)
   const hasConflict = (request: WorkRequestWithRelations) => {
-    return request.status === 'approved' && conflictDates.has(request.request_date)
+    return conflictDates.has(request.request_date)
   }
 
   // Get conflict info for a request

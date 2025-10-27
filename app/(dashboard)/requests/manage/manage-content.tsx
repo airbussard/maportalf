@@ -73,16 +73,15 @@ export function ManageContent({
   // Selection state (for batch actions)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
-  // Detect conflicts: count approved requests per date
+  // Detect conflicts: count all requests per date (regardless of status)
   const conflictDates = useMemo(() => {
     const dateMap = new Map<string, WorkRequestWithRelations[]>()
 
-    requests
-      .filter(r => r.status === 'approved')
-      .forEach(request => {
-        const existing = dateMap.get(request.request_date) || []
-        dateMap.set(request.request_date, [...existing, request])
-      })
+    // Check all requests, not just approved ones
+    requests.forEach(request => {
+      const existing = dateMap.get(request.request_date) || []
+      dateMap.set(request.request_date, [...existing, request])
+    })
 
     // Only keep dates with multiple employees
     const conflicts = new Map<string, WorkRequestWithRelations[]>()
