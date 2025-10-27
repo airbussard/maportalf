@@ -12,7 +12,8 @@ import {
   Mail,
   X,
   CalendarClock,
-  CalendarCheck
+  CalendarCheck,
+  Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +69,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       title: 'MANAGER',
       roles: ['manager', 'admin'],
       items: [
+        {
+          href: '/kalender',
+          label: 'Kalender',
+          icon: <Calendar className="w-5 h-5" />,
+        },
         {
           href: '/tickets',
           label: 'Tickets',

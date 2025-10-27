@@ -19,19 +19,28 @@ import type { CalendarEventData, SyncResult } from '@/lib/google-calendar/types'
 
 /**
  * Get calendar events for a date range
+ * If no dates provided, gets all events
  */
 export async function getCalendarEvents(
-  startDate: string,
-  endDate: string
+  startDate?: string,
+  endDate?: string
 ) {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('calendar_events')
     .select('*')
-    .gte('start_time', startDate)
-    .lte('start_time', endDate)
     .order('start_time', { ascending: true })
+
+  if (startDate) {
+    query = query.gte('start_time', startDate)
+  }
+
+  if (endDate) {
+    query = query.lte('start_time', endDate)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     throw new Error(`Failed to fetch calendar events: ${error.message}`)
