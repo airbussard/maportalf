@@ -165,16 +165,25 @@ export async function createGoogleCalendarEvent(
 ): Promise<GoogleCalendarEvent> {
   const accessToken = await getAccessToken()
 
+  // Ensure dates are in correct ISO 8601 format
+  const startDate = new Date(eventData.start_time)
+  const endDate = new Date(eventData.end_time)
+
+  // Validate dates
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    throw new Error('Invalid date format')
+  }
+
   const event = {
     summary: `${eventData.customer_first_name} ${eventData.customer_last_name}`,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {
-      dateTime: eventData.start_time,
+      dateTime: startDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
     end: {
-      dateTime: eventData.end_time,
+      dateTime: endDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
     status: eventData.status || 'confirmed'
@@ -208,16 +217,25 @@ export async function updateGoogleCalendarEvent(
 ): Promise<GoogleCalendarEvent> {
   const accessToken = await getAccessToken()
 
+  // Ensure dates are in correct ISO 8601 format
+  const startDate = new Date(eventData.start_time)
+  const endDate = new Date(eventData.end_time)
+
+  // Validate dates
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    throw new Error('Invalid date format')
+  }
+
   const event = {
     summary: `${eventData.customer_first_name} ${eventData.customer_last_name}`,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {
-      dateTime: eventData.start_time,
+      dateTime: startDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
     end: {
-      dateTime: eventData.end_time,
+      dateTime: endDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
     status: eventData.status || 'confirmed'
