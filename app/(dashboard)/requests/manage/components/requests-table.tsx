@@ -8,7 +8,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Check, X, Eye, MoreVertical, Trash2 } from 'lucide-react'
+import { Check, X, Eye, MoreVertical, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '../../components/status-badge'
 import {
   type WorkRequestWithRelations,
@@ -35,6 +36,7 @@ interface RequestsTableProps {
   selectedIds?: string[]
   onSelectionChange?: (ids: string[]) => void
   isAdmin?: boolean
+  conflictDates?: Map<string, WorkRequestWithRelations[]>
 }
 
 type SortField = 'date' | 'employee' | 'status'
@@ -48,7 +50,8 @@ export function RequestsTable({
   onDelete,
   selectedIds = [],
   onSelectionChange,
-  isAdmin = false
+  isAdmin = false,
+  conflictDates = new Map()
 }: RequestsTableProps) {
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -113,6 +116,26 @@ export function RequestsTable({
 
   const allSelected = sortedRequests.length > 0 && selectedIds.length === sortedRequests.length
 
+  // Helper to check if a request has conflicts
+  const hasConflict = (request: WorkRequestWithRelations) => {
+    return request.status === 'approved' && conflictDates.has(request.request_date)
+  }
+
+  // Get conflict info for a request
+  const getConflictInfo = (request: WorkRequestWithRelations) => {
+    if (!hasConflict(request)) return null
+
+    const conflictingRequests = conflictDates.get(request.request_date) || []
+    const otherEmployees = conflictingRequests
+      .filter(r => r.id !== request.id)
+      .map(r => getEmployeeName(r))
+
+    return {
+      count: conflictingRequests.length,
+      employees: otherEmployees
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -172,29 +195,43 @@ export function RequestsTable({
                 </div>
 
                 {/* Rows */}
-                {sortedRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className={`grid grid-cols-12 gap-4 py-3 border-b items-center text-sm hover:bg-muted/50 ${
-                      isSelected(request.id) ? 'bg-muted' : ''
-                    }`}
-                  >
-                    {onSelectionChange && (
-                      <div className="col-span-1">
-                        <input
-                          type="checkbox"
-                          checked={isSelected(request.id)}
-                          onChange={() => toggleSelection(request.id)}
-                          className="h-4 w-4"
-                        />
+                {sortedRequests.map((request) => {
+                  const conflictInfo = getConflictInfo(request)
+
+                  return (
+                    <div
+                      key={request.id}
+                      className={`grid grid-cols-12 gap-4 py-3 border-b items-center text-sm hover:bg-muted/50 ${
+                        isSelected(request.id) ? 'bg-muted' : ''
+                      } ${hasConflict(request) ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
+                    >
+                      {onSelectionChange && (
+                        <div className="col-span-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected(request.id)}
+                            onChange={() => toggleSelection(request.id)}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      )}
+                      <div className="col-span-2 font-medium">
+                        {getEmployeeName(request)}
                       </div>
-                    )}
-                    <div className="col-span-2 font-medium">
-                      {getEmployeeName(request)}
-                    </div>
-                    <div className="col-span-2">
-                      {formatRequestDateShort(request.request_date)}
-                    </div>
+                      <div className="col-span-2 flex items-center gap-2">
+                        <span>{formatRequestDateShort(request.request_date)}</span>
+                        {conflictInfo && (
+                          <div
+                            className="flex items-center gap-1"
+                            title={`Konflikt mit: ${conflictInfo.employees.join(', ')}`}
+                          >
+                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                            <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                              {conflictInfo.count}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
                     <div className="col-span-2 text-muted-foreground">
                       {formatRequestTime(request)}
                     </div>
@@ -249,34 +286,51 @@ export function RequestsTable({
                       )}
                     </div>
                   </div>
-                ))}
+                )})}
+
               </div>
             </div>
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-3">
-              {sortedRequests.map((request) => (
-                <Card key={request.id} className={isSelected(request.id) ? 'bg-muted' : ''}>
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        {onSelectionChange && (
-                          <input
-                            type="checkbox"
-                            checked={isSelected(request.id)}
-                            onChange={() => toggleSelection(request.id)}
-                            className="h-4 w-4"
-                          />
-                        )}
-                        <div>
-                          <div className="font-medium">{getEmployeeName(request)}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatRequestDateShort(request.request_date)}
+              {sortedRequests.map((request) => {
+                const conflictInfo = getConflictInfo(request)
+
+                return (
+                  <Card
+                    key={request.id}
+                    className={`${isSelected(request.id) ? 'bg-muted' : ''} ${
+                      hasConflict(request) ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' : ''
+                    }`}
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {onSelectionChange && (
+                            <input
+                              type="checkbox"
+                              checked={isSelected(request.id)}
+                              onChange={() => toggleSelection(request.id)}
+                              className="h-4 w-4"
+                            />
+                          )}
+                          <div>
+                            <div className="font-medium">{getEmployeeName(request)}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <span>{formatRequestDateShort(request.request_date)}</span>
+                              {conflictInfo && (
+                                <div className="flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                                  <span className="text-xs text-yellow-800 dark:text-yellow-200">
+                                    {conflictInfo.count} Mitarbeiter
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        <StatusBadge status={request.status} />
                       </div>
-                      <StatusBadge status={request.status} />
-                    </div>
 
                     <div className="space-y-1 text-sm mb-3">
                       <div className="text-muted-foreground">
@@ -323,7 +377,8 @@ export function RequestsTable({
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
+
             </div>
           </div>
         )}

@@ -8,7 +8,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Filter, CheckCircle, Trash2 } from 'lucide-react'
+import { Plus, Search, Filter, CheckCircle, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { StatsCards } from './components/stats-cards'
 import { RequestsTable } from './components/requests-table'
@@ -59,6 +61,7 @@ export function ManageContent({
   // Filter state
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all')
+  const [showConflictsOnly, setShowConflictsOnly] = useState(false)
 
   // Dialog state
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
@@ -69,6 +72,28 @@ export function ManageContent({
 
   // Selection state (for batch actions)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // Detect conflicts: count approved requests per date
+  const conflictDates = useMemo(() => {
+    const dateMap = new Map<string, WorkRequestWithRelations[]>()
+
+    requests
+      .filter(r => r.status === 'approved')
+      .forEach(request => {
+        const existing = dateMap.get(request.request_date) || []
+        dateMap.set(request.request_date, [...existing, request])
+      })
+
+    // Only keep dates with multiple employees
+    const conflicts = new Map<string, WorkRequestWithRelations[]>()
+    dateMap.forEach((reqs, date) => {
+      if (reqs.length > 1) {
+        conflicts.set(date, reqs)
+      }
+    })
+
+    return conflicts
+  }, [requests])
 
   // Filter and search requests
   const filteredRequests = useMemo(() => {
@@ -98,8 +123,13 @@ export function ManageContent({
       })
     }
 
+    // Conflict filter
+    if (showConflictsOnly) {
+      result = result.filter(r => conflictDates.has(r.request_date))
+    }
+
     return result
-  }, [requests, activeTab, selectedEmployee, searchTerm])
+  }, [requests, activeTab, selectedEmployee, searchTerm, showConflictsOnly, conflictDates])
 
   // Handle approval
   const handleApprove = (request: WorkRequestWithRelations) => {
@@ -254,12 +284,31 @@ export function ManageContent({
           </SelectContent>
         </Select>
 
-        {(searchTerm || selectedEmployee !== 'all') && (
+        {/* Conflict Filter */}
+        {conflictDates.size > 0 && (
+          <div className="flex items-center space-x-2 px-3 py-2 border rounded-md">
+            <Checkbox
+              id="conflicts-only"
+              checked={showConflictsOnly}
+              onCheckedChange={(checked) => setShowConflictsOnly(checked === true)}
+            />
+            <Label
+              htmlFor="conflicts-only"
+              className="text-sm font-medium cursor-pointer flex items-center gap-2"
+            >
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              Nur Konflikte ({conflictDates.size})
+            </Label>
+          </div>
+        )}
+
+        {(searchTerm || selectedEmployee !== 'all' || showConflictsOnly) && (
           <Button
             variant="outline"
             onClick={() => {
               setSearchTerm('')
               setSelectedEmployee('all')
+              setShowConflictsOnly(false)
             }}
           >
             Filter zurücksetzen
@@ -319,6 +368,7 @@ export function ManageContent({
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
             isAdmin={isAdmin}
+            conflictDates={conflictDates}
           />
         </TabsContent>
       </Tabs>
