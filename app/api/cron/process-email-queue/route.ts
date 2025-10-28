@@ -53,7 +53,9 @@ export async function GET(request: NextRequest) {
     // Process each email
     for (const email of pendingEmails) {
       try {
-        // Mark as processing
+        console.log(`[Email Queue] Processing email ${email.id} (attempt ${email.attempts + 1}/3)`)
+
+        // Mark as processing (prevents duplicate sends if cron runs multiple times)
         await supabase
           .from('email_queue')
           .update({
@@ -158,16 +160,28 @@ export async function GET(request: NextRequest) {
 
           console.log(`[Email Queue] Email ${email.id} marked as failed after ${newAttempts} attempts`)
         } else {
-          // Reset to pending for retry
-          await supabase
+          // Reset to pending for retry, but ONLY if not already sent
+          // This prevents duplicate sends if email was sent but logging failed
+          const { data: currentEmail } = await supabase
             .from('email_queue')
-            .update({
-              status: 'pending',
-              error_message: errorMessage
-            })
+            .select('sent_at, status')
             .eq('id', email.id)
+            .single()
 
-          console.log(`[Email Queue] Email ${email.id} will be retried (attempt ${newAttempts}/3)`)
+          // Only reset to pending if email was definitely NOT sent
+          if (!currentEmail?.sent_at && currentEmail?.status !== 'sent') {
+            await supabase
+              .from('email_queue')
+              .update({
+                status: 'pending',
+                error_message: errorMessage
+              })
+              .eq('id', email.id)
+
+            console.log(`[Email Queue] Email ${email.id} will be retried (attempt ${newAttempts}/3)`)
+          } else {
+            console.log(`[Email Queue] Email ${email.id} was already sent, not retrying`)
+          }
         }
 
         results.failed++

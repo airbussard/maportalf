@@ -37,9 +37,16 @@ interface TicketEmailOptions {
  * Send ticket creation email
  */
 export async function sendTicketEmail(options: TicketEmailOptions): Promise<boolean> {
+  let emailSent = false
+
   try {
+    console.log('[Ticket Email] Starting send process for ticket', options.ticketNumber)
+    console.log('[Ticket Email] Recipient:', options.to)
+    console.log('[Ticket Email] Attachments:', options.attachments?.length || 0)
+
     // Create transporter
     const transporter = nodemailer.createTransport(SMTP_CONFIG)
+    console.log('[Ticket Email] Transporter created')
 
     // Format ticket number with leading zeros
     const formattedTicketNumber = String(options.ticketNumber).padStart(6, '0')
@@ -50,6 +57,8 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
 
     // Create HTML content with signature
     const htmlContent = generateHtmlContent(options, formattedTicketNumber)
+
+    console.log('[Ticket Email] Content generated, sending via SMTP...')
 
     // Send email
     const info = await transporter.sendMail({
@@ -65,11 +74,26 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
       }
     })
 
-    console.log('[Ticket Email] Sent successfully:', info.messageId)
+    emailSent = true // Mark as sent BEFORE any other operations
+    console.log('[Ticket Email] ✅ Sent successfully:', info.messageId)
+    console.log('[Ticket Email] Response:', info.response)
+
     return true
 
   } catch (error) {
-    console.error('[Ticket Email] Failed to send:', error)
+    console.error('[Ticket Email] ❌ Failed to send:', error)
+    console.error('[Ticket Email] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      emailSent // Log if email was sent before error occurred
+    })
+
+    // If email was sent but subsequent operation failed, still return true
+    if (emailSent) {
+      console.warn('[Ticket Email] ⚠️ Email was sent but post-send operation failed')
+      return true
+    }
+
     return false
   }
 }
