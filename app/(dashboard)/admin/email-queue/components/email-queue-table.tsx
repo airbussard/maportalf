@@ -15,7 +15,7 @@ interface EmailQueueItem {
   recipient_email: string
   subject: string
   content: string
-  status: 'pending' | 'sending' | 'sent' | 'failed'
+  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled'
   attempts: number
   max_attempts: number
   last_attempt_at: string | null
@@ -46,12 +46,14 @@ export function EmailQueueTable({ emails }: EmailQueueTableProps) {
     switch (status) {
       case 'pending':
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Wartend</Badge>
-      case 'sending':
+      case 'processing':
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Wird gesendet</Badge>
       case 'sent':
         return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Gesendet</Badge>
       case 'failed':
         return <Badge variant="secondary" className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" /> Fehlgeschlagen</Badge>
+      case 'cancelled':
+        return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Abgebrochen</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }

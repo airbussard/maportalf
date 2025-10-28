@@ -284,9 +284,12 @@ export async function createTicket(formData: FormData) {
       await supabase
         .from('email_queue')
         .insert({
+          type: 'ticket',
+          recipient: recipient_email,
           ticket_id: ticket.id,
           recipient_email,
           subject,
+          body: description,
           content: description,
           status: 'pending'
         })

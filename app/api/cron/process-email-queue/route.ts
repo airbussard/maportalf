@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
     // Process each email
     for (const email of pendingEmails) {
       try {
-        // Mark as sending
+        // Mark as processing
         await supabase
           .from('email_queue')
           .update({
-            status: 'sending',
+            status: 'processing',
             last_attempt_at: new Date().toISOString(),
             attempts: email.attempts + 1
           })
