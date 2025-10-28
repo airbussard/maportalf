@@ -48,15 +48,29 @@ export default function NewTicketPage() {
     setLoading(true)
     setError(null)
 
-    const result = await createTicket({
-      ...formData,
-      attachments
-    })
+    try {
+      // Create FormData for file upload
+      const submitData = new FormData()
+      submitData.append('subject', formData.subject)
+      submitData.append('description', formData.description)
+      submitData.append('priority', formData.priority)
+      submitData.append('recipient_email', formData.recipient_email)
 
-    if (result.success && result.data) {
-      router.push(`/tickets/${result.data.id}`)
-    } else {
-      setError(result.error || 'Fehler beim Erstellen des Tickets')
+      // Add attachments
+      attachments.forEach(file => {
+        submitData.append('attachments', file)
+      })
+
+      const result = await createTicket(submitData)
+
+      if (result.success && result.data) {
+        router.push(`/tickets/${result.data.id}`)
+      } else {
+        setError(result.error || 'Fehler beim Erstellen des Tickets')
+        setLoading(false)
+      }
+    } catch (err) {
+      setError('Ein unerwarteter Fehler ist aufgetreten')
       setLoading(false)
     }
   }

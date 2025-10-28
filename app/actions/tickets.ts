@@ -160,20 +160,25 @@ export async function getTicket(id: string) {
   }
 }
 
-export async function createTicket(data: {
-  subject: string
-  description: string
-  priority: string
-  recipient_email: string
-  tagIds?: string[]
-  attachments?: File[]
-}) {
+export async function createTicket(formData: FormData) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Extract form data
+    const subject = formData.get('subject') as string
+    const description = formData.get('description') as string
+    const priority = formData.get('priority') as string
+    const recipient_email = formData.get('recipient_email') as string
+    const attachmentFiles = formData.getAll('attachments') as File[]
+
+    // Validate required fields
+    if (!subject || !description || !recipient_email) {
+      return { success: false, error: 'Pflichtfelder fehlen' }
     }
 
     // Get user profile for email
@@ -191,11 +196,11 @@ export async function createTicket(data: {
     const { data: ticket, error } = await supabase
       .from('tickets')
       .insert({
-        subject: data.subject,
-        description: data.description,
-        priority: data.priority,
+        subject,
+        description,
+        priority,
         created_by: user.id,
-        created_from_email: data.recipient_email,
+        created_from_email: recipient_email,
         status: 'open'
       })
       .select()
@@ -209,8 +214,10 @@ export async function createTicket(data: {
     // Handle file uploads to Supabase Storage
     const uploadedAttachments: Array<{ filename: string; path?: string; content?: Buffer; contentType?: string }> = []
 
-    if (data.attachments && data.attachments.length > 0) {
-      for (const file of data.attachments) {
+    if (attachmentFiles && attachmentFiles.length > 0) {
+      for (const file of attachmentFiles) {
+        // Skip empty entries
+        if (!file || file.size === 0) continue
         try {
           // Convert File to ArrayBuffer then to Buffer
           const arrayBuffer = await file.arrayBuffer()
@@ -261,25 +268,15 @@ export async function createTicket(data: {
       }
     }
 
-    // Add tags if provided
-    if (data.tagIds && data.tagIds.length > 0) {
-      const tagInserts = data.tagIds.map(tagId => ({
-        ticket_id: ticket.id,
-        tag_id: tagId
-      }))
-
-      await supabase
-        .from('ticket_tags')
-        .insert(tagInserts)
-    }
+    // Tags are not supported in FormData version yet (can be added later if needed)
 
     // Send email
     const ticketNumber = ticket.ticket_number || parseInt(ticket.id.split('-')[0], 16) % 1000000
 
     const emailSent = await sendTicketEmail({
-      to: data.recipient_email,
-      subject: data.subject,
-      content: data.description,
+      to: recipient_email,
+      subject: subject,
+      content: description,
       ticketNumber,
       senderName,
       senderEmail: profile?.email || 'info@flighthour.de',
