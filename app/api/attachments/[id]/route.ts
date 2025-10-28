@@ -1,8 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
 
 export async function GET(
   request: NextRequest,
@@ -53,32 +50,29 @@ export async function GET(
       return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 })
     }
 
-    // Read file from disk
-    const localPath = path.join(process.cwd(), 'uploads', attachment.storage_path)
+    // Download file from Supabase Storage
+    console.log('[Attachment Download] Downloading from storage:', attachment.storage_path)
 
-    if (!existsSync(localPath)) {
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('ticket-attachments')
+      .download(attachment.storage_path)
+
+    if (downloadError || !fileData) {
+      console.error('[Attachment Download] Error:', downloadError)
       return NextResponse.json({ error: 'Datei nicht gefunden' }, { status: 404 })
     }
 
-    // Security check: Verify path is within uploads directory
-    const realPath = path.resolve(localPath)
-    const uploadsPath = path.resolve(process.cwd(), 'uploads')
-    if (!realPath.startsWith(uploadsPath)) {
-      return NextResponse.json({ error: 'Ungültiger Dateipfad' }, { status: 403 })
-    }
+    // Convert Blob to Buffer
+    const buffer = Buffer.from(await fileData.arrayBuffer())
 
-    // Read file
-    const fileBuffer = await readFile(localPath)
-
-    // Convert Buffer to Uint8Array for NextResponse
-    const uint8Array = new Uint8Array(fileBuffer)
+    console.log('[Attachment Download] Successfully downloaded:', attachment.original_filename, buffer.length, 'bytes')
 
     // Return file with appropriate headers
-    return new NextResponse(uint8Array, {
+    return new NextResponse(buffer, {
       headers: {
         'Content-Type': attachment.mime_type,
         'Content-Disposition': `attachment; filename="${attachment.original_filename}"`,
-        'Content-Length': attachment.size_bytes.toString(),
+        'Content-Length': buffer.length.toString(),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
