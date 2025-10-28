@@ -19,13 +19,28 @@ export default function NewTicketPage() {
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
-    priority: 'medium'
+    priority: 'medium',
+    recipient_email: ''
   })
+  const [attachments, setAttachments] = useState<File[]>([])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    // Validate file size (max 25MB per file)
+    const validFiles = files.filter(file => {
+      if (file.size > 25 * 1024 * 1024) {
+        setError(`Datei "${file.name}" ist zu groß (max. 25MB)`)
+        return false
+      }
+      return true
+    })
+    setAttachments(validFiles)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.subject.trim() || !formData.description.trim()) {
+    if (!formData.subject.trim() || !formData.description.trim() || !formData.recipient_email.trim()) {
       setError('Bitte füllen Sie alle Pflichtfelder aus')
       return
     }
@@ -33,7 +48,10 @@ export default function NewTicketPage() {
     setLoading(true)
     setError(null)
 
-    const result = await createTicket(formData)
+    const result = await createTicket({
+      ...formData,
+      attachments
+    })
 
     if (result.success && result.data) {
       router.push(`/tickets/${result.data.id}`)
@@ -75,6 +93,24 @@ export default function NewTicketPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipient_email">
+                E-Mail Empfänger <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="recipient_email"
+                type="email"
+                value={formData.recipient_email}
+                onChange={(e) => setFormData({ ...formData, recipient_email: e.target.value })}
+                placeholder="z.B. kunde@example.com"
+                disabled={loading}
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Die E-Mail wird an diese Adresse gesendet und ein Ticket erstellt
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="subject">
                 Betreff <span className="text-red-500">*</span>
@@ -121,6 +157,26 @@ export default function NewTicketPage() {
                   <SelectItem value="urgent">Dringend</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="attachments">Anhänge</Label>
+              <Input
+                id="attachments"
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                disabled={loading}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip"
+              />
+              <p className="text-sm text-muted-foreground">
+                Max. 25 MB pro Datei. Erlaubte Formate: Bilder, PDF, Office-Dokumente, Text, ZIP
+              </p>
+              {attachments.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {attachments.length} Datei(en) ausgewählt: {attachments.map(f => f.name).join(', ')}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 pt-4">

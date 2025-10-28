@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { Ticket, TicketMessage, TicketFilters, Tag } from '@/lib/types/ticket'
+import { sendTicketEmail } from '@/lib/email/ticket-mailer'
 
 export async function getTickets(filters: TicketFilters = {}) {
   try {
@@ -163,7 +164,9 @@ export async function createTicket(data: {
   subject: string
   description: string
   priority: string
+  recipient_email: string
   tagIds?: string[]
+  attachments?: File[]
 }) {
   try {
     const supabase = await createClient()
@@ -173,6 +176,17 @@ export async function createTicket(data: {
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
+    // Get user profile for email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', user.id)
+      .single()
+
+    const senderName = profile
+      ? `${profile.first_name} ${profile.last_name}`.trim() || profile.email
+      : 'FLIGHTHOUR Team'
+
     // Create ticket
     const { data: ticket, error } = await supabase
       .from('tickets')
@@ -181,6 +195,7 @@ export async function createTicket(data: {
         description: data.description,
         priority: data.priority,
         created_by: user.id,
+        created_from_email: data.recipient_email,
         status: 'open'
       })
       .select()
@@ -189,6 +204,61 @@ export async function createTicket(data: {
     if (error || !ticket) {
       console.error('Create ticket error:', error)
       return { success: false, error: 'Fehler beim Erstellen des Tickets' }
+    }
+
+    // Handle file uploads to Supabase Storage
+    const uploadedAttachments: Array<{ filename: string; path?: string; content?: Buffer; contentType?: string }> = []
+
+    if (data.attachments && data.attachments.length > 0) {
+      for (const file of data.attachments) {
+        try {
+          // Convert File to ArrayBuffer then to Buffer
+          const arrayBuffer = await file.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+
+          // Upload to Supabase Storage
+          const fileName = `${ticket.id}/${Date.now()}_${file.name}`
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('ticket-attachments')
+            .upload(fileName, buffer, {
+              contentType: file.type,
+              upsert: false
+            })
+
+          if (uploadError) {
+            console.error('File upload error:', uploadError)
+            continue
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('ticket-attachments')
+            .getPublicUrl(fileName)
+
+          // Save attachment metadata to database
+          await supabase
+            .from('ticket_attachments')
+            .insert({
+              ticket_id: ticket.id,
+              message_id: null,
+              filename: file.name,
+              original_filename: file.name,
+              mime_type: file.type,
+              size_bytes: file.size,
+              storage_path: fileName,
+              uploaded_by: user.id
+            })
+
+          // Add to email attachments with buffer
+          uploadedAttachments.push({
+            filename: file.name,
+            content: buffer,
+            contentType: file.type
+          })
+        } catch (fileError) {
+          console.error('Error processing file:', file.name, fileError)
+        }
+      }
     }
 
     // Add tags if provided
@@ -203,8 +273,26 @@ export async function createTicket(data: {
         .insert(tagInserts)
     }
 
+    // Send email
+    const ticketNumber = ticket.ticket_number || parseInt(ticket.id.split('-')[0], 16) % 1000000
+
+    const emailSent = await sendTicketEmail({
+      to: data.recipient_email,
+      subject: data.subject,
+      content: data.description,
+      ticketNumber,
+      senderName,
+      senderEmail: profile?.email || 'info@flighthour.de',
+      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined
+    })
+
+    if (!emailSent) {
+      console.error('Failed to send ticket email')
+      // Don't fail the whole operation, just log the error
+    }
+
     revalidatePath('/tickets')
-    return { success: true, data: ticket }
+    return { success: true, data: ticket, emailSent }
   } catch (error) {
     console.error('Create ticket error:', error)
     return { success: false, error: 'Ein Fehler ist aufgetreten' }
