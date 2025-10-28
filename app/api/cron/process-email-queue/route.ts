@@ -13,15 +13,6 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
-    const { searchParams } = new URL(request.url)
-    const key = searchParams.get('key')
-    const cronSecret = process.env.CRON_SECRET
-
-    if (!cronSecret || key !== cronSecret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const supabase = createAdminClient()
 
     // Get pending emails (oldest first, limit to 10 per run)

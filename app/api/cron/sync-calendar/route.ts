@@ -23,19 +23,6 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // 1. Verify Cron Secret via query parameter
-    const { searchParams } = new URL(request.url)
-    const key = searchParams.get('key')
-    const cronSecret = process.env.CRON_SECRET || 'geheim123'
-
-    if (key !== cronSecret) {
-      console.warn('[Cron] Unauthorized sync attempt - Invalid key')
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid key' },
-        { status: 401 }
-      )
-    }
-
     console.log('[Cron] Starting scheduled calendar sync...')
 
     // 2. Perform full sync with admin client
