@@ -42,7 +42,18 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
   try {
     console.log('[Ticket Email] Starting send process for ticket', options.ticketNumber)
     console.log('[Ticket Email] Recipient:', options.to)
-    console.log('[Ticket Email] Attachments:', options.attachments?.length || 0)
+    console.log('[Ticket Email] Attachments received:', options.attachments?.length || 0)
+
+    if (options.attachments && options.attachments.length > 0) {
+      options.attachments.forEach((att, index) => {
+        console.log(`[Ticket Email] - Attachment ${index + 1}:`, {
+          filename: att.filename,
+          contentType: att.contentType,
+          hasContent: !!att.content,
+          contentLength: att.content?.length || 0
+        })
+      })
+    }
 
     // Create transporter
     const transporter = nodemailer.createTransport(SMTP_CONFIG)

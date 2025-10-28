@@ -81,28 +81,54 @@ export async function GET(request: NextRequest) {
           parseInt(email.ticket_id.split('-')[0], 16) % 1000000
 
         // Get attachments from ticket_attachments table
-        const { data: attachments } = await supabase
+        console.log('[Email Queue] Looking for attachments for ticket_id:', email.ticket_id)
+
+        const { data: attachments, error: attachmentsError } = await supabase
           .from('ticket_attachments')
           .select('*')
           .eq('ticket_id', email.ticket_id)
           .is('message_id', null) // Only initial ticket attachments
+
+        if (attachmentsError) {
+          console.error('[Email Queue] Error fetching attachments:', attachmentsError)
+        }
+
+        console.log('[Email Queue] Found attachments:', attachments?.length || 0)
+        if (attachments && attachments.length > 0) {
+          console.log('[Email Queue] Attachment details:', attachments.map(a => ({
+            filename: a.original_filename,
+            storage_path: a.storage_path,
+            size: a.size_bytes
+          })))
+        }
 
         // Download attachment files from Supabase Storage for email
         const emailAttachments = []
         if (attachments && attachments.length > 0) {
           for (const att of attachments) {
             try {
-              const { data: fileData } = await supabase.storage
+              console.log('[Email Queue] Downloading attachment from storage:', att.storage_path)
+
+              const { data: fileData, error: downloadError } = await supabase.storage
                 .from('ticket-attachments')
                 .download(att.storage_path)
 
+              if (downloadError) {
+                console.error('[Email Queue] Storage download error:', downloadError)
+                continue
+              }
+
               if (fileData) {
                 const buffer = Buffer.from(await fileData.arrayBuffer())
+                console.log('[Email Queue] Downloaded successfully:', att.original_filename, buffer.length, 'bytes')
+
                 emailAttachments.push({
                   filename: att.original_filename,
                   content: buffer,
                   contentType: att.mime_type
                 })
+              } else {
+                console.error('[Email Queue] No file data returned for:', att.storage_path)
               }
             } catch (downloadError) {
               console.error('[Email Queue] Attachment download failed:', att.filename, downloadError)
@@ -110,6 +136,8 @@ export async function GET(request: NextRequest) {
             }
           }
         }
+
+        console.log('[Email Queue] Total attachments ready for email:', emailAttachments.length)
 
         // Send email
         const emailSent = await sendTicketEmail({
