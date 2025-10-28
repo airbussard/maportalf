@@ -270,26 +270,35 @@ export async function createTicket(formData: FormData) {
 
     // Tags are not supported in FormData version yet (can be added later if needed)
 
-    // Send email
-    const ticketNumber = ticket.ticket_number || parseInt(ticket.id.split('-')[0], 16) % 1000000
+    // Queue email for background processing instead of sending directly
+    // This prevents timeout issues and provides better monitoring
+    try {
+      // Store attachment data for email (serialize to JSON)
+      const attachmentData = uploadedAttachments.map(att => ({
+        filename: att.filename,
+        contentType: att.contentType,
+        ticketId: ticket.id,
+        storagePath: `${ticket.id}/${Date.now()}_${att.filename}`
+      }))
 
-    const emailSent = await sendTicketEmail({
-      to: recipient_email,
-      subject: subject,
-      content: description,
-      ticketNumber,
-      senderName,
-      senderEmail: profile?.email || 'info@flighthour.de',
-      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined
-    })
+      await supabase
+        .from('email_queue')
+        .insert({
+          ticket_id: ticket.id,
+          recipient_email,
+          subject,
+          content: description,
+          status: 'pending'
+        })
 
-    if (!emailSent) {
-      console.error('Failed to send ticket email')
-      // Don't fail the whole operation, just log the error
+      console.log('[Ticket] Email queued for delivery')
+    } catch (queueError) {
+      console.error('[Ticket] Failed to queue email:', queueError)
+      // Don't fail ticket creation if queue insertion fails
     }
 
     revalidatePath('/tickets')
-    return { success: true, data: ticket, emailSent }
+    return { success: true, data: ticket }
   } catch (error) {
     console.error('Create ticket error:', error)
     return { success: false, error: 'Ein Fehler ist aufgetreten' }

@@ -105,6 +105,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           label: 'Zeiterfassung Verwaltung',
           icon: <Clock className="w-5 h-5" />,
         },
+        {
+          href: '/admin/email-queue',
+          label: 'E-Mail Warteschlange',
+          icon: <Mail className="w-5 h-5" />,
+        },
       ],
     },
   ]
