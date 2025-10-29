@@ -471,6 +471,7 @@ async function logEventDistribution(supabase: any): Promise<void> {
       .from('calendar_events')
       .select('start_time, status, event_type')
       .order('start_time', { ascending: true })
+      .limit(10000) // Override Supabase default limit of 1000
 
     if (error) {
       console.error('[Debug] Failed to fetch events:', error)
