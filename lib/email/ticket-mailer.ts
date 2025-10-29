@@ -4,21 +4,7 @@
  */
 
 import nodemailer from 'nodemailer'
-
-// IONOS SMTP Configuration
-const SMTP_CONFIG = {
-  host: 'smtp.ionos.de',
-  port: 465,
-  secure: true, // SSL
-  auth: {
-    user: 'info@flighthour.de',
-    pass: 'centr0@LL3'
-  },
-  // Increase timeouts for large attachments
-  connectionTimeout: 300000,  // 5 minutes (default: 2 minutes)
-  greetingTimeout: 300000,    // 5 minutes
-  socketTimeout: 300000       // 5 minutes
-}
+import { createAdminClient } from '@/lib/supabase/admin'
 
 interface EmailAttachment {
   filename: string
@@ -48,6 +34,21 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
     console.log('[Ticket Email] Recipient:', options.to)
     console.log('[Ticket Email] Attachments received:', options.attachments?.length || 0)
 
+    // Get SMTP settings from Supabase (same as PHP system)
+    const supabase = createAdminClient()
+    const { data: emailSettings, error: settingsError } = await supabase
+      .from('email_settings')
+      .select('*')
+      .eq('is_active', true)
+      .single()
+
+    if (settingsError || !emailSettings) {
+      console.error('[Ticket Email] Failed to load email settings:', settingsError)
+      throw new Error('Email settings not configured')
+    }
+
+    console.log('[Ticket Email] Using SMTP:', emailSettings.smtp_host, ':', emailSettings.smtp_port)
+
     if (options.attachments && options.attachments.length > 0) {
       options.attachments.forEach((att, index) => {
         console.log(`[Ticket Email] - Attachment ${index + 1}:`, {
@@ -59,9 +60,21 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
       })
     }
 
-    // Create transporter
-    const transporter = nodemailer.createTransport(SMTP_CONFIG)
-    console.log('[Ticket Email] Transporter created')
+    // Create transporter with settings from database
+    const transporter = nodemailer.createTransport({
+      host: emailSettings.smtp_host,
+      port: emailSettings.smtp_port,
+      secure: emailSettings.smtp_port === 465, // SSL for port 465
+      auth: {
+        user: emailSettings.smtp_username,
+        pass: emailSettings.smtp_password
+      },
+      // Increase timeouts for large attachments
+      connectionTimeout: 300000,  // 5 minutes
+      greetingTimeout: 300000,
+      socketTimeout: 300000
+    })
+    console.log('[Ticket Email] Transporter created with credentials from database')
 
     // Format ticket number with leading zeros
     const formattedTicketNumber = String(options.ticketNumber).padStart(6, '0')
