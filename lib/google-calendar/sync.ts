@@ -326,12 +326,17 @@ export async function exportLocalEventsToGoogle(
 
     for (const event of unsyncedEvents || []) {
       try {
-        // Create event in Google Calendar
+        // Create event in Google Calendar with all fields (including FI-event fields)
         const googleEvent = await createGoogleCalendarEvent({
+          event_type: event.event_type,
           customer_first_name: event.customer_first_name,
           customer_last_name: event.customer_last_name,
           customer_phone: event.customer_phone,
           customer_email: event.customer_email,
+          assigned_instructor_id: event.assigned_instructor_id,
+          assigned_instructor_name: event.assigned_instructor_name,
+          assigned_instructor_number: event.assigned_instructor_number,
+          is_all_day: event.is_all_day,
           start_time: event.start_time,
           end_time: event.end_time,
           duration: event.duration,
