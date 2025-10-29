@@ -407,42 +407,42 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                     <div className="hidden sm:block text-xs text-muted-foreground">
                       {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
                     </div>
-                    {/* FI Names when checkbox is enabled */}
-                    {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
-                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                        {dayEvents
-                          .filter(e => e.event_type === 'fi_assignment')
-                          .map(e => (
-                            <div
-                              key={e.id}
-                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
-                              title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
-                            >
-                              {e.assigned_instructor_name}
-                              {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
-                            </div>
-                          ))
-                        }
-                      </div>
-                    )}
-                    {/* Blocker when checkbox is enabled */}
-                    {showBlockers && dayEvents.some(e => e.event_type === 'blocker') && (
-                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                        {dayEvents
-                          .filter(e => e.event_type === 'blocker')
-                          .map(e => (
-                            <div
-                              key={e.id}
-                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
-                              title={e.title || e.customer_first_name || 'Blocker'}
-                            >
-                              {e.title || e.customer_first_name || 'Blocker'}
-                            </div>
-                          ))
-                        }
-                      </div>
-                    )}
                   </>
+                )}
+                {/* FI Names when checkbox is enabled - always show if present */}
+                {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
+                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                    {dayEvents
+                      .filter(e => e.event_type === 'fi_assignment')
+                      .map(e => (
+                        <div
+                          key={e.id}
+                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
+                          title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
+                        >
+                          {e.assigned_instructor_name}
+                          {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+                {/* Blocker when checkbox is enabled - always show if present */}
+                {showBlockers && dayEvents.some(e => e.event_type === 'blocker') && (
+                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                    {dayEvents
+                      .filter(e => e.event_type === 'blocker')
+                      .map(e => (
+                        <div
+                          key={e.id}
+                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
+                          title={e.title || e.customer_first_name || 'Blocker'}
+                        >
+                          {e.title || e.customer_first_name || 'Blocker'}
+                        </div>
+                      ))
+                    }
+                  </div>
                 )}
               </div>
             )

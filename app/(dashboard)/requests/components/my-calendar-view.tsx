@@ -50,9 +50,9 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     loadMonth(selectedDate.getFullYear(), selectedDate.getMonth())
   }, [])
 
-  // Group events by date (exclude cancelled events, show all FI events)
+  // Group events by date (exclude cancelled events, show all event types)
   const eventsByDate = events
-    .filter(event => event.status !== 'cancelled' && event.event_type === 'fi_assignment')
+    .filter(event => event.status !== 'cancelled')
     .reduce((acc, event) => {
       const date = new Date(event.start_time).toDateString()
       if (!acc[date]) {
@@ -62,7 +62,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
       return acc
     }, {} as Record<string, CalendarEvent[]>)
 
-  // Get events for current month (only FI events)
+  // Get events for current month (all event types)
   const currentMonth = selectedDate.getMonth()
   const currentYear = selectedDate.getFullYear()
   const eventsThisMonth = events.filter(event => {
@@ -70,8 +70,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     return (
       eventDate.getMonth() === currentMonth &&
       eventDate.getFullYear() === currentYear &&
-      event.status !== 'cancelled' &&
-      event.event_type === 'fi_assignment'
+      event.status !== 'cancelled'
     )
   })
 
@@ -160,7 +159,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
             Mein Kalender
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Übersicht Ihrer FI-Einsätze (nur lesend)
+            Übersicht aller Termine mit Ihren FI-Einsätzen (nur lesend)
           </p>
         </div>
       </div>
@@ -240,8 +239,12 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
             const isToday = dateStr === new Date().toDateString()
             const isSelected = selectedDay && dateStr === selectedDay.toDateString()
 
-            // Check if user has FI events on this day
-            const userEventsOnDay = dayEvents.filter(e => e.assigned_instructor_id === userId)
+            // Only count booking events (exclude FI events and blockers from count)
+            const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
+
+            // Check if user has FI events on this day (only check FI events)
+            const fiEventsOnDay = dayEvents.filter(e => e.event_type === 'fi_assignment')
+            const userEventsOnDay = fiEventsOnDay.filter(e => e.assigned_instructor_id === userId)
             const hasUserEvents = userEventsOnDay.length > 0
 
             return (
@@ -259,7 +262,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
                 <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
-                {dayEvents.length > 0 && (
+                {bookingEvents.length > 0 && (
                   <>
                     {/* Mobile: Show dot indicator */}
                     <div className="sm:hidden flex justify-center">
@@ -267,20 +270,20 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
                     </div>
                     {/* Desktop: Show event count */}
                     <div className="hidden sm:block text-xs text-muted-foreground">
-                      {dayEvents.length} {dayEvents.length === 1 ? 'Event' : 'Events'}
+                      {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
                     </div>
-                    {/* Show user's name ONLY on days they have FI events */}
-                    {hasUserEvents && (
-                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                        <div
-                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
-                          title={userName}
-                        >
-                          {userName}
-                        </div>
-                      </div>
-                    )}
                   </>
+                )}
+                {/* Show user's name ONLY on days they have FI events */}
+                {hasUserEvents && (
+                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                    <div
+                      className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
+                      title={userName}
+                    >
+                      {userName}
+                    </div>
+                  </div>
                 )}
               </div>
             )
@@ -303,7 +306,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
               </>
             ) : (
               <>
-                <span className="hidden sm:inline">FI-Events diesen Monat ({eventsThisMonth.length})</span>
+                <span className="hidden sm:inline">Events diesen Monat ({eventsThisMonth.length})</span>
                 <span className="sm:hidden">Events ({eventsThisMonth.length})</span>
               </>
             )}
@@ -318,7 +321,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
         {displayedEvents.length === 0 ? (
           <Card className="p-6 sm:p-8 text-center text-muted-foreground">
             <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-            <p className="text-sm sm:text-base">{selectedDay ? 'Keine FI-Events an diesem Tag' : 'Keine FI-Events in diesem Monat'}</p>
+            <p className="text-sm sm:text-base">{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
           </Card>
         ) : (
           <div className="space-y-2">
