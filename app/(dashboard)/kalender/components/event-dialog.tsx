@@ -54,7 +54,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     is_all_day: false,
     actual_work_start_time: '',
     actual_work_end_time: '',
-    blocker_title: ''
+    blocker_title: 'Block'
   })
 
   // Separate state for all-day event date selection
@@ -114,7 +114,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         actual_work_start_time: '',
         actual_work_end_time: '',
         is_all_day: false,
-        blocker_title: ''
+        blocker_title: 'Block'
       })
     }
   }, [event, open])
@@ -297,7 +297,14 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </Label>
             <RadioGroup
               value={formData.event_type}
-              onValueChange={(value) => setFormData({...formData, event_type: value as 'booking' | 'fi_assignment' | 'blocker'})}
+              onValueChange={(value) => {
+                const newType = value as 'booking' | 'fi_assignment' | 'blocker'
+                setFormData({
+                  ...formData,
+                  event_type: newType,
+                  blocker_title: newType === 'blocker' && !formData.blocker_title ? 'Block' : formData.blocker_title
+                })
+              }}
               disabled={isReadOnly}
             >
               <div className="flex items-center space-x-2">

@@ -119,7 +119,13 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
     if (!eventData.assigned_instructor_name) {
       throw new Error('Instructor name is required')
     }
+  } else if (eventData.event_type === 'blocker') {
+    // Blocker: customer_first_name contains the title
+    if (!eventData.customer_first_name) {
+      throw new Error('Blocker title is required')
+    }
   } else {
+    // Regular booking
     if (!eventData.customer_first_name || !eventData.customer_last_name) {
       throw new Error('Customer name is required')
     }
