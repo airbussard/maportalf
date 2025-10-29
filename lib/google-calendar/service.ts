@@ -167,16 +167,29 @@ export async function createGoogleCalendarEvent(
   const accessToken = await getAccessToken()
 
   // Ensure dates are in correct ISO 8601 format
-  const startDate = new Date(eventData.start_time)
-  const endDate = new Date(eventData.end_time)
+  let startDate = new Date(eventData.start_time)
+  let endDate = new Date(eventData.end_time)
 
   // Validate dates
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     throw new Error('Invalid date format')
   }
 
+  // For FI events, always use 08:00-09:00 in Google Calendar
+  const isFIEvent = eventData.event_type === 'fi_assignment'
+  if (isFIEvent) {
+    const originalStart = new Date(startDate)
+    const originalEnd = new Date(endDate)
+
+    // Set to 08:00-09:00 on the event's date
+    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 8, 0, 0)
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
+  }
+
   const event = {
-    summary: `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+    summary: isFIEvent
+      ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
+      : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {
@@ -219,16 +232,29 @@ export async function updateGoogleCalendarEvent(
   const accessToken = await getAccessToken()
 
   // Ensure dates are in correct ISO 8601 format
-  const startDate = new Date(eventData.start_time)
-  const endDate = new Date(eventData.end_time)
+  let startDate = new Date(eventData.start_time)
+  let endDate = new Date(eventData.end_time)
 
   // Validate dates
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     throw new Error('Invalid date format')
   }
 
+  // For FI events, always use 08:00-09:00 in Google Calendar
+  const isFIEvent = eventData.event_type === 'fi_assignment'
+  if (isFIEvent) {
+    const originalStart = new Date(startDate)
+    const originalEnd = new Date(endDate)
+
+    // Set to 08:00-09:00 on the event's date
+    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 8, 0, 0)
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
+  }
+
   const event = {
-    summary: `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+    summary: isFIEvent
+      ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
+      : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {
@@ -287,6 +313,20 @@ export async function deleteGoogleCalendarEvent(eventId: string): Promise<void> 
  */
 function formatEventDescription(eventData: CalendarEventData): string {
   const parts = []
+
+  // For FI events with specific times (not all-day), include actual times
+  if (eventData.event_type === 'fi_assignment' && !eventData.is_all_day) {
+    const startDate = new Date(eventData.start_time)
+    const endDate = new Date(eventData.end_time)
+    parts.push(`Tatsächliche Zeiten: ${startDate.toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })} - ${endDate.toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`)
+    parts.push('') // Empty line for readability
+  }
 
   if (eventData.customer_phone) {
     parts.push(`Telefon: ${eventData.customer_phone}`)

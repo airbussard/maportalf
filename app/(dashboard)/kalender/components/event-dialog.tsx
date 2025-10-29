@@ -399,8 +399,32 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </Label>
           </div>
 
-          {/* Time fields only if not all day */}
-          {!formData.is_all_day && (
+          {/* Date picker for all-day events */}
+          {formData.is_all_day ? (
+            <div>
+              <Label htmlFor="event_date" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Datum *
+              </Label>
+              <Input
+                id="event_date"
+                type="date"
+                value={formData.start_time ? formData.start_time.split('T')[0] : ''}
+                onChange={(e) => {
+                  // Set start and end to the selected date with dummy times
+                  const dateStr = e.target.value
+                  setFormData({
+                    ...formData,
+                    start_time: `${dateStr}T08:00`,
+                    end_time: `${dateStr}T09:00`
+                  })
+                }}
+                required
+                disabled={isReadOnly}
+              />
+            </div>
+          ) : (
+            /* Time fields for non-all-day events */
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="start_time" className="flex items-center gap-2">
