@@ -51,15 +51,27 @@ export async function syncGoogleCalendarToDatabase(
 
     console.log(`[Sync] Fetched ${events.length} events from Google Calendar`)
 
-    // Process each Google event
+    // Process each Google event with progress logging
+    let processed = 0
+    const totalEvents = events.length
+    console.log(`[Sync] Starting to process ${totalEvents} events...`)
+
     for (const googleEvent of events) {
       try {
         await processGoogleEvent(googleEvent, supabase, result)
+        processed++
+
+        // Log progress every 100 events
+        if (processed % 100 === 0) {
+          console.log(`[Sync] Progress: ${processed}/${totalEvents} events processed (${Math.round(processed/totalEvents*100)}%)`)
+        }
       } catch (error) {
         console.error(`[Sync] Error processing event ${googleEvent.id}:`, error)
         result.errors.push(`Event ${googleEvent.id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
+
+    console.log(`[Sync] ✅ Processing complete: ${processed}/${totalEvents} events`)
 
     // Store sync token for next incremental sync
     result.syncToken = nextSyncToken
