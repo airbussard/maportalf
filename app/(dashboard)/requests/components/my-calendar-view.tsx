@@ -74,20 +74,13 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     )
   })
 
-  // Filter events by selected day (if any) - only show user's FI events
+  // Filter events by selected day (if any) - show all events (read-only view)
   const displayedEvents = (selectedDay
     ? eventsThisMonth.filter(event => {
         const eventDate = new Date(event.start_time)
-        const isRightDay = eventDate.toDateString() === selectedDay.toDateString()
-        // Only show FI events where user is assigned (by ID or name)
-        const isUserFIEvent = event.event_type === 'fi_assignment' &&
-          (event.assigned_instructor_id === userId || event.assigned_instructor_name === userName)
-        return isRightDay && isUserFIEvent
+        return eventDate.toDateString() === selectedDay.toDateString()
       })
-    : eventsThisMonth.filter(e =>
-        e.event_type === 'fi_assignment' &&
-        (e.assigned_instructor_id === userId || e.assigned_instructor_name === userName)
-      )
+    : eventsThisMonth
   ).sort((a, b) => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
@@ -166,7 +159,7 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
             Mein Kalender
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Übersicht aller Termine mit Ihren FI-Einsätzen (nur lesend)
+            Übersicht aller Termine (nur lesend)
           </p>
         </div>
       </div>
@@ -249,31 +242,6 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
             // Only count booking events (exclude FI events and blockers from count)
             const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
 
-            // Check if user has FI events on this day (only check FI events)
-            const fiEventsOnDay = dayEvents.filter(e => e.event_type === 'fi_assignment')
-            const userEventsOnDay = fiEventsOnDay.filter(e =>
-              e.assigned_instructor_id === userId ||
-              e.assigned_instructor_name === userName
-            )
-            const hasUserEvents = userEventsOnDay.length > 0
-
-            // DEBUG: Log FI events on first day with events
-            if (day === 1 && fiEventsOnDay.length > 0) {
-              console.log('🔍 Requests Calendar DEBUG:', {
-                userId,
-                userName,
-                fiEventsCount: fiEventsOnDay.length,
-                userEventsCount: userEventsOnDay.length,
-                fiEvents: fiEventsOnDay.map(e => ({
-                  id: e.id,
-                  assigned_instructor_id: e.assigned_instructor_id,
-                  assigned_instructor_name: e.assigned_instructor_name,
-                  matchesById: e.assigned_instructor_id === userId,
-                  matchesByName: e.assigned_instructor_name === userName
-                }))
-              })
-            }
-
             return (
               <div
                 key={day}
@@ -289,28 +257,53 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
                 <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
+                {/* FI Names - always show if present (no checkbox) */}
+                {dayEvents.some(e => e.event_type === 'fi_assignment') && (
+                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                    {dayEvents
+                      .filter(e => e.event_type === 'fi_assignment')
+                      .map(e => (
+                        <div
+                          key={e.id}
+                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
+                          title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
+                        >
+                          {e.assigned_instructor_name}
+                          {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+                {/* Blocker - always show if present (no checkbox) */}
+                {dayEvents.some(e => e.event_type === 'blocker') && (
+                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                    {dayEvents
+                      .filter(e => e.event_type === 'blocker')
+                      .map(e => (
+                        <div
+                          key={e.id}
+                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
+                          title={e.title || e.customer_first_name || 'Blocker'}
+                        >
+                          {e.title || e.customer_first_name || 'Blocker'}
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+                {/* Event count displayed last - after FI names and blockers */}
                 {bookingEvents.length > 0 && (
                   <>
                     {/* Mobile: Show dot indicator */}
-                    <div className="sm:hidden flex justify-center">
+                    <div className="sm:hidden flex justify-center mt-1">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
                     </div>
                     {/* Desktop: Show event count */}
-                    <div className="hidden sm:block text-xs text-muted-foreground">
+                    <div className="hidden sm:block text-xs text-muted-foreground mt-1">
                       {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
                     </div>
                   </>
-                )}
-                {/* Show user's name ONLY on days they have FI events */}
-                {hasUserEvents && (
-                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                    <div
-                      className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
-                      title={userName}
-                    >
-                      {userName}
-                    </div>
-                  </div>
                 )}
               </div>
             )
