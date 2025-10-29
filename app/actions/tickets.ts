@@ -552,7 +552,7 @@ export async function bulkDeleteTickets(ticketIds: string[]) {
 
 /**
  * Get count of open tickets (for dashboard widget)
- * Returns count of tickets that are not closed
+ * Returns count of tickets with status 'open' or 'in_progress' that are not spam
  */
 export async function getOpenTicketsCount() {
   try {
@@ -561,7 +561,8 @@ export async function getOpenTicketsCount() {
     const { count, error } = await supabase
       .from('tickets')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'open')
+      .in('status', ['open', 'in_progress'])
+      .or('is_spam.is.null,is_spam.eq.false')
 
     if (error) {
       console.error('Failed to get open tickets count:', error)
