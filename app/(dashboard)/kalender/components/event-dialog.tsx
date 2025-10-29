@@ -54,10 +54,16 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     is_all_day: false
   })
 
+  // Separate state for all-day event date selection
+  const [selectedDate, setSelectedDate] = useState<string>('')
+
   // Reset form when event changes
   useEffect(() => {
     if (event) {
       // Viewing/Editing existing event
+      const startDate = event.start_time ? new Date(event.start_time).toISOString().slice(0, 10) : ''
+      setSelectedDate(startDate)
+
       setFormData({
         event_type: event.event_type || 'booking',
         customer_first_name: event.customer_first_name || '',
@@ -80,6 +86,9 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
       const now = new Date()
       const startTime = new Date(now.getTime() + 60 * 60 * 1000) // +1 hour
       const endTime = new Date(startTime.getTime() + 90 * 60 * 1000) // +90 minutes
+
+      // Initialize selectedDate with today
+      setSelectedDate(now.toISOString().slice(0, 10))
 
       setFormData({
         event_type: 'booking',
@@ -421,10 +430,11 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               <Input
                 id="event_date"
                 type="date"
-                value={formData.start_time ? formData.start_time.split('T')[0] : ''}
+                value={selectedDate}
                 onChange={(e) => {
-                  // Set start and end to the selected date with dummy times
                   const dateStr = e.target.value
+                  setSelectedDate(dateStr)
+                  // Update formData with the selected date
                   setFormData({
                     ...formData,
                     start_time: `${dateStr}T08:00`,

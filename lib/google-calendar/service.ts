@@ -115,6 +115,7 @@ async function getAccessToken(): Promise<string> {
 
 /**
  * List events from Google Calendar
+ * Handles pagination to fetch ALL events (not just first 250)
  */
 export async function listGoogleCalendarEvents(
   timeMin: string,
@@ -122,39 +123,64 @@ export async function listGoogleCalendarEvents(
   syncToken?: string
 ): Promise<{ events: GoogleCalendarEvent[]; nextSyncToken?: string }> {
   const accessToken = await getAccessToken()
+  let allEvents: GoogleCalendarEvent[] = []
+  let pageToken: string | undefined = undefined
+  let pageCount = 0
+  let responseSyncToken: string | undefined = undefined
 
-  const params = new URLSearchParams({
-    maxResults: '250',
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    showDeleted: 'true' // Include deleted events (status: 'cancelled')
-  })
+  // Pagination loop - fetch all pages
+  do {
+    const params = new URLSearchParams({
+      maxResults: '250',
+      singleEvents: 'true',
+      orderBy: 'startTime',
+      showDeleted: 'true' // Include deleted events (status: 'cancelled')
+    })
 
-  if (syncToken) {
-    params.append('syncToken', syncToken)
-  } else {
-    params.append('timeMin', timeMin)
-    params.append('timeMax', timeMax)
-  }
-
-  const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events?${params}`
-
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
+    // Pagination token takes precedence
+    if (pageToken) {
+      params.append('pageToken', pageToken)
+    } else if (syncToken) {
+      params.append('syncToken', syncToken)
+    } else {
+      params.append('timeMin', timeMin)
+      params.append('timeMax', timeMax)
     }
-  })
 
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to list events: ${error}`)
-  }
+    const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events?${params}`
 
-  const data = await response.json()
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Failed to list events: ${error}`)
+    }
+
+    const data = await response.json()
+
+    // Accumulate events from this page
+    const pageEvents = data.items || []
+    allEvents = allEvents.concat(pageEvents)
+    pageCount++
+
+    // Log pagination progress
+    console.log(`[Google API] Fetched page ${pageCount}: ${pageEvents.length} events (total so far: ${allEvents.length})`)
+
+    // Check for next page
+    pageToken = data.nextPageToken
+    responseSyncToken = data.nextSyncToken
+
+  } while (pageToken) // Continue while there are more pages
+
+  console.log(`[Google API] ✅ Pagination complete: ${allEvents.length} total events across ${pageCount} page(s)`)
 
   return {
-    events: data.items || [],
-    nextSyncToken: data.nextSyncToken
+    events: allEvents,
+    nextSyncToken: responseSyncToken
   }
 }
 
@@ -186,10 +212,24 @@ export async function createGoogleCalendarEvent(
     endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
   }
 
+  // Build summary with validation
+  let summary = ''
+  if (isFIEvent) {
+    const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
+    const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
+    summary = `FI: ${instructorName}${instructorNumber}`
+
+    console.log('[Google Calendar CREATE] FI Event:', {
+      instructorName: eventData.assigned_instructor_name,
+      instructorNumber: eventData.assigned_instructor_number,
+      summary
+    })
+  } else {
+    summary = `${eventData.customer_first_name} ${eventData.customer_last_name}`
+  }
+
   const event = {
-    summary: isFIEvent
-      ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
-      : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+    summary,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {
@@ -251,10 +291,25 @@ export async function updateGoogleCalendarEvent(
     endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
   }
 
+  // Build summary with validation
+  let summary = ''
+  if (isFIEvent) {
+    const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
+    const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
+    summary = `FI: ${instructorName}${instructorNumber}`
+
+    console.log('[Google Calendar UPDATE] FI Event:', {
+      eventId,
+      instructorName: eventData.assigned_instructor_name,
+      instructorNumber: eventData.assigned_instructor_number,
+      summary
+    })
+  } else {
+    summary = `${eventData.customer_first_name} ${eventData.customer_last_name}`
+  }
+
   const event = {
-    summary: isFIEvent
-      ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
-      : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+    summary,
     description: formatEventDescription(eventData),
     location: eventData.location || 'FLIGHTHOUR Flugsimulator',
     start: {

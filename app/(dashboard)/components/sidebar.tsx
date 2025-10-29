@@ -14,7 +14,8 @@ import {
   X,
   CalendarClock,
   CalendarCheck,
-  Calendar
+  Calendar,
+  BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -79,6 +80,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/tickets',
           label: 'Tickets',
           icon: <Ticket className="w-5 h-5" />,
+        },
+        {
+          href: '/tickets/stats',
+          label: 'Ticket-Statistiken',
+          icon: <BarChart3 className="w-5 h-5" />,
         },
         {
           href: '/tags',

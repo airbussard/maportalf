@@ -140,6 +140,11 @@ async function processGoogleEvent(
 
   // Skip events without start time or summary
   if (!googleEvent.start || !googleEvent.summary) {
+    console.log(`[Sync] Skipping event ${googleEvent.id}: Missing start time or summary`, {
+      hasStart: !!googleEvent.start,
+      hasSummary: !!googleEvent.summary,
+      summary: googleEvent.summary
+    })
     return
   }
 
@@ -148,13 +153,48 @@ async function processGoogleEvent(
   const endTime = googleEvent.end.dateTime || googleEvent.end.date
 
   if (!startTime || !endTime) {
+    console.log(`[Sync] Skipping event ${googleEvent.id}: Missing start/end time`, {
+      summary: googleEvent.summary,
+      hasStartTime: !!startTime,
+      hasEndTime: !!endTime
+    })
     return
   }
 
-  // Parse customer name from summary
-  const nameParts = googleEvent.summary.split(' ')
-  const firstName = nameParts[0] || 'Unknown'
-  const lastName = nameParts.slice(1).join(' ') || 'Customer'
+  // Detect if this is an FI event
+  const isFIEvent = googleEvent.summary.startsWith('FI:')
+  let eventType: 'fi_assignment' | 'booking' = 'booking'
+  let firstName = ''
+  let lastName = ''
+  let assignedInstructorName = ''
+  let assignedInstructorNumber = null
+
+  if (isFIEvent) {
+    eventType = 'fi_assignment'
+    // Parse "FI: Max Mustermann (123)" or "FI: Max Mustermann"
+    const fiMatch = googleEvent.summary.match(/^FI:\s*(.+?)(?:\s*\((\d+)\))?$/)
+    if (fiMatch) {
+      assignedInstructorName = fiMatch[1].trim()
+      assignedInstructorNumber = fiMatch[2] || null
+    } else {
+      // Fallback: just remove "FI: " prefix
+      assignedInstructorName = googleEvent.summary.replace(/^FI:\s*/, '').trim()
+    }
+    // FI events don't have customer names
+    firstName = ''
+    lastName = ''
+
+    console.log(`[Sync] Detected FI Event:`, {
+      summary: googleEvent.summary,
+      assignedInstructorName,
+      assignedInstructorNumber
+    })
+  } else {
+    // Regular booking event - parse customer name
+    const nameParts = googleEvent.summary.split(' ')
+    firstName = nameParts[0] || 'Unknown'
+    lastName = nameParts.slice(1).join(' ') || 'Customer'
+  }
 
   // Parse additional data from description
   const parsedData = parseGoogleEventDescription(googleEvent.description || '')
@@ -190,12 +230,17 @@ async function processGoogleEvent(
     id: googleEvent.id, // Use Google event ID as primary key (schema uses TEXT)
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
+    event_type: eventType, // 'fi_assignment' or 'booking'
     title: googleEvent.summary,
     description: googleEvent.description || '',
     customer_first_name: firstName,
     customer_last_name: lastName,
     customer_phone: parsedData.customer_phone,
     customer_email: parsedData.customer_email,
+    assigned_instructor_id: null, // We don't have the DB ID from Google
+    assigned_instructor_name: assignedInstructorName || null,
+    assigned_instructor_number: assignedInstructorNumber,
+    is_all_day: !googleEvent.start.dateTime, // dateTime missing means all-day
     start_time: startTime,
     end_time: endTime,
     duration,
@@ -211,6 +256,13 @@ async function processGoogleEvent(
     updated_at: new Date().toISOString()
   }
 
+  // Check if event exists BEFORE upsert (for correct import/update counting)
+  const { data: existingEvent } = await supabase
+    .from('calendar_events')
+    .select('id')
+    .eq('google_event_id', googleEvent.id)
+    .maybeSingle()
+
   // UPSERT: Insert or update on conflict (prevents duplicates)
   const { data, error } = await supabase
     .from('calendar_events')
@@ -221,14 +273,20 @@ async function processGoogleEvent(
     .select()
 
   if (error) {
+    console.error(`[Sync] Database error for event ${googleEvent.id}:`, {
+      summary: googleEvent.summary,
+      error: error.message,
+      eventType,
+      eventData
+    })
     throw new Error(`Database error: ${error.message}`)
   }
 
   // Track whether this was an insert or update
   if (data && data.length > 0) {
-    const isNewRecord = !data[0].id // Simplified check
-    if (isNewRecord) {
+    if (!existingEvent) {
       result.imported++
+      console.log(`[Sync] ✅ IMPORTED new event: ${googleEvent.summary}`)
     } else {
       result.updated++
     }
