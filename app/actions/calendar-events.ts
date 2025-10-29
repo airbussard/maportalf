@@ -325,6 +325,38 @@ export async function deleteCalendarEvent(id: string) {
       throw new Error(`Failed to delete calendar event: ${error.message}`)
     }
 
+    // Reverse sync: If this was a request-generated FI event, withdraw the request
+    if (existingEvent.request_id && existingEvent.event_type === 'fi_assignment') {
+      try {
+        // Get the associated work request
+        const { data: workRequest } = await supabase
+          .from('work_requests')
+          .select('status')
+          .eq('id', existingEvent.request_id)
+          .single()
+
+        // Only withdraw if still approved
+        if (workRequest && workRequest.status === 'approved') {
+          await supabase
+            .from('work_requests')
+            .update({
+              status: 'withdrawn',
+              calendar_event_id: null
+            })
+            .eq('id', existingEvent.request_id)
+
+          console.log(`[Reverse Sync] Auto-withdrew request ${existingEvent.request_id} due to calendar event deletion`)
+
+          // Revalidate request pages
+          revalidatePath('/requests')
+          revalidatePath('/requests/manage')
+        }
+      } catch (reverseError) {
+        console.error('[Reverse Sync] Error auto-withdrawing request:', reverseError)
+        // Don't throw - event deletion succeeded, this is bonus
+      }
+    }
+
     revalidatePath('/kalender')
     revalidatePath('/dashboard')
 

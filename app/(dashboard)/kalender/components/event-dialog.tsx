@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users } from 'lucide-react'
+import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees } from '@/app/actions/calendar-events'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -195,6 +196,17 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               : 'Erstelle ein neues Event. Es wird automatisch mit Google Calendar synchronisiert.'}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Info Banner for request-linked events */}
+        {event?.request_id && event?.event_type === 'fi_assignment' && (
+          <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-sm text-blue-700 dark:text-blue-300">
+              <strong>Request-verknüpft:</strong> Dieses Event wurde automatisch durch einen genehmigten Arbeitstag-Request erstellt.
+              Beim Löschen wird der Request automatisch zurückgezogen.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {/* Event Type Selection */}

@@ -452,7 +452,7 @@ export async function approveWorkRequest(requestId: string): Promise<WorkRequest
       .from('work_requests')
       .select(`
         *,
-        employee:profiles!employee_id(id, first_name, last_name, email)
+        employee:profiles!employee_id(id, first_name, last_name, email, employee_number)
       `)
       .eq('id', requestId)
       .single()
@@ -487,31 +487,39 @@ export async function approveWorkRequest(requestId: string): Promise<WorkRequest
       throw new Error('Fehler beim Genehmigen des Requests')
     }
 
-    // Create calendar event (fixed 8:00-9:00 as in PHP)
+    // Create calendar event as FI assignment (fixed 8:00-9:00 in Google Calendar)
     const requestDate = existingRequest.request_date
 
-    let eventTitle = `${employee.first_name} ${employee.last_name} - Arbeitstag`
-    if (!existingRequest.is_full_day && existingRequest.start_time && existingRequest.end_time) {
-      const start = existingRequest.start_time.slice(0, 5)
-      const end = existingRequest.end_time.slice(0, 5)
-      eventTitle += ` (${start}-${end})`
-    }
+    // FI event title with employee number
+    const eventTitle = `FI: ${employee.first_name} ${employee.last_name}${employee.employee_number ? ` (${employee.employee_number})` : ''}`
 
     const remarks = existingRequest.is_full_day
-      ? 'Ganztägiger Arbeitstag'
-      : `Arbeitstag von ${existingRequest.start_time?.slice(0, 5)} bis ${existingRequest.end_time?.slice(0, 5)}`
+      ? 'Ganztägiger Arbeitstag (genehmigter Request)'
+      : `Arbeitstag von ${existingRequest.start_time?.slice(0, 5)} bis ${existingRequest.end_time?.slice(0, 5)} (genehmigter Request)`
 
     const calendarEventId = `work_request_${requestId}`
 
     const eventData = {
       id: calendarEventId,
       user_id: employee.id,
+      event_type: 'fi_assignment',  // Mark as FI assignment
       title: eventTitle,
       description: existingRequest.reason || 'Genehmigter Arbeitstag',
-      customer_first_name: employee.first_name,
-      customer_last_name: employee.last_name,
-      customer_email: employee.email,
-      customer_phone: '',
+
+      // FI-specific fields
+      assigned_instructor_id: employee.id || null,
+      assigned_instructor_number: employee.employee_number || null,
+      assigned_instructor_name: `${employee.first_name} ${employee.last_name}`,
+      is_all_day: existingRequest.is_full_day,
+      request_id: requestId,  // Link back to work request
+
+      // Empty customer fields (not used for FI events)
+      customer_first_name: '',
+      customer_last_name: '',
+      customer_email: null,
+      customer_phone: null,
+
+      // Fixed times (8:00-9:00) for Google Calendar sync
       start_time: `${requestDate}T08:00:00`,
       end_time: `${requestDate}T09:00:00`,
       duration: 60,
