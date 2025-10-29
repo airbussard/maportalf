@@ -51,6 +51,38 @@ export function MyCalendarView({ userId, userName, userEmployeeNumber }: MyCalen
     loadMonth(selectedDate.getFullYear(), selectedDate.getMonth())
   }, [])
 
+  // Debug logging for FI events filtering
+  useEffect(() => {
+    const fiEvents = events.filter(e => e.event_type === 'fi_assignment' && e.status !== 'cancelled')
+
+    if (fiEvents.length > 0) {
+      console.log('=== REQUESTS CALENDAR DEBUG ===')
+      console.log('Your employee_number:', userEmployeeNumber || 'NULL/UNDEFINED')
+      console.log('Your userId:', userId)
+      console.log('Your userName:', userName)
+      console.log('Total FI Events loaded:', fiEvents.length)
+      console.log('FI Events Details:', fiEvents.map(e => ({
+        id: e.id.slice(0, 8) + '...',
+        date: new Date(e.start_time).toLocaleDateString('de-DE'),
+        instructor_name: e.assigned_instructor_name || 'NULL',
+        instructor_number: e.assigned_instructor_number || 'NULL',
+        instructor_id: e.assigned_instructor_id || 'NULL',
+        matches: {
+          byNumber: e.assigned_instructor_number === userEmployeeNumber,
+          byId: e.assigned_instructor_id === userId,
+          byName: e.assigned_instructor_name === userName
+        }
+      })))
+
+      const matchedEvents = fiEvents.filter(e =>
+        (userEmployeeNumber && e.assigned_instructor_number === userEmployeeNumber) ||
+        e.assigned_instructor_id === userId ||
+        e.assigned_instructor_name === userName
+      )
+      console.log('Matched FI Events (your events):', matchedEvents.length)
+    }
+  }, [events, userId, userName, userEmployeeNumber])
+
   // Group events by date (exclude cancelled events, show all event types)
   const eventsByDate = events
     .filter(event => event.status !== 'cancelled')
@@ -78,12 +110,25 @@ export function MyCalendarView({ userId, userName, userEmployeeNumber }: MyCalen
   // Helper: Check if FI event belongs to current user
   const isUserFIEvent = (event: CalendarEvent) => {
     if (event.event_type !== 'fi_assignment') return false
-    // Match by employee number (primary), fallback to ID or name
-    return (
-      (userEmployeeNumber && event.assigned_instructor_number === userEmployeeNumber) ||
-      event.assigned_instructor_id === userId ||
-      event.assigned_instructor_name === userName
-    )
+
+    // Match by employee number (primary) - trim and case-insensitive
+    if (userEmployeeNumber && event.assigned_instructor_number) {
+      const userNum = userEmployeeNumber.trim().toLowerCase()
+      const eventNum = event.assigned_instructor_number.trim().toLowerCase()
+      if (userNum === eventNum) return true
+    }
+
+    // Fallback: Match by ID
+    if (event.assigned_instructor_id === userId) return true
+
+    // Fallback: Match by name (trim and case-insensitive)
+    if (userName && event.assigned_instructor_name) {
+      const userNameTrimmed = userName.trim().toLowerCase()
+      const eventNameTrimmed = event.assigned_instructor_name.trim().toLowerCase()
+      if (userNameTrimmed === eventNameTrimmed) return true
+    }
+
+    return false
   }
 
   // Filter events by selected day (if any) - show only user's FI events
