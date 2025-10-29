@@ -26,6 +26,7 @@ export interface GoogleCalendarEvent {
 }
 
 export interface CalendarEventData {
+  event_type?: 'booking' | 'fi_assignment'
   customer_first_name: string
   customer_last_name: string
   customer_phone?: string
@@ -38,6 +39,12 @@ export interface CalendarEventData {
   location?: string
   status?: 'confirmed' | 'tentative' | 'cancelled'
   google_event_id?: string
+  // FI Assignment fields
+  assigned_instructor_id?: string
+  assigned_instructor_number?: string
+  assigned_instructor_name?: string
+  is_all_day?: boolean
+  request_id?: string
 }
 
 export interface SyncResult {

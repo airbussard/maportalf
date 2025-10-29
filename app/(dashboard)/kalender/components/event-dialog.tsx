@@ -32,6 +32,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
 
   // Form state
   const [formData, setFormData] = useState({
+    event_type: 'booking' as 'booking' | 'fi_assignment',
     customer_first_name: '',
     customer_last_name: '',
     customer_phone: '',
@@ -41,7 +42,11 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     duration: 0,
     attendee_count: 1,
     remarks: '',
-    location: 'FLIGHTHOUR Flugsimulator'
+    location: 'FLIGHTHOUR Flugsimulator',
+    assigned_instructor_id: '',
+    assigned_instructor_number: '',
+    assigned_instructor_name: '',
+    is_all_day: false
   })
 
   // Reset form when event changes
@@ -49,6 +54,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     if (event) {
       // Viewing/Editing existing event
       setFormData({
+        event_type: event.event_type || 'booking',
         customer_first_name: event.customer_first_name || '',
         customer_last_name: event.customer_last_name || '',
         customer_phone: event.customer_phone || '',
@@ -58,7 +64,11 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         duration: event.duration || 0,
         attendee_count: event.attendee_count || 1,
         remarks: event.remarks || '',
-        location: event.location || 'FLIGHTHOUR Flugsimulator'
+        location: event.location || 'FLIGHTHOUR Flugsimulator',
+        assigned_instructor_id: event.assigned_instructor_id || '',
+        assigned_instructor_number: event.assigned_instructor_number || '',
+        assigned_instructor_name: event.assigned_instructor_name || '',
+        is_all_day: event.is_all_day || false
       })
     } else {
       // Creating new event - reset to defaults
@@ -67,6 +77,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
       const endTime = new Date(startTime.getTime() + 90 * 60 * 1000) // +90 minutes
 
       setFormData({
+        event_type: 'booking',
         customer_first_name: '',
         customer_last_name: '',
         customer_phone: '',
@@ -76,7 +87,11 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         duration: 90,
         attendee_count: 1,
         remarks: '',
-        location: 'FLIGHTHOUR Flugsimulator'
+        location: 'FLIGHTHOUR Flugsimulator',
+        assigned_instructor_id: '',
+        assigned_instructor_number: '',
+        assigned_instructor_name: '',
+        is_all_day: false
       })
     }
   }, [event, open])
