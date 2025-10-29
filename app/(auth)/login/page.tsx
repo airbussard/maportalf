@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { LoginLoader } from './components/login-loader'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [showLoader, setShowLoader] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,8 +45,10 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        router.push('/dashboard')
-        router.refresh()
+        // Show loading animation before redirect
+        setLoading(false)
+        setShowLoader(true)
+        // Redirect will happen after loader completes (5 seconds)
       }
     } catch (err) {
       console.error('Login Exception:', err)
@@ -54,74 +58,83 @@ export default function LoginPage() {
     }
   }
 
+  const handleLoaderComplete = () => {
+    router.push('/dashboard')
+    router.refresh()
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">Anmelden</CardTitle>
-        <CardDescription>
-          Geben Sie Ihre Email und Passwort ein, um sich anzumelden
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleLogin}>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-              {error}
+    <>
+      {showLoader && <LoginLoader onComplete={handleLoaderComplete} />}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Anmelden</CardTitle>
+          <CardDescription>
+            Geben Sie Ihre Email und Passwort ein, um sich anzumelden
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="ihre.email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="ihre.email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Passwort</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Vergessen?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex flex-col space-y-4">
+            <Button
+              type="submit"
+              className="w-full"
               disabled={loading}
-            />
-          </div>
+            >
+              {loading ? 'Wird geladen...' : 'Anmelden'}
+            </Button>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Passwort</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
-                Vergessen?
+            <div className="text-sm text-center text-muted-foreground">
+              Noch kein Konto?{' '}
+              <Link href="/register" className="text-primary hover:underline">
+                Registrieren
               </Link>
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-        </CardContent>
-
-        <CardFooter className="flex flex-col space-y-4">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? 'Wird geladen...' : 'Anmelden'}
-          </Button>
-
-          <div className="text-sm text-center text-muted-foreground">
-            Noch kein Konto?{' '}
-            <Link href="/register" className="text-primary hover:underline">
-              Registrieren
-            </Link>
-          </div>
-        </CardFooter>
-      </form>
-    </Card>
+          </CardFooter>
+        </form>
+      </Card>
+    </>
   )
 }

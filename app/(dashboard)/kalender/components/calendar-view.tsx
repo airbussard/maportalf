@@ -397,18 +397,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
-                {bookingEvents.length > 0 && (
-                  <>
-                    {/* Mobile: Show dot indicator */}
-                    <div className="sm:hidden flex justify-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    </div>
-                    {/* Desktop: Show event count */}
-                    <div className="hidden sm:block text-xs text-muted-foreground">
-                      {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
-                    </div>
-                  </>
-                )}
                 {/* FI Names when checkbox is enabled - always show if present */}
                 {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
                   <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
@@ -443,6 +431,19 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                       ))
                     }
                   </div>
+                )}
+                {/* Event count displayed last - after FI names and blockers */}
+                {bookingEvents.length > 0 && (
+                  <>
+                    {/* Mobile: Show dot indicator */}
+                    <div className="sm:hidden flex justify-center mt-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+                    </div>
+                    {/* Desktop: Show event count */}
+                    <div className="hidden sm:block text-xs text-muted-foreground mt-1">
+                      {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
+                    </div>
+                  </>
                 )}
               </div>
             )
