@@ -7,7 +7,7 @@ import nodemailer from 'nodemailer'
 
 // IONOS SMTP Configuration
 const SMTP_CONFIG = {
-  host: 'ionos.de',
+  host: 'smtp.ionos.de',
   port: 465,
   secure: true, // SSL
   auth: {
