@@ -203,6 +203,8 @@ export async function createGoogleCalendarEvent(
 
   // For FI events, always use 08:00-09:00 in Google Calendar
   const isFIEvent = eventData.event_type === 'fi_assignment'
+  const isBlocker = eventData.event_type === 'blocker'
+
   if (isFIEvent) {
     const originalStart = new Date(startDate)
     const originalEnd = new Date(endDate)
@@ -212,12 +214,21 @@ export async function createGoogleCalendarEvent(
     endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
   }
 
+  // For Blocker events with all-day, use 05:00-22:00 in Google Calendar
+  if (isBlocker && eventData.is_all_day) {
+    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 5, 0, 0)
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 22, 0, 0)
+  }
+
   // Build summary with validation
   let summary = ''
 
   // Use pre-generated title if provided (includes actual work times for FI events)
   if (eventData.title) {
     summary = eventData.title
+  } else if (isBlocker) {
+    // For blocker events, use customer_first_name as title
+    summary = eventData.customer_first_name || 'Blocker'
   } else if (isFIEvent) {
     const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
     const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
@@ -253,7 +264,7 @@ export async function createGoogleCalendarEvent(
       timeZone: 'Europe/Berlin'
     },
     status: eventData.status || 'confirmed',
-    colorId: isFIEvent ? '5' : undefined // '5' = Gelb/Banana für FI-Events
+    colorId: isFIEvent ? '5' : isBlocker ? '11' : undefined // '5' = Gelb für FI, '11' = Rot für Blocker
   }
 
   const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
@@ -295,6 +306,8 @@ export async function updateGoogleCalendarEvent(
 
   // For FI events, always use 08:00-09:00 in Google Calendar
   const isFIEvent = eventData.event_type === 'fi_assignment'
+  const isBlocker = eventData.event_type === 'blocker'
+
   if (isFIEvent) {
     const originalStart = new Date(startDate)
     const originalEnd = new Date(endDate)
@@ -304,12 +317,21 @@ export async function updateGoogleCalendarEvent(
     endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 9, 0, 0)
   }
 
+  // For Blocker events with all-day, use 05:00-22:00 in Google Calendar
+  if (isBlocker && eventData.is_all_day) {
+    startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 5, 0, 0)
+    endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 22, 0, 0)
+  }
+
   // Build summary with validation
   let summary = ''
 
   // Use pre-generated title if provided (includes actual work times for FI events)
   if (eventData.title) {
     summary = eventData.title
+  } else if (isBlocker) {
+    // For blocker events, use customer_first_name as title
+    summary = eventData.customer_first_name || 'Blocker'
   } else if (isFIEvent) {
     const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
     const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
@@ -346,7 +368,7 @@ export async function updateGoogleCalendarEvent(
       timeZone: 'Europe/Berlin'
     },
     status: eventData.status || 'confirmed',
-    colorId: isFIEvent ? '5' : undefined // '5' = Gelb/Banana für FI-Events
+    colorId: isFIEvent ? '5' : isBlocker ? '11' : undefined // '5' = Gelb für FI, '11' = Rot für Blocker
   }
 
   const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}`

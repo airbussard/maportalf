@@ -37,7 +37,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
 
   // Form state
   const [formData, setFormData] = useState({
-    event_type: 'booking' as 'booking' | 'fi_assignment',
+    event_type: 'booking' as 'booking' | 'fi_assignment' | 'blocker',
     customer_first_name: '',
     customer_last_name: '',
     customer_phone: '',
@@ -53,7 +53,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     assigned_instructor_name: '',
     is_all_day: false,
     actual_work_start_time: '',
-    actual_work_end_time: ''
+    actual_work_end_time: '',
+    blocker_title: ''
   })
 
   // Separate state for all-day event date selection
@@ -83,7 +84,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         assigned_instructor_name: event.assigned_instructor_name || '',
         is_all_day: event.is_all_day || false,
         actual_work_start_time: event.actual_work_start_time || '',
-        actual_work_end_time: event.actual_work_end_time || ''
+        actual_work_end_time: event.actual_work_end_time || '',
+        blocker_title: event.title || ''
       })
     } else {
       // Creating new event - reset to defaults
@@ -111,7 +113,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         assigned_instructor_name: '',
         actual_work_start_time: '',
         actual_work_end_time: '',
-        is_all_day: false
+        is_all_day: false,
+        blocker_title: ''
       })
     }
   }, [event, open])
@@ -143,8 +146,36 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
       // Prepare data
       let submitData = { ...formData }
 
+      // Blocker Events - special handling
+      if (formData.event_type === 'blocker') {
+        // Validation
+        if (!formData.blocker_title || formData.blocker_title.trim() === '') {
+          throw new Error('Bitte geben Sie einen Titel für den Blocker ein')
+        }
+
+        // Ganztägiger Blocker (05:00-22:00)
+        if (formData.is_all_day) {
+          if (!selectedDate) {
+            throw new Error('Bitte wählen Sie ein Datum aus')
+          }
+          submitData.start_time = `${selectedDate}T05:00:00`
+          submitData.end_time = `${selectedDate}T22:00:00`
+          submitData.duration = 17 * 60 // 17 Stunden in Minuten
+        }
+        // Mit individuellen Zeiten
+        else {
+          if (!formData.start_time || !formData.end_time) {
+            throw new Error('Bitte geben Sie Start- und Endzeit an')
+          }
+          // Times already set in formData
+        }
+
+        // Store title in title field for blocker
+        submitData.customer_first_name = formData.blocker_title
+        submitData.customer_last_name = ''
+      }
       // FI Assignment Events - special handling
-      if (formData.event_type === 'fi_assignment') {
+      else if (formData.event_type === 'fi_assignment') {
         // Validation
         if (!formData.assigned_instructor_name) {
           throw new Error('Bitte wählen Sie einen Mitarbeiter aus')
@@ -266,7 +297,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </Label>
             <RadioGroup
               value={formData.event_type}
-              onValueChange={(value) => setFormData({...formData, event_type: value as 'booking' | 'fi_assignment'})}
+              onValueChange={(value) => setFormData({...formData, event_type: value as 'booking' | 'fi_assignment' | 'blocker'})}
               disabled={isReadOnly}
             >
               <div className="flex items-center space-x-2">
@@ -276,6 +307,10 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="fi_assignment" id="fi" />
                 <Label htmlFor="fi" className="font-normal cursor-pointer">FI-Mitarbeiter</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="blocker" id="blocker" />
+                <Label htmlFor="blocker" className="font-normal cursor-pointer">Blocker</Label>
               </div>
             </RadioGroup>
           </div>
@@ -425,7 +460,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             />
           </div>
           </>
-          ) : (
+          ) : formData.event_type === 'fi_assignment' ? (
           <>
           {/* FI Assignment Fields */}
           {/* Instructor Name */}
@@ -578,7 +613,101 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             />
           </div>
           </>
+          ) : formData.event_type === 'blocker' ? (
+          <>
+          {/* Blocker Fields */}
+          {/* Blocker Title */}
+          <div>
+            <Label htmlFor="blocker_title" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Titel *
+            </Label>
+            <Input
+              id="blocker_title"
+              value={formData.blocker_title}
+              onChange={(e) => setFormData({ ...formData, blocker_title: e.target.value })}
+              required
+              disabled={isReadOnly}
+              placeholder="z.B. Wartung, Geschlossen, Urlaub..."
+            />
+          </div>
+
+          {/* All Day Checkbox for Blocker */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="blocker_all_day"
+              checked={formData.is_all_day}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_all_day: checked as boolean })}
+              disabled={isReadOnly}
+            />
+            <Label htmlFor="blocker_all_day" className="font-normal cursor-pointer">
+              Ganztägig (05:00-22:00)
+            </Label>
+          </div>
+
+          {/* Date picker or time fields */}
+          {formData.is_all_day ? (
+            <div>
+              <Label htmlFor="blocker_date" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Datum *
+              </Label>
+              <Input
+                id="blocker_date"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                required
+                disabled={isReadOnly}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="blocker_start_time" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Start *
+                </Label>
+                <Input
+                  id="blocker_start_time"
+                  type="datetime-local"
+                  value={formData.start_time}
+                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="blocker_end_time">Ende *</Label>
+                <Input
+                  id="blocker_end_time"
+                  type="datetime-local"
+                  value={formData.end_time}
+                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+            </div>
           )}
+
+          {/* Remarks for Blocker */}
+          <div>
+            <Label htmlFor="blocker_remarks" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Bemerkungen
+            </Label>
+            <Textarea
+              id="blocker_remarks"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+              disabled={isReadOnly}
+              rows={3}
+              placeholder="Zusätzliche Informationen..."
+            />
+          </div>
+          </>
+          ) : null}
 
           {/* Sync Status */}
           {event && (

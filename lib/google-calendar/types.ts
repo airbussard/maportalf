@@ -26,7 +26,7 @@ export interface GoogleCalendarEvent {
 }
 
 export interface CalendarEventData {
-  event_type?: 'booking' | 'fi_assignment'
+  event_type?: 'booking' | 'fi_assignment' | 'blocker'
   customer_first_name: string
   customer_last_name: string
   customer_phone?: string
@@ -50,7 +50,7 @@ export interface CalendarEventData {
   // while start_time/end_time remain 08:00-09:00 for Google Calendar
   actual_work_start_time?: string // Format: 'HH:MM:SS'
   actual_work_end_time?: string // Format: 'HH:MM:SS'
-  title?: string // Pre-generated title (for FI events with times)
+  title?: string // Pre-generated title (for FI events with times, blocker title)
 }
 
 export interface SyncResult {

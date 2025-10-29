@@ -15,7 +15,7 @@ interface EventCardProps {
     location: string
     status: string
     sync_status: string
-    event_type?: 'booking' | 'fi_assignment'
+    event_type?: 'booking' | 'fi_assignment' | 'blocker'
     assigned_instructor_name?: string
     assigned_instructor_number?: string
     is_all_day?: boolean
@@ -29,6 +29,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
   const startDate = new Date(event.start_time)
   const endDate = new Date(event.end_time)
   const isFIEvent = event.event_type === 'fi_assignment'
+  const isBlocker = event.event_type === 'blocker'
 
   const statusColors = {
     confirmed: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -47,6 +48,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
       className={`p-2 sm:p-3 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''} ${
         isFIEvent
           ? 'bg-[#FCD34D]/20 border-[#FCD34D]/50 hover:border-[#FCD34D]'
+          : isBlocker
+          ? 'bg-red-500/20 border-red-500/50 hover:border-red-500'
           : 'hover:border-primary/50'
       }`}
       onClick={onClick}
@@ -80,6 +83,10 @@ export function EventCard({ event, onClick }: EventCardProps) {
                     </span>
                   )}
                 </>
+              ) : isBlocker ? (
+                <>
+                  {event.title || event.customer_first_name || 'Blocker'}
+                </>
               ) : (
                 <>
                   {event.customer_first_name} {event.customer_last_name}
@@ -94,6 +101,10 @@ export function EventCard({ event, onClick }: EventCardProps) {
           {isFIEvent ? (
             <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
               Geplanter MA
+            </Badge>
+          ) : isBlocker ? (
+            <Badge className="text-xs bg-red-500 text-white hover:bg-red-500/90">
+              Blocker
             </Badge>
           ) : (
             <Badge
@@ -152,6 +163,10 @@ export function EventCard({ event, onClick }: EventCardProps) {
                   </span>
                 )}
               </>
+            ) : isBlocker ? (
+              <>
+                {event.title || event.customer_first_name || 'Blocker'}
+              </>
             ) : (
               <>
                 {event.customer_first_name} {event.customer_last_name}
@@ -171,6 +186,10 @@ export function EventCard({ event, onClick }: EventCardProps) {
           {isFIEvent ? (
             <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
               Geplanter Mitarbeiter
+            </Badge>
+          ) : isBlocker ? (
+            <Badge className="text-xs bg-red-500 text-white hover:bg-red-500/90">
+              Blocker
             </Badge>
           ) : (
             <Badge

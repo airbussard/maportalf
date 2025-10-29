@@ -40,7 +40,7 @@ interface CalendarEvent {
   id: string
   title: string
   description: string | null
-  event_type?: 'booking' | 'fi_assignment'
+  event_type?: 'booking' | 'fi_assignment' | 'blocker'
   customer_first_name: string
   customer_last_name: string
   customer_phone: string | null
@@ -85,6 +85,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [showFINames, setShowFINames] = useState(false)
+  const [showBlockers, setShowBlockers] = useState(false)
 
   // Show sync result toast based on URL params
   useEffect(() => {
@@ -246,15 +247,27 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
               <span className="sm:hidden">Neu</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="show-fi-names"
-              checked={showFINames}
-              onCheckedChange={(checked) => setShowFINames(checked === true)}
-            />
-            <Label htmlFor="show-fi-names" className="text-sm cursor-pointer">
-              FI-Namen anzeigen
-            </Label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-fi-names"
+                checked={showFINames}
+                onCheckedChange={(checked) => setShowFINames(checked === true)}
+              />
+              <Label htmlFor="show-fi-names" className="text-sm cursor-pointer">
+                FI-Namen anzeigen
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-blockers"
+                checked={showBlockers}
+                onCheckedChange={(checked) => setShowBlockers(checked === true)}
+              />
+              <Label htmlFor="show-blockers" className="text-sm cursor-pointer">
+                Blocker anzeigen
+              </Label>
+            </div>
           </div>
         </div>
       </div>
@@ -405,6 +418,23 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                             >
                               {e.assigned_instructor_name}
                               {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                    {/* Blocker when checkbox is enabled */}
+                    {showBlockers && dayEvents.some(e => e.event_type === 'blocker') && (
+                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                        {dayEvents
+                          .filter(e => e.event_type === 'blocker')
+                          .map(e => (
+                            <div
+                              key={e.id}
+                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
+                              title={e.title || e.customer_first_name || 'Blocker'}
+                            >
+                              {e.title || e.customer_first_name || 'Blocker'}
                             </div>
                           ))
                         }
