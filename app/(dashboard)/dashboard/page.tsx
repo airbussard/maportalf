@@ -97,7 +97,7 @@ export default async function DashboardPage() {
               {filteredEvents
                 .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
                 .map(event => (
-                  <EventCard key={event.id} event={event} onClick={() => {}} />
+                  <EventCard key={event.id} event={event} />
                 ))
               }
             </div>

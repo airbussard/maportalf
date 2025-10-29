@@ -22,7 +22,7 @@ interface EventCardProps {
     actual_work_start_time?: string
     actual_work_end_time?: string
   }
-  onClick: () => void
+  onClick?: () => void
 }
 
 export function EventCard({ event, onClick }: EventCardProps) {
@@ -44,7 +44,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
   return (
     <Card
-      className={`p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer ${
+      className={`p-2 sm:p-3 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''} ${
         isFIEvent
           ? 'bg-[#FCD34D]/20 border-[#FCD34D]/50 hover:border-[#FCD34D]'
           : 'hover:border-primary/50'
