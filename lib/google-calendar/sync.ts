@@ -430,9 +430,6 @@ export async function fullSync(
 
   console.log('[Sync] Full sync completed:', combinedResult)
 
-  // Debug: Show event distribution by month
-  await logEventDistribution(supabaseClient || await createClient())
-
   return combinedResult
 }
 
@@ -460,55 +457,5 @@ async function logSync(
       })
   } catch (error) {
     console.error('[Sync] Failed to log sync:', error)
-  }
-}
-
-/**
- * Debug: Log event distribution by month
- */
-async function logEventDistribution(supabase: any): Promise<void> {
-  try {
-    const { data: events, error } = await supabase
-      .from('calendar_events')
-      .select('start_time, status, event_type')
-      .order('start_time', { ascending: true })
-      .limit(10000) // Override Supabase default limit of 1000
-
-    if (error) {
-      console.error('[Debug] Failed to fetch events:', error)
-      return
-    }
-
-    // Group by month
-    const byMonth: Record<string, { total: number, fi: number, booking: number, cancelled: number }> = {}
-
-    events?.forEach((event: any) => {
-      const date = new Date(event.start_time)
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-      if (!byMonth[monthKey]) {
-        byMonth[monthKey] = { total: 0, fi: 0, booking: 0, cancelled: 0 }
-      }
-
-      byMonth[monthKey].total++
-      if (event.status === 'cancelled') byMonth[monthKey].cancelled++
-      if (event.event_type === 'fi_assignment') byMonth[monthKey].fi++
-      if (event.event_type === 'booking') byMonth[monthKey].booking++
-    })
-
-    console.log('[Debug] ============================================')
-    console.log('[Debug] Event Distribution by Month in Database:')
-    console.log('[Debug] ============================================')
-    Object.entries(byMonth)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([month, stats]) => {
-        console.log(`[Debug] ${month}: ${stats.total} total (${stats.booking} bookings, ${stats.fi} FI, ${stats.cancelled} cancelled)`)
-      })
-    console.log('[Debug] ============================================')
-    console.log(`[Debug] Total events in database: ${events?.length || 0}`)
-    console.log('[Debug] ============================================')
-
-  } catch (error) {
-    console.error('[Debug] Error logging event distribution:', error)
   }
 }
