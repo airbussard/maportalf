@@ -15,6 +15,10 @@ interface EventCardProps {
     location: string
     status: string
     sync_status: string
+    event_type?: 'booking' | 'fi_assignment'
+    assigned_instructor_name?: string
+    assigned_instructor_number?: string
+    is_all_day?: boolean
   }
   onClick: () => void
 }
@@ -22,6 +26,7 @@ interface EventCardProps {
 export function EventCard({ event, onClick }: EventCardProps) {
   const startDate = new Date(event.start_time)
   const endDate = new Date(event.end_time)
+  const isFIEvent = event.event_type === 'fi_assignment'
 
   const statusColors = {
     confirmed: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -37,33 +42,48 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
   return (
     <Card
-      className="p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+      className={`p-3 hover:shadow-md transition-all cursor-pointer ${
+        isFIEvent
+          ? 'bg-[#FCD34D]/20 border-[#FCD34D]/50 hover:border-[#FCD34D]'
+          : 'hover:border-primary/50'
+      }`}
       onClick={onClick}
     >
       <div className="flex items-center gap-4">
-        {/* Time */}
-        <div className="flex items-center gap-2 text-sm min-w-[140px]">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <div className="flex flex-col">
-            <span className="font-medium">
-              {startDate.toLocaleTimeString('de-DE', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-              {' - '}
-              {endDate.toLocaleTimeString('de-DE', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </span>
+        {/* Time - hide for all-day FI events */}
+        {!event.is_all_day && (
+          <div className="flex items-center gap-2 text-sm min-w-[140px]">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col">
+              <span className="font-medium">
+                {startDate.toLocaleTimeString('de-DE', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+                {' - '}
+                {endDate.toLocaleTimeString('de-DE', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Customer Name */}
+        {/* Name - Customer or FI */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="font-semibold truncate">
-            {event.customer_first_name} {event.customer_last_name}
+            {isFIEvent ? (
+              <>
+                FI: {event.assigned_instructor_name}
+                {event.assigned_instructor_number && ` (${event.assigned_instructor_number})`}
+              </>
+            ) : (
+              <>
+                {event.customer_first_name} {event.customer_last_name}
+              </>
+            )}
           </span>
         </div>
 
@@ -75,14 +95,20 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
         {/* Badges */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Badge
-            variant="secondary"
-            className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
-          >
-            {event.status === 'confirmed' && 'Bestätigt'}
-            {event.status === 'tentative' && 'Vorläufig'}
-            {event.status === 'cancelled' && 'Abgesagt'}
-          </Badge>
+          {isFIEvent ? (
+            <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
+              Geplanter Mitarbeiter
+            </Badge>
+          ) : (
+            <Badge
+              variant="secondary"
+              className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
+            >
+              {event.status === 'confirmed' && 'Bestätigt'}
+              {event.status === 'tentative' && 'Vorläufig'}
+              {event.status === 'cancelled' && 'Abgesagt'}
+            </Badge>
+          )}
           <Badge
             variant="outline"
             className={`text-xs ${syncStatusColors[event.sync_status as keyof typeof syncStatusColors] || ''}`}
