@@ -13,7 +13,11 @@ const SMTP_CONFIG = {
   auth: {
     user: 'm0716be75',
     pass: 'centr0@LL33'
-  }
+  },
+  // Increase timeouts for large attachments
+  connectionTimeout: 300000,  // 5 minutes (default: 2 minutes)
+  greetingTimeout: 300000,    // 5 minutes
+  socketTimeout: 300000       // 5 minutes
 }
 
 interface EmailAttachment {
@@ -21,7 +25,6 @@ interface EmailAttachment {
   path?: string
   content?: Buffer
   contentType?: string
-  encoding?: string
 }
 
 interface TicketEmailOptions {
@@ -78,8 +81,8 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
         JSON.stringify(options.attachments.map(a => ({
           filename: a.filename,
           contentType: a.contentType,
-          encoding: a.encoding,
-          contentLength: a.content?.length || 0
+          contentLength: a.content?.length || 0,
+          isBuffer: Buffer.isBuffer(a.content)
         })))
       )
     }

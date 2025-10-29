@@ -125,8 +125,8 @@ export async function GET(request: NextRequest) {
                 emailAttachments.push({
                   filename: att.original_filename,
                   content: buffer,
-                  contentType: att.mime_type,
-                  encoding: 'base64' as any // Explicitly tell Nodemailer how to handle the Buffer
+                  contentType: att.mime_type
+                  // No encoding - Buffer is already binary, Nodemailer handles it automatically
                 })
               } else {
                 console.error('[Email Queue] No file data returned for:', att.storage_path)
