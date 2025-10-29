@@ -18,6 +18,18 @@ import { fullSync } from '@/lib/google-calendar/sync'
 import type { CalendarEventData, SyncResult } from '@/lib/google-calendar/types'
 
 /**
+ * Helper: Convert empty strings to null for UUID fields
+ * PostgreSQL UUID fields cannot accept empty strings
+ */
+function sanitizeUuidFields(data: Partial<CalendarEventData>) {
+  return {
+    ...data,
+    assigned_instructor_id: data.assigned_instructor_id || null,
+    request_id: data.request_id || null
+  }
+}
+
+/**
  * Get calendar events for a date range
  * If no dates provided, gets all events
  */
@@ -119,10 +131,11 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         customer_last_name: eventData.customer_last_name || '',
         customer_phone: eventData.customer_phone,
         customer_email: eventData.customer_email,
-        assigned_instructor_id: eventData.assigned_instructor_id,
+        assigned_instructor_id: eventData.assigned_instructor_id || null,
         assigned_instructor_number: eventData.assigned_instructor_number,
         assigned_instructor_name: eventData.assigned_instructor_name,
         is_all_day: eventData.is_all_day || false,
+        request_id: eventData.request_id || null,
         start_time: eventData.start_time,
         end_time: eventData.end_time,
         duration: eventData.duration,
@@ -219,7 +232,7 @@ export async function updateCalendarEvent(
       const { data, error } = await supabase
         .from('calendar_events')
         .update({
-          ...eventData,
+          ...sanitizeUuidFields(eventData),
           etag: googleEvent.etag,
           sync_status: 'synced',
           last_synced_at: new Date().toISOString(),
@@ -243,7 +256,7 @@ export async function updateCalendarEvent(
       const { data, error } = await supabase
         .from('calendar_events')
         .update({
-          ...eventData,
+          ...sanitizeUuidFields(eventData),
           sync_status: 'pending',
           last_modified_at: new Date().toISOString()
         })
