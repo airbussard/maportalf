@@ -11,8 +11,8 @@ const SMTP_CONFIG = {
   port: 465,
   secure: true, // SSL
   auth: {
-    user: 'm0716be75',
-    pass: 'centr0@LL33'
+    user: 'info@flighthour.de',
+    pass: 'centr0@LL3'
   },
   // Increase timeouts for large attachments
   connectionTimeout: 300000,  // 5 minutes (default: 2 minutes)
