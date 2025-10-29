@@ -25,10 +25,10 @@ async function RequestsPageContent() {
     redirect('/login')
   }
 
-  // Fetch user profile for name
+  // Fetch user profile for name and employee number
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name')
+    .select('first_name, last_name, employee_number')
     .eq('id', user.id)
     .single()
 
@@ -36,10 +36,12 @@ async function RequestsPageContent() {
     ? `${profile.first_name} ${profile.last_name}`
     : user.email || 'Unbekannt'
 
+  const userEmployeeNumber = profile?.employee_number || null
+
   // Load user's requests
   const requests = await getMyWorkRequests()
 
-  return <RequestsContent requests={requests} userId={user.id} userName={userName} />
+  return <RequestsContent requests={requests} userId={user.id} userName={userName} userEmployeeNumber={userEmployeeNumber} />
 }
 
 export default function RequestsPage() {

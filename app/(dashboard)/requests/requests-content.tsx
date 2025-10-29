@@ -23,9 +23,10 @@ interface RequestsContentProps {
   requests: WorkRequest[]
   userId: string
   userName: string
+  userEmployeeNumber: string | null
 }
 
-export function RequestsContent({ requests, userId, userName }: RequestsContentProps) {
+export function RequestsContent({ requests, userId, userName, userEmployeeNumber }: RequestsContentProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('calendar')
@@ -138,6 +139,7 @@ export function RequestsContent({ requests, userId, userName }: RequestsContentP
           <MyCalendarView
             userId={userId}
             userName={userName}
+            userEmployeeNumber={userEmployeeNumber}
           />
         </TabsContent>
       </Tabs>

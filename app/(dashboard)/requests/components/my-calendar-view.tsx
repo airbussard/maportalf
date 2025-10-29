@@ -36,9 +36,10 @@ interface CalendarEvent {
 interface MyCalendarViewProps {
   userId: string
   userName: string
+  userEmployeeNumber: string | null
 }
 
-export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
+export function MyCalendarView({ userId, userName, userEmployeeNumber }: MyCalendarViewProps) {
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -74,13 +75,25 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     )
   })
 
-  // Filter events by selected day (if any) - show all events (read-only view)
+  // Helper: Check if FI event belongs to current user
+  const isUserFIEvent = (event: CalendarEvent) => {
+    if (event.event_type !== 'fi_assignment') return false
+    // Match by employee number (primary), fallback to ID or name
+    return (
+      (userEmployeeNumber && event.assigned_instructor_number === userEmployeeNumber) ||
+      event.assigned_instructor_id === userId ||
+      event.assigned_instructor_name === userName
+    )
+  }
+
+  // Filter events by selected day (if any) - show only user's FI events
   const displayedEvents = (selectedDay
     ? eventsThisMonth.filter(event => {
         const eventDate = new Date(event.start_time)
-        return eventDate.toDateString() === selectedDay.toDateString()
+        const isRightDay = eventDate.toDateString() === selectedDay.toDateString()
+        return isRightDay && isUserFIEvent(event)
       })
-    : eventsThisMonth
+    : eventsThisMonth.filter(isUserFIEvent)
   ).sort((a, b) => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
@@ -257,11 +270,11 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
                 <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
-                {/* FI Names - always show if present (no checkbox) */}
-                {dayEvents.some(e => e.event_type === 'fi_assignment') && (
+                {/* FI Names - only show user's own FI events */}
+                {dayEvents.filter(isUserFIEvent).length > 0 && (
                   <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
                     {dayEvents
-                      .filter(e => e.event_type === 'fi_assignment')
+                      .filter(isUserFIEvent)
                       .map(e => (
                         <div
                           key={e.id}
