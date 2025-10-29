@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; status?: string; page?: string }>
+  searchParams: Promise<{ filter?: string; status?: string; page?: string; search?: string }>
 }) {
   const resolvedSearchParams = await searchParams
 
@@ -32,7 +32,8 @@ export default async function TicketsPage({
   const result = await getTickets({
     filter: (resolvedSearchParams.filter as any) || 'all',
     status: resolvedSearchParams.status as any,
-    page: parseInt(resolvedSearchParams.page || '1')
+    page: parseInt(resolvedSearchParams.page || '1'),
+    search: resolvedSearchParams.search
   })
 
   return (
@@ -55,8 +56,15 @@ export default async function TicketsPage({
       <TicketFilters
         currentFilter={resolvedSearchParams.filter || 'all'}
         currentStatus={resolvedSearchParams.status}
+        currentSearch={resolvedSearchParams.search}
         isManagerOrAdmin={isManagerOrAdmin}
       />
+
+      {resolvedSearchParams.search && (
+        <div className="mb-4 text-sm text-muted-foreground">
+          {result.count || 0} Ergebnis{result.count !== 1 ? 'se' : ''} für "{resolvedSearchParams.search}"
+        </div>
+      )}
 
       <TicketList
         tickets={result.data || []}

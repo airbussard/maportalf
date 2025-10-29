@@ -58,6 +58,13 @@ export async function getTickets(filters: TicketFilters = {}) {
       query = query.eq('status', filters.status)
     }
 
+    // Apply search filter - searches across all tickets in database
+    if (filters.search && filters.search.trim()) {
+      const searchTerm = filters.search.trim()
+      // Use OR condition to search in multiple fields
+      query = query.or(`subject.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,created_from_email.ilike.%${searchTerm}%,ticket_number.eq.${parseInt(searchTerm) || 0}`)
+    }
+
     const { data, error, count } = await query
 
     if (error) {

@@ -81,4 +81,5 @@ export interface TicketFilters {
   filter?: 'all' | 'assigned' | 'spam'
   status?: TicketStatus
   page?: number
+  search?: string
 }
