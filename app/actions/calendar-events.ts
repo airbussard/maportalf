@@ -9,6 +9,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import {
   createGoogleCalendarEvent,
   updateGoogleCalendarEvent,
@@ -539,11 +540,12 @@ export async function getLastSyncStatus() {
 /**
  * Get all employees with their employee numbers
  * For FI assignment autocomplete
+ * Uses Admin Client to bypass RLS and show all employees
  */
 export async function getEmployees() {
-  const supabase = await createClient()
+  const supabaseAdmin = createAdminClient()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('profiles')
     .select('id, first_name, last_name, email, employee_number')
     .order('first_name', { ascending: true })
