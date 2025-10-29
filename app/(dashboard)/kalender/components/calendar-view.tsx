@@ -15,6 +15,7 @@ interface CalendarEvent {
   id: string
   title: string
   description: string | null
+  event_type: string
   customer_first_name: string
   customer_last_name: string
   customer_phone: string | null
