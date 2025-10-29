@@ -141,79 +141,94 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calendar className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Calendar className="h-6 w-6 md:h-8 md:w-8 text-primary" />
             Kalender
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Google Calendar Events verwalten
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto">
           <Button
             variant="outline"
             onClick={handleSync}
             disabled={isSyncing}
+            className="flex-1 md:flex-none"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Synchronisiere...' : 'Sync'}
+            <span className="hidden sm:inline">{isSyncing ? 'Synchronisiere...' : 'Sync'}</span>
+            <span className="sm:hidden">{isSyncing ? '...' : 'Sync'}</span>
           </Button>
-          <Button onClick={handleNewEvent}>
+          <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
             <Plus className="h-4 w-4 mr-2" />
-            Neues Event
+            <span className="hidden sm:inline">Neues Event</span>
+            <span className="sm:hidden">Neu</span>
           </Button>
         </div>
       </div>
 
       {/* Last Sync Info */}
       {lastSync && (
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span>
-              Letzter Sync: {new Date(lastSync.completed_at).toLocaleString('de-DE')}
-            </span>
-            <span className="mx-2">•</span>
-            <Badge variant="secondary">
-              {lastSync.events_imported} importiert
-            </Badge>
-            <Badge variant="secondary">
-              {lastSync.events_exported} exportiert
-            </Badge>
-            <Badge variant="secondary">
-              {lastSync.events_updated} aktualisiert
-            </Badge>
+        <Card className="p-3 md:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">
+                <span className="hidden sm:inline">Letzter Sync: </span>
+                {new Date(lastSync.completed_at).toLocaleString('de-DE', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+            </div>
+            <span className="hidden sm:inline mx-2">•</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {lastSync.events_imported} imp.
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {lastSync.events_exported} exp.
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {lastSync.events_updated} akt.
+              </Badge>
+            </div>
           </div>
         </Card>
       )}
 
       {/* Calendar Grid */}
-      <Card className="p-6">
+      <Card className="p-3 sm:p-4 md:p-6">
         {/* Month Navigation */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="outline" size="sm" onClick={previousMonth}>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <Button variant="outline" size="sm" onClick={previousMonth} className="h-9 w-9 p-0">
             ←
           </Button>
-          <h2 className="text-xl font-semibold">
-            {monthNames[currentMonth]} {currentYear}
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold">
+            <span className="hidden sm:inline">{monthNames[currentMonth]} {currentYear}</span>
+            <span className="sm:hidden">{monthNames[currentMonth].slice(0, 3)} {currentYear}</span>
           </h2>
-          <Button variant="outline" size="sm" onClick={nextMonth}>
+          <Button variant="outline" size="sm" onClick={nextMonth} className="h-9 w-9 p-0">
             →
           </Button>
         </div>
 
         {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
+            <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground p-1 sm:p-2">
               {day}
             </div>
           ))}
         </div>
 
         {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {calendarDays.map((day, index) => {
             if (day === null) {
               return <div key={`empty-${index}`} className="aspect-square" />
@@ -229,21 +244,28 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
               <div
                 key={day}
                 onClick={() => setSelectedDay(dayDate)}
-                className={`aspect-square border rounded-lg p-2 ${
+                className={`aspect-square border rounded-md sm:rounded-lg p-1 sm:p-2 ${
                   isSelected
-                    ? 'border-primary bg-primary/20 ring-2 ring-primary'
+                    ? 'border-primary bg-primary/20 ring-1 sm:ring-2 ring-primary'
                     : isToday
                       ? 'border-primary bg-primary/5'
                       : 'border-border'
                 } hover:bg-accent transition-colors cursor-pointer`}
               >
-                <div className={`text-sm font-medium mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
+                <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
                 {dayEvents.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {dayEvents.length} {dayEvents.length === 1 ? 'Event' : 'Events'}
-                  </div>
+                  <>
+                    {/* Mobile: Show dot indicator */}
+                    <div className="sm:hidden flex justify-center">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+                    </div>
+                    {/* Desktop: Show event count */}
+                    <div className="hidden sm:block text-xs text-muted-foreground">
+                      {dayEvents.length} {dayEvents.length === 1 ? 'Event' : 'Events'}
+                    </div>
+                  </>
                 )}
               </div>
             )
@@ -253,22 +275,35 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
 
       {/* Upcoming Events List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            {selectedDay
-              ? `Events am ${selectedDay.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })} (${displayedEvents.length})`
-              : `Events diesen Monat (${eventsThisMonth.length})`}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold truncate">
+            {selectedDay ? (
+              <>
+                <span className="hidden md:inline">
+                  Events am {selectedDay.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })} ({displayedEvents.length})
+                </span>
+                <span className="md:hidden">
+                  {selectedDay.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })} ({displayedEvents.length})
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Events diesen Monat ({eventsThisMonth.length})</span>
+                <span className="sm:hidden">Events ({eventsThisMonth.length})</span>
+              </>
+            )}
           </h2>
           {selectedDay && (
-            <Button variant="outline" size="sm" onClick={() => setSelectedDay(null)}>
-              Alle anzeigen
+            <Button variant="outline" size="sm" onClick={() => setSelectedDay(null)} className="flex-shrink-0">
+              <span className="hidden sm:inline">Alle anzeigen</span>
+              <span className="sm:hidden">Alle</span>
             </Button>
           )}
         </div>
         {displayedEvents.length === 0 ? (
-          <Card className="p-8 text-center text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
+          <Card className="p-6 sm:p-8 text-center text-muted-foreground">
+            <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+            <p className="text-sm sm:text-base">{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
           </Card>
         ) : (
           <div className="space-y-2">

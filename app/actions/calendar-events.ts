@@ -81,9 +81,15 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
     throw new Error('Unauthorized')
   }
 
-  // Validate required fields
-  if (!eventData.customer_first_name || !eventData.customer_last_name) {
-    throw new Error('Customer name is required')
+  // Validate required fields based on event type
+  if (eventData.event_type === 'fi_assignment') {
+    if (!eventData.assigned_instructor_name) {
+      throw new Error('Instructor name is required')
+    }
+  } else {
+    if (!eventData.customer_first_name || !eventData.customer_last_name) {
+      throw new Error('Customer name is required')
+    }
   }
 
   if (!eventData.start_time || !eventData.end_time) {
@@ -104,12 +110,19 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         id: eventId,
         user_id: user.id, // Schema uses user_id, not created_by
         google_event_id: googleEvent.id,
-        title: `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+        title: eventData.event_type === 'fi_assignment'
+          ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
+          : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
         description: eventData.remarks || '',
-        customer_first_name: eventData.customer_first_name,
-        customer_last_name: eventData.customer_last_name,
+        event_type: eventData.event_type || 'booking',
+        customer_first_name: eventData.customer_first_name || '',
+        customer_last_name: eventData.customer_last_name || '',
         customer_phone: eventData.customer_phone,
         customer_email: eventData.customer_email,
+        assigned_instructor_id: eventData.assigned_instructor_id,
+        assigned_instructor_number: eventData.assigned_instructor_number,
+        assigned_instructor_name: eventData.assigned_instructor_name,
+        is_all_day: eventData.is_all_day || false,
         start_time: eventData.start_time,
         end_time: eventData.end_time,
         duration: eventData.duration,
@@ -177,10 +190,15 @@ export async function updateCalendarEvent(
 
     // Merge with existing data for Google Calendar update
     const mergedData: CalendarEventData = {
+      event_type: eventData.event_type || existingEvent.event_type,
       customer_first_name: eventData.customer_first_name || existingEvent.customer_first_name,
       customer_last_name: eventData.customer_last_name || existingEvent.customer_last_name,
       customer_phone: eventData.customer_phone ?? existingEvent.customer_phone,
       customer_email: eventData.customer_email ?? existingEvent.customer_email,
+      assigned_instructor_id: eventData.assigned_instructor_id ?? existingEvent.assigned_instructor_id,
+      assigned_instructor_number: eventData.assigned_instructor_number ?? existingEvent.assigned_instructor_number,
+      assigned_instructor_name: eventData.assigned_instructor_name ?? existingEvent.assigned_instructor_name,
+      is_all_day: eventData.is_all_day ?? existingEvent.is_all_day,
       start_time: eventData.start_time || existingEvent.start_time,
       end_time: eventData.end_time || existingEvent.end_time,
       duration: eventData.duration || existingEvent.duration,

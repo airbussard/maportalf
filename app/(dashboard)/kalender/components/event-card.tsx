@@ -42,17 +42,77 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
   return (
     <Card
-      className={`p-3 hover:shadow-md transition-all cursor-pointer ${
+      className={`p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer ${
         isFIEvent
           ? 'bg-[#FCD34D]/20 border-[#FCD34D]/50 hover:border-[#FCD34D]'
           : 'hover:border-primary/50'
       }`}
       onClick={onClick}
     >
-      <div className="flex items-center gap-4">
+      {/* Mobile Layout (< sm) */}
+      <div className="sm:hidden space-y-2">
+        {/* Row 1: Time and Name */}
+        <div className="flex items-center gap-2">
+          {!event.is_all_day && (
+            <div className="flex items-center gap-1 text-xs min-w-[70px]">
+              <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <span className="font-medium">
+                {startDate.toLocaleTimeString('de-DE', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <span className="text-sm font-semibold truncate">
+              {isFIEvent ? (
+                <>
+                  FI: {event.assigned_instructor_name}
+                  {event.assigned_instructor_number && ` (${event.assigned_instructor_number})`}
+                </>
+              ) : (
+                <>
+                  {event.customer_first_name} {event.customer_last_name}
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Row 2: Badges */}
+        <div className="flex items-center gap-2">
+          {isFIEvent ? (
+            <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
+              Geplanter MA
+            </Badge>
+          ) : (
+            <Badge
+              variant="secondary"
+              className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
+            >
+              {event.status === 'confirmed' && 'Bestätigt'}
+              {event.status === 'tentative' && 'Vorläufig'}
+              {event.status === 'cancelled' && 'Abgesagt'}
+            </Badge>
+          )}
+          <Badge
+            variant="outline"
+            className={`text-xs ${syncStatusColors[event.sync_status as keyof typeof syncStatusColors] || ''}`}
+          >
+            {event.sync_status === 'synced' && '✓'}
+            {event.sync_status === 'pending' && '⏳'}
+            {event.sync_status === 'error' && '⚠'}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Desktop Layout (>= sm) */}
+      <div className="hidden sm:flex items-center gap-4">
         {/* Time - hide for all-day FI events */}
         {!event.is_all_day && (
-          <div className="flex items-center gap-2 text-sm min-w-[140px]">
+          <div className="flex items-center gap-2 text-sm min-w-[100px] lg:min-w-[140px]">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
               <span className="font-medium">

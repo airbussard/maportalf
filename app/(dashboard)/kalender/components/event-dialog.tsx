@@ -222,7 +222,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
           {formData.event_type === 'booking' ? (
           <>
           {/* Customer Name */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="customer_first_name" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
@@ -251,7 +251,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
           </div>
 
           {/* Contact Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="customer_phone" className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
@@ -283,7 +283,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
           </div>
 
           {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="start_time" className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -312,7 +312,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
           </div>
 
           {/* Duration & Attendees */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Dauer</Label>
               <Input
@@ -425,7 +425,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </div>
           ) : (
             /* Time fields for non-all-day events */
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="start_time" className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
