@@ -21,6 +21,7 @@ interface EmailAttachment {
   path?: string
   content?: Buffer
   contentType?: string
+  encoding?: string
 }
 
 interface TicketEmailOptions {
@@ -71,6 +72,18 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
 
     console.log('[Ticket Email] Content generated, sending via SMTP...')
 
+    // Log attachments being sent to Nodemailer
+    if (options.attachments && options.attachments.length > 0) {
+      console.log('[Ticket Email] Sending to Nodemailer with attachments:',
+        JSON.stringify(options.attachments.map(a => ({
+          filename: a.filename,
+          contentType: a.contentType,
+          encoding: a.encoding,
+          contentLength: a.content?.length || 0
+        })))
+      )
+    }
+
     // Send email
     const info = await transporter.sendMail({
       from: 'FLIGHTHOUR Support <info@flighthour.de>',
@@ -84,6 +97,9 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<bool
         'X-Ticket-Number': String(options.ticketNumber)
       }
     })
+
+    console.log('[Ticket Email] Nodemailer response accepted:', info.accepted)
+    console.log('[Ticket Email] Nodemailer response rejected:', info.rejected)
 
     emailSent = true // Mark as sent BEFORE any other operations
     console.log('[Ticket Email] ✅ Sent successfully:', info.messageId)
