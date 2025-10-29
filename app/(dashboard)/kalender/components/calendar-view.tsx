@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Calendar, Plus, RefreshCw, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -49,6 +50,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName }: Cale
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
+  const [loadProgress, setLoadProgress] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
@@ -140,15 +142,34 @@ export function CalendarView({ events: initialEvents, lastSync, userName }: Cale
 
   const loadMonth = async (year: number, month: number) => {
     setIsLoadingMonth(true)
+    setLoadProgress(0)
+
+    // Progress simulation: 0 → 90% during fetch
+    const progressInterval = setInterval(() => {
+      setLoadProgress(prev => Math.min(prev + 10, 90))
+    }, 100)
+
     try {
       const newEvents = await getCalendarEventsByMonth(year, month)
       setEvents(newEvents)
       setSelectedDay(null) // Reset selected day when changing months
+
+      // Complete: 90% → 100%
+      clearInterval(progressInterval)
+      setLoadProgress(100)
+
+      // Hide overlay after short delay
+      setTimeout(() => {
+        setIsLoadingMonth(false)
+        setLoadProgress(0)
+      }, 300)
+
     } catch (error) {
+      clearInterval(progressInterval)
       toast.error('Fehler beim Laden der Events')
       console.error('Error loading month:', error)
-    } finally {
       setIsLoadingMonth(false)
+      setLoadProgress(0)
     }
   }
 
@@ -234,10 +255,25 @@ export function CalendarView({ events: initialEvents, lastSync, userName }: Cale
       <Card className="p-3 sm:p-4 md:p-6 relative">
         {/* Loading Overlay */}
         {isLoadingMonth && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-            <div className="flex flex-col items-center gap-2">
-              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Lade Monat...</p>
+          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="flex flex-col items-center gap-4">
+              {/* Flighthour Logo */}
+              <Image
+                src="/logo.png"
+                alt="FLIGHTHOUR"
+                width={128}
+                height={128}
+                className="object-contain"
+                priority
+              />
+
+              {/* Gelber Fortschrittsbalken */}
+              <div className="w-64 h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#EAB308] transition-all duration-300 ease-out"
+                  style={{ width: `${loadProgress}%` }}
+                />
+              </div>
             </div>
           </div>
         )}
