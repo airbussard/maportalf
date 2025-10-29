@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2 } from 'lucide-react'
+import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/app/actions/calendar-events'
+import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees } from '@/app/actions/calendar-events'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 

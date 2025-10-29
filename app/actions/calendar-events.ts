@@ -384,3 +384,22 @@ export async function getLastSyncStatus() {
 
   return data || null
 }
+
+/**
+ * Get all employees with their employee numbers
+ * For FI assignment autocomplete
+ */
+export async function getEmployees() {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, email, employee_number')
+    .order('first_name', { ascending: true })
+
+  if (error) {
+    throw new Error(`Failed to fetch employees: ${error.message}`)
+  }
+
+  return data || []
+}
