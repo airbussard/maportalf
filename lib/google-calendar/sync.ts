@@ -237,17 +237,34 @@ function prepareEventData(
     return null
   }
 
-  // Detect if this is an FI event
-  const isFIEvent = googleEvent.summary.startsWith('FI:')
-  let eventType: 'fi_assignment' | 'booking' = 'booking'
+  // Parse additional data from description (including EVENT_TYPE marker)
+  const parsedData = parseGoogleEventDescription(googleEvent.description || '')
+
+  // Detect event type - Priority: 1) Description marker, 2) Title prefix, 3) Default to booking
+  let eventType: 'fi_assignment' | 'booking' | 'blocker' = 'booking'
   let firstName = ''
   let lastName = ''
   let assignedInstructorName = ''
   let assignedInstructorNumber = null
 
-  if (isFIEvent) {
+  // Priority 1: Check for EVENT_TYPE marker in description
+  if (parsedData.event_type) {
+    eventType = parsedData.event_type
+  }
+  // Priority 2: Fallback to title-based detection (for backwards compatibility)
+  else if (googleEvent.summary.startsWith('FI:')) {
     eventType = 'fi_assignment'
-    // Parse "FI: Max Mustermann (123)" or "FI: Max Mustermann"
+  }
+
+  // Parse event-specific fields based on type
+  if (eventType === 'blocker') {
+    // Blocker: customer_first_name = title, customer_last_name = empty
+    firstName = googleEvent.summary || 'Blocker'
+    lastName = ''
+    assignedInstructorName = ''
+    assignedInstructorNumber = null
+  } else if (eventType === 'fi_assignment') {
+    // FI event: Parse "FI: Max Mustermann (123)" or "FI: Max Mustermann"
     const fiMatch = googleEvent.summary.match(/^FI:\s*(.+?)(?:\s*\((\d+)\))?$/)
     if (fiMatch) {
       assignedInstructorName = fiMatch[1].trim()
@@ -266,9 +283,6 @@ function prepareEventData(
     lastName = nameParts.slice(1).join(' ') || 'Customer'
   }
 
-  // Parse additional data from description
-  const parsedData = parseGoogleEventDescription(googleEvent.description || '')
-
   // Calculate duration in minutes
   const duration = Math.round(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
@@ -279,7 +293,7 @@ function prepareEventData(
     id: googleEvent.id, // Use Google event ID as primary key (schema uses TEXT)
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
-    event_type: eventType, // 'fi_assignment' or 'booking'
+    event_type: eventType, // 'fi_assignment', 'booking', or 'blocker'
     title: googleEvent.summary,
     description: googleEvent.description || '',
     customer_first_name: firstName,

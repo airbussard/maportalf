@@ -417,6 +417,18 @@ export async function deleteGoogleCalendarEvent(eventId: string): Promise<void> 
 function formatEventDescription(eventData: CalendarEventData): string {
   const parts = []
 
+  // Add EVENT_TYPE marker at the beginning for reliable detection during sync
+  if (eventData.event_type === 'blocker') {
+    parts.push('EVENT_TYPE:BLOCKER')
+    parts.push('') // Empty line for readability
+  } else if (eventData.event_type === 'fi_assignment') {
+    parts.push('EVENT_TYPE:FI_ASSIGNMENT')
+    parts.push('') // Empty line for readability
+  } else {
+    parts.push('EVENT_TYPE:BOOKING')
+    parts.push('') // Empty line for readability
+  }
+
   // For FI events with specific times (not all-day), include actual work times
   if (eventData.event_type === 'fi_assignment' && !eventData.is_all_day) {
     if (eventData.actual_work_start_time && eventData.actual_work_end_time) {
@@ -451,6 +463,19 @@ export function parseGoogleEventDescription(description: string): Partial<Calend
   if (!description) return {}
 
   const data: Partial<CalendarEventData> = {}
+
+  // Parse EVENT_TYPE marker (first line)
+  const eventTypeMatch = description.match(/^EVENT_TYPE:(BLOCKER|FI_ASSIGNMENT|BOOKING)/i)
+  if (eventTypeMatch) {
+    const type = eventTypeMatch[1].toUpperCase()
+    if (type === 'BLOCKER') {
+      data.event_type = 'blocker'
+    } else if (type === 'FI_ASSIGNMENT') {
+      data.event_type = 'fi_assignment'
+    } else if (type === 'BOOKING') {
+      data.event_type = 'booking'
+    }
+  }
 
   const phoneMatch = description.match(/Telefon:\s*(.+)/i)
   if (phoneMatch) data.customer_phone = phoneMatch[1].trim()

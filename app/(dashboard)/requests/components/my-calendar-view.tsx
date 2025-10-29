@@ -1,40 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import { Calendar, Plus, RefreshCw, Clock } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { EventDialog } from './event-dialog'
-import { EventCard } from './event-card'
+import { EventCard } from '@/app/(dashboard)/kalender/components/event-card'
 import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-
-/**
- * Sync Button Component with loading state
- * Uses useFormStatus to show spinner during server-side sync
- */
-function SyncButton() {
-  const { pending } = useFormStatus()
-
-  return (
-    <Button
-      type="submit"
-      variant="outline"
-      disabled={pending}
-      className="flex-1 md:flex-none"
-    >
-      <RefreshCw className={`h-4 w-4 mr-2 ${pending ? 'animate-spin' : ''}`} />
-      <span className="hidden sm:inline">{pending ? 'Synchronisiere...' : 'Sync'}</span>
-      <span className="sm:hidden">{pending ? '...' : 'Sync'}</span>
-    </Button>
-  )
-}
 
 interface CalendarEvent {
   id: string
@@ -60,58 +33,26 @@ interface CalendarEvent {
   actual_work_end_time?: string
 }
 
-interface LastSync {
-  completed_at: string
-  events_imported: number
-  events_exported: number
-  events_updated: number
-  status: string
-}
-
-interface CalendarViewProps {
-  events: CalendarEvent[]
-  lastSync: LastSync | null
+interface MyCalendarViewProps {
+  userId: string
   userName: string
-  syncAction: () => Promise<void>
 }
 
-export function CalendarView({ events: initialEvents, lastSync, userName, syncAction }: CalendarViewProps) {
-  const router = useRouter()
-  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
-  const [showFINames, setShowFINames] = useState(false)
-  const [showBlockers, setShowBlockers] = useState(false)
+  const [events, setEvents] = useState<CalendarEvent[]>([])
 
-  // Show sync result toast based on URL params
+  // Load initial month events
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const syncSuccess = params.get('syncSuccess')
-
-    if (syncSuccess === 'true') {
-      const imported = params.get('imported') || '0'
-      const exported = params.get('exported') || '0'
-      const updated = params.get('updated') || '0'
-      toast.success(`Sync erfolgreich! ${imported} importiert, ${exported} exportiert, ${updated} aktualisiert`)
-
-      // Clean URL
-      window.history.replaceState({}, '', '/kalender')
-    } else if (syncSuccess === 'false') {
-      const error = params.get('error') || 'Unbekannter Fehler'
-      toast.error(`Sync fehlgeschlagen: ${decodeURIComponent(error)}`)
-
-      // Clean URL
-      window.history.replaceState({}, '', '/kalender')
-    }
+    loadMonth(selectedDate.getFullYear(), selectedDate.getMonth())
   }, [])
 
-  // Group events by date (exclude cancelled events)
+  // Group events by date (exclude cancelled events, show all FI events)
   const eventsByDate = events
-    .filter(event => event.status !== 'cancelled')
+    .filter(event => event.status !== 'cancelled' && event.event_type === 'fi_assignment')
     .reduce((acc, event) => {
       const date = new Date(event.start_time).toDateString()
       if (!acc[date]) {
@@ -121,7 +62,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
       return acc
     }, {} as Record<string, CalendarEvent[]>)
 
-  // Get events for current month (exclude cancelled events)
+  // Get events for current month (only FI events)
   const currentMonth = selectedDate.getMonth()
   const currentYear = selectedDate.getFullYear()
   const eventsThisMonth = events.filter(event => {
@@ -129,7 +70,8 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
     return (
       eventDate.getMonth() === currentMonth &&
       eventDate.getFullYear() === currentYear &&
-      event.status !== 'cancelled' // Filter out cancelled/deleted events
+      event.status !== 'cancelled' &&
+      event.event_type === 'fi_assignment'
     )
   })
 
@@ -141,10 +83,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
       })
     : eventsThisMonth
   ).sort((a, b) => {
-    // FI events first
-    if (a.event_type === 'fi_assignment' && b.event_type !== 'fi_assignment') return -1
-    if (a.event_type !== 'fi_assignment' && b.event_type === 'fi_assignment') return 1
-    // Then sort by start time
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
 
@@ -162,16 +100,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   // Add days of month
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day)
-  }
-
-  const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEvent(event)
-    setIsEventDialogOpen(true)
-  }
-
-  const handleNewEvent = () => {
-    setSelectedEvent(null)
-    setIsEventDialogOpen(true)
   }
 
   const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
@@ -229,81 +157,13 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Calendar className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-            Kalender
+            Mein Kalender
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Google Calendar Events verwalten
+            Übersicht Ihrer FI-Einsätze (nur lesend)
           </p>
         </div>
-
-        <div className="flex flex-col gap-2 w-full md:w-auto">
-          <div className="flex gap-2">
-            <form action={syncAction}>
-              <SyncButton />
-            </form>
-            <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Neues Event</span>
-              <span className="sm:hidden">Neu</span>
-            </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-fi-names"
-                checked={showFINames}
-                onCheckedChange={(checked) => setShowFINames(checked === true)}
-              />
-              <Label htmlFor="show-fi-names" className="text-sm cursor-pointer">
-                FI-Namen anzeigen
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-blockers"
-                checked={showBlockers}
-                onCheckedChange={(checked) => setShowBlockers(checked === true)}
-              />
-              <Label htmlFor="show-blockers" className="text-sm cursor-pointer">
-                Blocker anzeigen
-              </Label>
-            </div>
-          </div>
-        </div>
       </div>
-
-      {/* Last Sync Info */}
-      {lastSync && (
-        <Card className="p-3 md:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">
-                <span className="hidden sm:inline">Letzter Sync: </span>
-                {new Date(lastSync.completed_at).toLocaleString('de-DE', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </span>
-            </div>
-            <span className="hidden sm:inline mx-2">•</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {lastSync.events_imported} imp.
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {lastSync.events_exported} exp.
-              </Badge>
-              <Badge variant="secondary" className="text-xs">
-                {lastSync.events_updated} akt.
-              </Badge>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* Calendar Grid */}
       <Card className="p-3 sm:p-4 md:p-6 relative">
@@ -379,8 +239,10 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
             const dayEvents = eventsByDate[dateStr] || []
             const isToday = dateStr === new Date().toDateString()
             const isSelected = selectedDay && dateStr === selectedDay.toDateString()
-            // Only count booking events (exclude FI events and blockers from count)
-            const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
+
+            // Check if user has FI events on this day
+            const userEventsOnDay = dayEvents.filter(e => e.assigned_instructor_id === userId)
+            const hasUserEvents = userEventsOnDay.length > 0
 
             return (
               <div
@@ -397,7 +259,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
                   {day}
                 </div>
-                {bookingEvents.length > 0 && (
+                {dayEvents.length > 0 && (
                   <>
                     {/* Mobile: Show dot indicator */}
                     <div className="sm:hidden flex justify-center">
@@ -405,41 +267,17 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                     </div>
                     {/* Desktop: Show event count */}
                     <div className="hidden sm:block text-xs text-muted-foreground">
-                      {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
+                      {dayEvents.length} {dayEvents.length === 1 ? 'Event' : 'Events'}
                     </div>
-                    {/* FI Names when checkbox is enabled */}
-                    {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
+                    {/* Show user's name ONLY on days they have FI events */}
+                    {hasUserEvents && (
                       <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                        {dayEvents
-                          .filter(e => e.event_type === 'fi_assignment')
-                          .map(e => (
-                            <div
-                              key={e.id}
-                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
-                              title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
-                            >
-                              {e.assigned_instructor_name}
-                              {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
-                            </div>
-                          ))
-                        }
-                      </div>
-                    )}
-                    {/* Blocker when checkbox is enabled */}
-                    {showBlockers && dayEvents.some(e => e.event_type === 'blocker') && (
-                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                        {dayEvents
-                          .filter(e => e.event_type === 'blocker')
-                          .map(e => (
-                            <div
-                              key={e.id}
-                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
-                              title={e.title || e.customer_first_name || 'Blocker'}
-                            >
-                              {e.title || e.customer_first_name || 'Blocker'}
-                            </div>
-                          ))
-                        }
+                        <div
+                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
+                          title={userName}
+                        >
+                          {userName}
+                        </div>
                       </div>
                     )}
                   </>
@@ -450,7 +288,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         </div>
       </Card>
 
-      {/* Upcoming Events List */}
+      {/* Upcoming Events List (Read-only) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-base sm:text-lg md:text-xl font-semibold truncate">
@@ -465,7 +303,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
               </>
             ) : (
               <>
-                <span className="hidden sm:inline">Events diesen Monat ({eventsThisMonth.length})</span>
+                <span className="hidden sm:inline">FI-Events diesen Monat ({eventsThisMonth.length})</span>
                 <span className="sm:hidden">Events ({eventsThisMonth.length})</span>
               </>
             )}
@@ -480,7 +318,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         {displayedEvents.length === 0 ? (
           <Card className="p-6 sm:p-8 text-center text-muted-foreground">
             <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-            <p className="text-sm sm:text-base">{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
+            <p className="text-sm sm:text-base">{selectedDay ? 'Keine FI-Events an diesem Tag' : 'Keine FI-Events in diesem Monat'}</p>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -490,19 +328,11 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 <EventCard
                   key={event.id}
                   event={event}
-                  onClick={() => handleEventClick(event)}
                 />
               ))}
           </div>
         )}
       </div>
-
-      {/* Event Dialog */}
-      <EventDialog
-        open={isEventDialogOpen}
-        onOpenChange={setIsEventDialogOpen}
-        event={selectedEvent}
-      />
     </div>
   )
 }

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { RequestListView } from './components/request-list-view'
-import { RequestCalendarView } from './components/request-calendar-view'
+import { MyCalendarView } from './components/my-calendar-view'
 import { CreateRequestDialog } from './components/create-request-dialog'
 import { EditRequestDialog } from './components/edit-request-dialog'
 import { withdrawWorkRequest } from '@/app/actions/work-requests'
@@ -22,12 +22,13 @@ import type { WorkRequest } from '@/lib/types/work-requests'
 interface RequestsContentProps {
   requests: WorkRequest[]
   userId: string
+  userName: string
 }
 
-export function RequestsContent({ requests, userId }: RequestsContentProps) {
+export function RequestsContent({ requests, userId, userName }: RequestsContentProps) {
   const router = useRouter()
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list')
+  const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('calendar')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<WorkRequest | null>(null)
@@ -104,14 +105,6 @@ export function RequestsContent({ requests, userId }: RequestsContentProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={requests.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportieren
-          </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Neuer Request
@@ -128,7 +121,7 @@ export function RequestsContent({ requests, userId }: RequestsContentProps) {
           </TabsTrigger>
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4" />
-            Kalender
+            Mein Kalender
           </TabsTrigger>
         </TabsList>
 
@@ -142,11 +135,9 @@ export function RequestsContent({ requests, userId }: RequestsContentProps) {
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
-          <RequestCalendarView
-            requests={requests}
+          <MyCalendarView
             userId={userId}
-            onEdit={handleEdit}
-            onWithdraw={handleWithdraw}
+            userName={userName}
           />
         </TabsContent>
       </Tabs>

@@ -25,10 +25,21 @@ async function RequestsPageContent() {
     redirect('/login')
   }
 
+  // Fetch user profile for name
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name')
+    .eq('id', user.id)
+    .single()
+
+  const userName = profile?.first_name && profile?.last_name
+    ? `${profile.first_name} ${profile.last_name}`
+    : user.email || 'Unbekannt'
+
   // Load user's requests
   const requests = await getMyWorkRequests()
 
-  return <RequestsContent requests={requests} userId={user.id} />
+  return <RequestsContent requests={requests} userId={user.id} userName={userName} />
 }
 
 export default function RequestsPage() {
