@@ -74,13 +74,16 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     )
   })
 
-  // Filter events by selected day (if any)
+  // Filter events by selected day (if any) - only show user's FI events
   const displayedEvents = (selectedDay
     ? eventsThisMonth.filter(event => {
         const eventDate = new Date(event.start_time)
-        return eventDate.toDateString() === selectedDay.toDateString()
+        const isRightDay = eventDate.toDateString() === selectedDay.toDateString()
+        // Only show FI events where user is assigned
+        const isUserFIEvent = event.event_type === 'fi_assignment' && event.assigned_instructor_id === userId
+        return isRightDay && isUserFIEvent
       })
-    : eventsThisMonth
+    : eventsThisMonth.filter(e => e.event_type === 'fi_assignment' && e.assigned_instructor_id === userId)
   ).sort((a, b) => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
