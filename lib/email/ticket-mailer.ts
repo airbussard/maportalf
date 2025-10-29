@@ -161,51 +161,108 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Poppins', Arial, sans-serif;
       line-height: 1.6;
-      color: #333;
+      color: #121212;
       max-width: 600px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .email-container {
+      background: #ffffff;
+      margin: 20px auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: #121212;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #fbb928;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
     }
     .content {
-      background: #ffffff;
+      padding: 30px 20px;
+    }
+    .content p {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    .ticket-info {
+      background: linear-gradient(135deg, #fbb928 0%, #f9a825 100%);
       padding: 20px;
-      border-radius: 5px;
+      border-radius: 8px;
+      margin: 25px 0;
+      box-shadow: 0 2px 4px rgba(251, 185, 40, 0.2);
+    }
+    .ticket-info strong {
+      color: #121212;
+      font-weight: 600;
+    }
+    .ticket-info-row {
+      margin: 8px 0;
+      font-size: 15px;
     }
     .signature {
       margin-top: 30px;
-      padding-top: 20px;
-      border-top: 2px solid #e0e0e0;
+      padding-top: 25px;
+      border-top: 2px solid #f0f0f0;
       color: #666;
       font-size: 14px;
     }
     .signature strong {
-      color: #333;
+      color: #121212;
+      font-weight: 600;
     }
-    .ticket-info {
-      background: #f5f5f5;
-      padding: 10px;
-      border-left: 4px solid #0066cc;
-      margin: 20px 0;
+    .footer {
+      background: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #999;
     }
   </style>
 </head>
 <body>
-  <div class="content">
-    <p>Sehr geehrte Damen und Herren,</p>
-
-    ${options.content.split('\n').map(line => `<p>${line}</p>`).join('')}
-
-    <div class="ticket-info">
-      <strong>Ticket-Nummer:</strong> ${ticketNumber}<br>
-      <strong>Status:</strong> Offen
+  <div class="email-container">
+    <div class="header">
+      <h1>FLIGHTHOUR</h1>
     </div>
 
-    <div class="signature">
-      ${generateHtmlSignature(options)}
+    <div class="content">
+      <p>Sehr geehrte Damen und Herren,</p>
+
+      ${options.content.split('\n').map(line => `<p>${line}</p>`).join('')}
+
+      <div class="ticket-info">
+        <div class="ticket-info-row">
+          <strong>📋 Ticket-Nummer:</strong> ${ticketNumber}
+        </div>
+        <div class="ticket-info-row">
+          <strong>🔄 Status:</strong> Offen
+        </div>
+      </div>
+
+      <div class="signature">
+        ${generateHtmlSignature(options)}
+      </div>
+    </div>
+
+    <div class="footer">
+      FLIGHTHOUR Flugsimulator • Ticket-System<br>
+      Diese E-Mail wurde automatisch generiert.
     </div>
   </div>
 </body>
@@ -231,16 +288,16 @@ Web: https://flighthour.de`
  * Generate HTML signature
  */
 function generateHtmlSignature(options: TicketEmailOptions): string {
-  return `<p>Mit freundlichen Grüßen<br>
-<strong>${options.senderName}</strong></p>
+  return `<p style="margin-bottom: 5px;">Mit freundlichen Grüßen</p>
+<p style="margin: 0; font-weight: 600; color: #121212;">${options.senderName}</p>
 
-<p style="color: #0066cc; font-weight: bold; margin-top: 20px;">
+<p style="color: #fbb928; font-weight: 700; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">
 FLIGHTHOUR Flugsimulator
 </p>
 
-<p style="font-size: 12px; color: #666;">
-<strong>Kontakt:</strong><br>
-E-Mail: <a href="mailto:info@flighthour.de">info@flighthour.de</a><br>
-Web: <a href="https://flighthour.de">https://flighthour.de</a>
+<p style="font-size: 13px; color: #666; line-height: 1.8;">
+<strong style="color: #121212;">Kontakt:</strong><br>
+E-Mail: <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a><br>
+Web: <a href="https://flighthour.de" style="color: #fbb928; text-decoration: none;">flighthour.de</a>
 </p>`
 }
