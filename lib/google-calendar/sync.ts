@@ -51,27 +51,103 @@ export async function syncGoogleCalendarToDatabase(
 
     console.log(`[Sync] Fetched ${events.length} events from Google Calendar`)
 
-    // Process each Google event with progress logging
-    let processed = 0
     const totalEvents = events.length
     console.log(`[Sync] Starting to process ${totalEvents} events...`)
 
-    for (const googleEvent of events) {
-      try {
-        await processGoogleEvent(googleEvent, supabase, result)
-        processed++
+    // 1. Cache user ID (avoid repeated lookups)
+    let cachedUserId: string | null = null
+    const { data: { user } } = await supabase.auth.getUser()
+    cachedUserId = user?.id || null
 
-        // Log progress every 100 events
-        if (processed % 100 === 0) {
-          console.log(`[Sync] Progress: ${processed}/${totalEvents} events processed (${Math.round(processed/totalEvents*100)}%)`)
-        }
-      } catch (error) {
-        console.error(`[Sync] Error processing event ${googleEvent.id}:`, error)
-        result.errors.push(`Event ${googleEvent.id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    if (!cachedUserId) {
+      // Fallback: Get first admin user
+      const { data: adminUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1)
+        .single()
+
+      cachedUserId = adminUser?.id
+      if (!cachedUserId) {
+        throw new Error('[Sync] No user available for sync')
       }
     }
 
-    console.log(`[Sync] ✅ Processing complete: ${processed}/${totalEvents} events`)
+    console.log(`[Sync] Using user ID: ${cachedUserId}`)
+
+    // 2. Bulk check which events already exist
+    const googleEventIds = events.map(e => e.id)
+    const { data: existingEvents } = await supabase
+      .from('calendar_events')
+      .select('google_event_id')
+      .in('google_event_id', googleEventIds)
+
+    const existingEventIds = new Set(existingEvents?.map((e: any) => e.google_event_id) || [])
+    console.log(`[Sync] Found ${existingEventIds.size} existing events in database`)
+
+    // 3. Handle cancelled events first (separate logic)
+    const cancelledEvents = events.filter(e => e.status === 'cancelled')
+    for (const googleEvent of cancelledEvents) {
+      try {
+        await handleDeletedEvent(googleEvent, supabase, result)
+      } catch (error) {
+        console.error(`[Sync] Error handling cancelled event ${googleEvent.id}:`, error)
+        result.errors.push(`Cancelled event ${googleEvent.id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    // 4. Batch-process active events
+    const activeEvents = events.filter(e => e.status !== 'cancelled')
+    const BATCH_SIZE = 50
+    let processed = 0
+
+    for (let i = 0; i < activeEvents.length; i += BATCH_SIZE) {
+      const batch = activeEvents.slice(i, i + BATCH_SIZE)
+
+      // Prepare event data for batch
+      const eventDataArray = batch
+        .map(googleEvent => prepareEventData(googleEvent, cachedUserId!))
+        .filter(data => data !== null) // Skip invalid events
+
+      if (eventDataArray.length > 0) {
+        try {
+          // Batch UPSERT
+          const { error } = await supabase
+            .from('calendar_events')
+            .upsert(eventDataArray, {
+              onConflict: 'google_event_id',
+              ignoreDuplicates: false
+            })
+
+          if (error) {
+            console.error(`[Sync] Batch UPSERT error:`, error)
+            result.errors.push(`Batch ${i}-${i + BATCH_SIZE}: ${error.message}`)
+          } else {
+            // Count imports vs updates
+            eventDataArray.forEach((eventData: any) => {
+              if (!existingEventIds.has(eventData.google_event_id)) {
+                result.imported++
+              } else {
+                result.updated++
+              }
+            })
+          }
+        } catch (error) {
+          console.error(`[Sync] Batch processing error:`, error)
+          result.errors.push(`Batch ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+      }
+
+      processed += batch.length
+
+      // Progress logging every batch
+      if (processed % 100 === 0 || processed === activeEvents.length) {
+        console.log(`[Sync] Progress: ${processed}/${activeEvents.length} active events processed (${Math.round(processed/activeEvents.length*100)}%)`)
+      }
+    }
+
+    console.log(`[Sync] ✅ Processing complete: ${result.imported} imported, ${result.updated} updated, ${cancelledEvents.length} cancelled`)
 
     // Store sync token for next incremental sync
     result.syncToken = nextSyncToken
@@ -136,41 +212,29 @@ async function handleDeletedEvent(
 }
 
 /**
- * Process a single Google Calendar event
- * Creates or updates in Supabase using UPSERT to prevent duplicates
+ * Prepare event data from Google Calendar event
+ * Returns null for invalid events, otherwise returns EventData object for UPSERT
  */
-async function processGoogleEvent(
+function prepareEventData(
   googleEvent: GoogleCalendarEvent,
-  supabase: any,
-  result: SyncResult
-): Promise<void> {
-  // Handle deleted/cancelled events (soft delete)
+  userId: string
+): any | null {
+  // Skip cancelled events (handled separately by handleDeletedEvent)
   if (googleEvent.status === 'cancelled') {
-    await handleDeletedEvent(googleEvent, supabase, result)
-    return
+    return null
   }
 
   // Skip events without start time or summary
   if (!googleEvent.start || !googleEvent.summary) {
-    console.log(`[Sync] Skipping event ${googleEvent.id}: Missing start time or summary`, {
-      hasStart: !!googleEvent.start,
-      hasSummary: !!googleEvent.summary,
-      summary: googleEvent.summary
-    })
-    return
+    return null
   }
 
   // Extract start/end times
   const startTime = googleEvent.start.dateTime || googleEvent.start.date
-  const endTime = googleEvent.end.dateTime || googleEvent.end.date
+  const endTime = googleEvent.end?.dateTime || googleEvent.end?.date
 
   if (!startTime || !endTime) {
-    console.log(`[Sync] Skipping event ${googleEvent.id}: Missing start/end time`, {
-      summary: googleEvent.summary,
-      hasStartTime: !!startTime,
-      hasEndTime: !!endTime
-    })
-    return
+    return null
   }
 
   // Detect if this is an FI event
@@ -195,12 +259,6 @@ async function processGoogleEvent(
     // FI events don't have customer names
     firstName = ''
     lastName = ''
-
-    console.log(`[Sync] Detected FI Event:`, {
-      summary: googleEvent.summary,
-      assignedInstructorName,
-      assignedInstructorNumber
-    })
   } else {
     // Regular booking event - parse customer name
     const nameParts = googleEvent.summary.split(' ')
@@ -216,29 +274,8 @@ async function processGoogleEvent(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
-  // Try to get current user, but don't fail if none (for background sync)
-  // For background syncs, we'll use a system user ID or the first admin
-  const { data: { user } } = await supabase.auth.getUser()
-
-  let userId = user?.id
-  if (!userId) {
-    // Background sync: Get first admin user as fallback
-    const { data: adminUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('role', 'admin')
-      .limit(1)
-      .single()
-
-    userId = adminUser?.id
-    if (!userId) {
-      console.error('[Sync] No user available for sync - skipping event')
-      return
-    }
-  }
-
-  // Prepare event data matching existing schema
-  const eventData = {
+  // Return prepared event data matching existing schema
+  return {
     id: googleEvent.id, // Use Google event ID as primary key (schema uses TEXT)
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
@@ -266,42 +303,6 @@ async function processGoogleEvent(
     sync_status: 'synced',
     last_modified_at: googleEvent.updated,
     updated_at: new Date().toISOString()
-  }
-
-  // Check if event exists BEFORE upsert (for correct import/update counting)
-  const { data: existingEvent } = await supabase
-    .from('calendar_events')
-    .select('id')
-    .eq('google_event_id', googleEvent.id)
-    .maybeSingle()
-
-  // UPSERT: Insert or update on conflict (prevents duplicates)
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .upsert(eventData, {
-      onConflict: 'google_event_id',
-      ignoreDuplicates: false
-    })
-    .select()
-
-  if (error) {
-    console.error(`[Sync] Database error for event ${googleEvent.id}:`, {
-      summary: googleEvent.summary,
-      error: error.message,
-      eventType,
-      eventData
-    })
-    throw new Error(`Database error: ${error.message}`)
-  }
-
-  // Track whether this was an insert or update
-  if (data && data.length > 0) {
-    if (!existingEvent) {
-      result.imported++
-      console.log(`[Sync] ✅ IMPORTED new event: ${googleEvent.summary}`)
-    } else {
-      result.updated++
-    }
   }
 }
 
