@@ -75,12 +75,19 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
   })
 
   // Filter events by selected day (if any)
-  const displayedEvents = selectedDay
+  const displayedEvents = (selectedDay
     ? eventsThisMonth.filter(event => {
         const eventDate = new Date(event.start_time)
         return eventDate.toDateString() === selectedDay.toDateString()
       })
     : eventsThisMonth
+  ).sort((a, b) => {
+    // FI events first
+    if (a.event_type === 'fi_assignment' && b.event_type !== 'fi_assignment') return -1
+    if (a.event_type !== 'fi_assignment' && b.event_type === 'fi_assignment') return 1
+    // Then sort by start time
+    return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  })
 
   // Generate calendar days
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1)

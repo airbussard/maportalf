@@ -43,6 +43,7 @@ export async function getCalendarEvents(
     .from('calendar_events')
     .select('*')
     .order('start_time', { ascending: true })
+    .limit(5000) // Explicit limit to override Supabase default of 1000
 
   if (startDate) {
     query = query.gte('start_time', startDate)
