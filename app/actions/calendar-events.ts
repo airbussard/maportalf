@@ -202,7 +202,9 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         etag: googleEvent.etag,
         sync_status: 'synced',
         last_synced_at: new Date().toISOString(),
-        created_by: user.id
+        created_by: user.id,
+        has_video_recording: eventData.has_video_recording || false,
+        on_site_payment_amount: eventData.on_site_payment_amount || null
       })
       .select()
       .single()
@@ -275,7 +277,9 @@ export async function updateCalendarEvent(
       attendee_count: eventData.attendee_count ?? existingEvent.attendee_count,
       remarks: eventData.remarks ?? existingEvent.remarks,
       location: eventData.location || existingEvent.location,
-      status: eventData.status || existingEvent.status
+      status: eventData.status || existingEvent.status,
+      has_video_recording: eventData.has_video_recording ?? existingEvent.has_video_recording,
+      on_site_payment_amount: eventData.on_site_payment_amount ?? existingEvent.on_site_payment_amount
     }
 
     // Generate title for FI events with actual work times
@@ -323,6 +327,8 @@ export async function updateCalendarEvent(
           end_time: gcEndTime,
           actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
           actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
+          has_video_recording: eventData.has_video_recording ?? existingEvent.has_video_recording,
+          on_site_payment_amount: eventData.on_site_payment_amount ?? existingEvent.on_site_payment_amount,
           etag: googleEvent.etag,
           sync_status: 'synced',
           last_synced_at: new Date().toISOString(),

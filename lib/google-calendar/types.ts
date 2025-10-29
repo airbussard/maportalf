@@ -51,6 +51,9 @@ export interface CalendarEventData {
   actual_work_start_time?: string // Format: 'HH:MM:SS'
   actual_work_end_time?: string // Format: 'HH:MM:SS'
   title?: string // Pre-generated title (for FI events with times, blocker title)
+  // Booking-specific fields
+  has_video_recording?: boolean // Indicates if video recording was booked
+  on_site_payment_amount?: number | null // Amount to be paid on-site in EUR
 }
 
 export interface SyncResult {

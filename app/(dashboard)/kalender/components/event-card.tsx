@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, Clock, MapPin, User } from 'lucide-react'
+import { Calendar, Clock, MapPin, User, Video, Euro } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -21,6 +21,8 @@ interface EventCardProps {
     is_all_day?: boolean
     actual_work_start_time?: string
     actual_work_end_time?: string
+    has_video_recording?: boolean
+    on_site_payment_amount?: number | null
   }
   onClick?: () => void
 }
@@ -116,6 +118,23 @@ export function EventCard({ event, onClick }: EventCardProps) {
               {event.status === 'cancelled' && 'Abgesagt'}
             </Badge>
           )}
+          {/* Video & Payment Icons (only for booking events) */}
+          {!isFIEvent && !isBlocker && (
+            <>
+              {event.has_video_recording && (
+                <div className="flex items-center gap-1 text-xs text-primary" title="Videoaufnahme gebucht">
+                  <Video className="h-3 w-3" />
+                  <span className="hidden sm:inline">Video</span>
+                </div>
+              )}
+              {event.on_site_payment_amount != null && event.on_site_payment_amount > 0 && (
+                <div className="flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400" title="Vor Ort zu zahlen">
+                  <Euro className="h-3 w-3" />
+                  <span>{event.on_site_payment_amount.toFixed(2)}</span>
+                </div>
+              )}
+            </>
+          )}
           <Badge
             variant="outline"
             className={`text-xs ${syncStatusColors[event.sync_status as keyof typeof syncStatusColors] || ''}`}
@@ -200,6 +219,23 @@ export function EventCard({ event, onClick }: EventCardProps) {
               {event.status === 'tentative' && 'Vorläufig'}
               {event.status === 'cancelled' && 'Abgesagt'}
             </Badge>
+          )}
+          {/* Video & Payment Icons (only for booking events) */}
+          {!isFIEvent && !isBlocker && (
+            <>
+              {event.has_video_recording && (
+                <div className="flex items-center gap-1 text-xs text-primary" title="Videoaufnahme gebucht">
+                  <Video className="h-4 w-4" />
+                  <span>Video</span>
+                </div>
+              )}
+              {event.on_site_payment_amount != null && event.on_site_payment_amount > 0 && (
+                <div className="flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400" title="Vor Ort zu zahlen">
+                  <Euro className="h-4 w-4" />
+                  <span>{event.on_site_payment_amount.toFixed(2)} EUR</span>
+                </div>
+              )}
+            </>
           )}
           <Badge
             variant="outline"

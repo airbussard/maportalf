@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info } from 'lucide-react'
+import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,15 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     is_all_day: false,
     actual_work_start_time: '',
     actual_work_end_time: '',
-    blocker_title: 'Block'
+    blocker_title: 'Block',
+    // New fields for booking events
+    booking_date: '',
+    start_time_only: '',
+    end_time_only: '',
+    duration_mode: 'duration' as 'duration' | 'manual',
+    duration_preset: 60,
+    has_video_recording: false,
+    on_site_payment_amount: null as number | null
   })
 
   // Separate state for all-day event date selection
@@ -65,6 +73,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     if (event) {
       // Viewing/Editing existing event
       const startDate = event.start_time ? new Date(event.start_time).toISOString().slice(0, 10) : ''
+      const startTimeOnly = event.start_time ? new Date(event.start_time).toTimeString().slice(0, 5) : ''
+      const endTimeOnly = event.end_time ? new Date(event.end_time).toTimeString().slice(0, 5) : ''
       setSelectedDate(startDate)
 
       setFormData({
@@ -85,13 +95,20 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         is_all_day: event.is_all_day || false,
         actual_work_start_time: event.actual_work_start_time || '',
         actual_work_end_time: event.actual_work_end_time || '',
-        blocker_title: event.title || ''
+        blocker_title: event.title || '',
+        booking_date: startDate,
+        start_time_only: startTimeOnly,
+        end_time_only: endTimeOnly,
+        duration_mode: 'duration',
+        duration_preset: event.duration || 60,
+        has_video_recording: event.has_video_recording || false,
+        on_site_payment_amount: event.on_site_payment_amount || null
       })
     } else {
       // Creating new event - reset to defaults
       const now = new Date()
       const startTime = new Date(now.getTime() + 60 * 60 * 1000) // +1 hour
-      const endTime = new Date(startTime.getTime() + 90 * 60 * 1000) // +90 minutes
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // +60 minutes (1 hour default)
 
       // Initialize selectedDate with today
       setSelectedDate(now.toISOString().slice(0, 10))
@@ -104,7 +121,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         customer_email: '',
         start_time: startTime.toISOString().slice(0, 16),
         end_time: endTime.toISOString().slice(0, 16),
-        duration: 90,
+        duration: 60,
         attendee_count: 1,
         remarks: '',
         location: 'FLIGHTHOUR Flugsimulator',
@@ -114,7 +131,14 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         actual_work_start_time: '',
         actual_work_end_time: '',
         is_all_day: false,
-        blocker_title: 'Block'
+        blocker_title: 'Block',
+        booking_date: now.toISOString().slice(0, 10),
+        start_time_only: startTime.toTimeString().slice(0, 5),
+        end_time_only: endTime.toTimeString().slice(0, 5),
+        duration_mode: 'duration',
+        duration_preset: 60,
+        has_video_recording: false,
+        on_site_payment_amount: null
       })
     }
   }, [event, open])
@@ -126,17 +150,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     }
   }, [open])
 
-  // Calculate duration when times change
-  useEffect(() => {
-    if (formData.start_time && formData.end_time) {
-      const start = new Date(formData.start_time)
-      const end = new Date(formData.end_time)
-      const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60))
-      if (durationMinutes > 0) {
-        setFormData(prev => ({ ...prev, duration: durationMinutes }))
-      }
-    }
-  }, [formData.start_time, formData.end_time])
+  // No automatic duration calculation needed anymore - handled in submit
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,8 +160,53 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
       // Prepare data
       let submitData = { ...formData }
 
+      // Booking Events - special handling for new date/time fields
+      if (formData.event_type === 'booking') {
+        // Validate date and time
+        if (!formData.booking_date || !formData.start_time_only) {
+          throw new Error('Bitte geben Sie Datum und Startzeit an')
+        }
+
+        // Calculate start_time and end_time from new fields
+        const startDateTime = `${formData.booking_date}T${formData.start_time_only}:00`
+
+        let endDateTime: string
+        let durationMinutes: number
+
+        if (formData.duration_mode === 'duration') {
+          // Calculate end time from duration preset
+          durationMinutes = formData.duration_preset
+          const startDate = new Date(startDateTime)
+          const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000)
+          endDateTime = endDate.toISOString().slice(0, 19)
+        } else {
+          // Use manual end time
+          if (!formData.end_time_only) {
+            throw new Error('Bitte geben Sie eine Endzeit an')
+          }
+          endDateTime = `${formData.booking_date}T${formData.end_time_only}:00`
+
+          // Calculate duration
+          const start = new Date(startDateTime)
+          const end = new Date(endDateTime)
+
+          // Validate: end must be after start and on same day
+          if (end <= start) {
+            throw new Error('Endzeit muss nach der Startzeit liegen')
+          }
+          if (end.getDate() !== start.getDate()) {
+            throw new Error('Mehrtägige Events sind nicht erlaubt. Bitte wählen Sie eine Endzeit am selben Tag.')
+          }
+
+          durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60))
+        }
+
+        submitData.start_time = startDateTime
+        submitData.end_time = endDateTime
+        submitData.duration = durationMinutes
+      }
       // Blocker Events - special handling
-      if (formData.event_type === 'blocker') {
+      else if (formData.event_type === 'blocker') {
         // Validation
         if (!formData.blocker_title || formData.blocker_title.trim() === '') {
           throw new Error('Bitte geben Sie einen Titel für den Blocker ein')
@@ -385,54 +444,151 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </div>
           </div>
 
-          {/* Time Fields - Booking events only */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="start_time" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Start *
-              </Label>
-              <Input
-                id="start_time"
-                type="datetime-local"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                required
-                disabled={isReadOnly}
-              />
-            </div>
-            <div>
-              <Label htmlFor="end_time">Ende *</Label>
-              <Input
-                id="end_time"
-                type="datetime-local"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                required
-                disabled={isReadOnly}
-              />
-            </div>
+          {/* Date Field - Booking events only */}
+          <div>
+            <Label htmlFor="booking_date" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Datum *
+            </Label>
+            <Input
+              id="booking_date"
+              type="date"
+              value={formData.booking_date}
+              onChange={(e) => setFormData({ ...formData, booking_date: e.target.value })}
+              required
+              disabled={isReadOnly}
+            />
           </div>
 
-          {/* Duration & Attendees */}
+          {/* Time Mode Selection */}
+          <div className="space-y-2">
+            <Label>Zeiteingabe</Label>
+            <RadioGroup
+              value={formData.duration_mode}
+              onValueChange={(value: 'duration' | 'manual') => setFormData({ ...formData, duration_mode: value })}
+              disabled={isReadOnly}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="duration" id="duration-mode" />
+                <Label htmlFor="duration-mode" className="font-normal cursor-pointer">Startzeit + Dauer</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="manual" id="manual-mode" />
+                <Label htmlFor="manual-mode" className="font-normal cursor-pointer">Startzeit + Endzeit</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Time Fields based on mode */}
+          {formData.duration_mode === 'duration' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start_time_only" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Startzeit *
+                </Label>
+                <Input
+                  id="start_time_only"
+                  type="time"
+                  value={formData.start_time_only}
+                  onChange={(e) => setFormData({ ...formData, start_time_only: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="duration_preset">Dauer *</Label>
+                <Select
+                  value={formData.duration_preset.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, duration_preset: parseInt(value) })}
+                  disabled={isReadOnly}
+                >
+                  <SelectTrigger id="duration_preset">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 Minuten</SelectItem>
+                    <SelectItem value="60">1 Stunde</SelectItem>
+                    <SelectItem value="120">2 Stunden</SelectItem>
+                    <SelectItem value="180">3 Stunden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start_time_only_manual" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Startzeit *
+                </Label>
+                <Input
+                  id="start_time_only_manual"
+                  type="time"
+                  value={formData.start_time_only}
+                  onChange={(e) => setFormData({ ...formData, start_time_only: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="end_time_only">Endzeit *</Label>
+                <Input
+                  id="end_time_only"
+                  type="time"
+                  value={formData.end_time_only}
+                  onChange={(e) => setFormData({ ...formData, end_time_only: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Attendees */}
+          <div>
+            <Label htmlFor="attendee_count" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Anzahl Personen
+            </Label>
+            <Input
+              id="attendee_count"
+              type="number"
+              min="1"
+              value={formData.attendee_count}
+              onChange={(e) => setFormData({ ...formData, attendee_count: parseInt(e.target.value) || 1 })}
+              disabled={isReadOnly}
+            />
+          </div>
+
+          {/* New Fields: Video Recording & Payment */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Dauer</Label>
-              <Input
-                value={`${formData.duration} Minuten`}
-                disabled
-                className="bg-muted"
+            <div className="flex items-center space-x-2 pt-8">
+              <Checkbox
+                id="has_video_recording"
+                checked={formData.has_video_recording}
+                onCheckedChange={(checked) => setFormData({ ...formData, has_video_recording: checked as boolean })}
+                disabled={isReadOnly}
               />
+              <Label htmlFor="has_video_recording" className="font-normal cursor-pointer flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Videoaufnahme gebucht
+              </Label>
             </div>
             <div>
-              <Label htmlFor="attendee_count">Anzahl Personen</Label>
+              <Label htmlFor="on_site_payment_amount" className="flex items-center gap-2">
+                <Euro className="h-4 w-4" />
+                Vor Ort zu zahlen (EUR)
+              </Label>
               <Input
-                id="attendee_count"
+                id="on_site_payment_amount"
                 type="number"
-                min="1"
-                value={formData.attendee_count}
-                onChange={(e) => setFormData({ ...formData, attendee_count: parseInt(e.target.value) || 1 })}
+                step="0.01"
+                min="0"
+                value={formData.on_site_payment_amount || ''}
+                onChange={(e) => setFormData({ ...formData, on_site_payment_amount: e.target.value ? parseFloat(e.target.value) : null })}
                 disabled={isReadOnly}
+                placeholder="0.00"
               />
             </div>
           </div>
