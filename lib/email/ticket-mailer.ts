@@ -182,16 +182,14 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     .header {
-      background: #121212;
+      background: #ffffff;
       padding: 30px 20px;
       text-align: center;
+      border-bottom: 3px solid #fbb928;
     }
-    .header h1 {
-      color: #fbb928;
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 1px;
+    .header img {
+      max-width: 200px;
+      height: auto;
     }
     .content {
       padding: 30px 20px;
@@ -201,19 +199,21 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
       color: #333;
     }
     .ticket-info {
-      background: linear-gradient(135deg, #fbb928 0%, #f9a825 100%);
-      padding: 20px;
-      border-radius: 8px;
-      margin: 25px 0;
-      box-shadow: 0 2px 4px rgba(251, 185, 40, 0.2);
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      border-left: 3px solid #fbb928;
+      font-size: 13px;
+      color: #666;
     }
     .ticket-info strong {
       color: #121212;
-      font-weight: 600;
+      font-weight: 500;
     }
     .ticket-info-row {
-      margin: 8px 0;
-      font-size: 15px;
+      margin: 6px 0;
+      font-size: 13px;
     }
     .signature {
       margin-top: 30px;
@@ -231,14 +231,15 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
       padding: 20px;
       text-align: center;
       font-size: 12px;
-      color: #999;
+      color: #121212;
+      border-top: 1px solid #e0e0e0;
     }
   </style>
 </head>
 <body>
   <div class="email-container">
     <div class="header">
-      <h1>FLIGHTHOUR</h1>
+      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">
@@ -246,23 +247,22 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
 
       ${options.content.split('\n').map(line => `<p>${line}</p>`).join('')}
 
-      <div class="ticket-info">
-        <div class="ticket-info-row">
-          <strong>📋 Ticket-Nummer:</strong> ${ticketNumber}
-        </div>
-        <div class="ticket-info-row">
-          <strong>🔄 Status:</strong> Offen
-        </div>
-      </div>
-
       <div class="signature">
         ${generateHtmlSignature(options)}
       </div>
     </div>
 
     <div class="footer">
-      FLIGHTHOUR Flugsimulator • Ticket-System<br>
-      Diese E-Mail wurde automatisch generiert.
+      <strong>FLIGHTHOUR Flugsimulator</strong> • Ticket-System
+    </div>
+
+    <div class="ticket-info">
+      <div class="ticket-info-row">
+        <strong>Ticket-Nummer:</strong> ${ticketNumber}
+      </div>
+      <div class="ticket-info-row">
+        <strong>Status:</strong> Offen
+      </div>
     </div>
   </div>
 </body>
