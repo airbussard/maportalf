@@ -83,7 +83,7 @@ export default async function DashboardPage() {
             <CardTitle>Termine heute ({filteredEvents.length})</CardTitle>
           </div>
           <CardDescription>
-            {filteredEvents.length === 0 ? 'Keine Termine für heute' : 'Ihre Termine für heute'}
+            {filteredEvents.length === 0 ? 'Keine Termine für heute' : 'Heutige Termine'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -95,7 +95,13 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {filteredEvents
-                .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+                .sort((a, b) => {
+                  // FI events first
+                  if (a.event_type === 'fi_assignment' && b.event_type !== 'fi_assignment') return -1
+                  if (a.event_type !== 'fi_assignment' && b.event_type === 'fi_assignment') return 1
+                  // Then by time
+                  return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+                })
                 .map(event => (
                   <EventCard key={event.id} event={event} />
                 ))

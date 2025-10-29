@@ -561,7 +561,7 @@ export async function getOpenTicketsCount() {
     const { count, error } = await supabase
       .from('tickets')
       .select('*', { count: 'exact', head: true })
-      .neq('status', 'closed')
+      .eq('status', 'open')
 
     if (error) {
       console.error('Failed to get open tickets count:', error)

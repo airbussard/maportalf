@@ -916,7 +916,7 @@ export async function getPendingRequestsCount() {
     const { count, error } = await supabase
       .from('work_requests')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['pending', 'approved'])
+      .eq('status', 'pending')
 
     if (error) {
       console.error('Failed to get pending requests count:', error)
