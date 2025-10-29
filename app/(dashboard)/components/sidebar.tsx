@@ -82,11 +82,6 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           icon: <Ticket className="w-5 h-5" />,
         },
         {
-          href: '/tickets/stats',
-          label: 'Ticket-Statistiken',
-          icon: <BarChart3 className="w-5 h-5" />,
-        },
-        {
           href: '/tags',
           label: 'Tags',
           icon: <Tag className="w-5 h-5" />,
@@ -100,6 +95,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/requests/manage',
           label: 'Requests verwalten',
           icon: <CalendarCheck className="w-5 h-5" />,
+        },
+        {
+          href: '/tickets/stats',
+          label: 'Statistiken',
+          icon: <BarChart3 className="w-5 h-5" />,
         },
       ],
     },

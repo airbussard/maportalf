@@ -38,8 +38,8 @@ export async function syncGoogleCalendarToDatabase(
   }
 
   try {
-    // Default time range: -1 month to +12 months
-    const timeMin = options.timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    // Default time range: -12 months to +12 months
+    const timeMin = options.timeMin || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
     const timeMax = options.timeMax || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
 
     // Fetch events from Google Calendar

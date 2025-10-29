@@ -8,6 +8,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export type TimeRange = 'day' | 'week' | 'month' | 'year'
 
@@ -71,6 +72,11 @@ export async function getTicketStats(timeRange: TimeRange = 'month'): Promise<Ti
       throw new Error('Unauthorized - Manager or Admin access required')
     }
 
+    // Use admin client for admins (bypasses RLS to see all tickets)
+    // Managers see only their own tickets (RLS remains active)
+    const isAdmin = profile?.role === 'admin'
+    const dataClient = isAdmin ? createAdminClient() : supabase
+
     // Calculate date range
     const now = new Date()
     const startDate = new Date()
@@ -91,7 +97,8 @@ export async function getTicketStats(timeRange: TimeRange = 'month'): Promise<Ti
     }
 
     // Fetch all tickets in range (excluding spam by default)
-    const { data: tickets, error } = await supabase
+    // dataClient: Admin sees ALL tickets, Manager sees only assigned tickets
+    const { data: tickets, error } = await dataClient
       .from('tickets')
       .select(`
         *,
