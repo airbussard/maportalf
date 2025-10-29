@@ -79,11 +79,15 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
     ? eventsThisMonth.filter(event => {
         const eventDate = new Date(event.start_time)
         const isRightDay = eventDate.toDateString() === selectedDay.toDateString()
-        // Only show FI events where user is assigned
-        const isUserFIEvent = event.event_type === 'fi_assignment' && event.assigned_instructor_id === userId
+        // Only show FI events where user is assigned (by ID or name)
+        const isUserFIEvent = event.event_type === 'fi_assignment' &&
+          (event.assigned_instructor_id === userId || event.assigned_instructor_name === userName)
         return isRightDay && isUserFIEvent
       })
-    : eventsThisMonth.filter(e => e.event_type === 'fi_assignment' && e.assigned_instructor_id === userId)
+    : eventsThisMonth.filter(e =>
+        e.event_type === 'fi_assignment' &&
+        (e.assigned_instructor_id === userId || e.assigned_instructor_name === userName)
+      )
   ).sort((a, b) => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
@@ -247,8 +251,28 @@ export function MyCalendarView({ userId, userName }: MyCalendarViewProps) {
 
             // Check if user has FI events on this day (only check FI events)
             const fiEventsOnDay = dayEvents.filter(e => e.event_type === 'fi_assignment')
-            const userEventsOnDay = fiEventsOnDay.filter(e => e.assigned_instructor_id === userId)
+            const userEventsOnDay = fiEventsOnDay.filter(e =>
+              e.assigned_instructor_id === userId ||
+              e.assigned_instructor_name === userName
+            )
             const hasUserEvents = userEventsOnDay.length > 0
+
+            // DEBUG: Log FI events on first day with events
+            if (day === 1 && fiEventsOnDay.length > 0) {
+              console.log('🔍 Requests Calendar DEBUG:', {
+                userId,
+                userName,
+                fiEventsCount: fiEventsOnDay.length,
+                userEventsCount: userEventsOnDay.length,
+                fiEvents: fiEventsOnDay.map(e => ({
+                  id: e.id,
+                  assigned_instructor_id: e.assigned_instructor_id,
+                  assigned_instructor_name: e.assigned_instructor_name,
+                  matchesById: e.assigned_instructor_id === userId,
+                  matchesByName: e.assigned_instructor_name === userName
+                }))
+              })
+            }
 
             return (
               <div

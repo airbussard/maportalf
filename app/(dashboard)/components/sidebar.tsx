@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
   Home,
@@ -15,9 +15,12 @@ import {
   CalendarClock,
   CalendarCheck,
   Calendar,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
 
 interface SidebarProps {
   role: string
@@ -39,6 +42,14 @@ interface NavGroup {
 
 export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   const navGroups: NavGroup[] = [
     {
@@ -202,9 +213,20 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-3">
+          {/* Logout Button */}
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Abmelden</span>
+          </Button>
+
+          {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.000
+            Version 2.001
           </p>
         </div>
       </aside>
