@@ -549,3 +549,28 @@ export async function bulkDeleteTickets(ticketIds: string[]) {
     return { success: false, error: 'Ein Fehler ist aufgetreten' }
   }
 }
+
+/**
+ * Get count of open tickets (for dashboard widget)
+ * Returns count of tickets that are not closed
+ */
+export async function getOpenTicketsCount() {
+  try {
+    const supabase = await createClient()
+
+    const { count, error } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .neq('status', 'closed')
+
+    if (error) {
+      console.error('Failed to get open tickets count:', error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Failed to get open tickets count:', error)
+    return 0
+  }
+}

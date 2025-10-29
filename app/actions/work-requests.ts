@@ -904,3 +904,28 @@ export async function getConflictCount(
   const conflicts = await checkWorkRequestConflicts(requestDate, excludeId)
   return conflicts.length
 }
+
+/**
+ * Get count of pending/open requests (for dashboard widget)
+ * Returns count of requests that are pending or approved
+ */
+export async function getPendingRequestsCount() {
+  try {
+    const supabase = await createClient()
+
+    const { count, error } = await supabase
+      .from('work_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pending', 'approved'])
+
+    if (error) {
+      console.error('Failed to get pending requests count:', error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Failed to get pending requests count:', error)
+    return 0
+  }
+}

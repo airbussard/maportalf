@@ -518,6 +518,21 @@ export async function getUpcomingEvents(limit: number = 5) {
 }
 
 /**
+ * Get today's events (for dashboard widget)
+ * Returns all events for the current day
+ */
+export async function getTodaysEvents() {
+  const today = new Date()
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
+
+  return getCalendarEvents(
+    startOfDay.toISOString(),
+    endOfDay.toISOString()
+  )
+}
+
+/**
  * Get last sync status
  */
 export async function getLastSyncStatus() {
