@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 import {
   Home,
   Ticket,
@@ -144,7 +145,13 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2" onClick={onClose}>
-            <span className="text-xl font-bold">FLIGHTHOUR</span>
+            <Image
+              src="/logo.png"
+              alt="FLIGHTHOUR"
+              width={150}
+              height={40}
+              className="h-8 w-auto"
+            />
           </Link>
           <button
             onClick={onClose}

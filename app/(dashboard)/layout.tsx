@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './components/sidebar'
+import Image from 'next/image'
 
 export default function DashboardLayout({
   children,
@@ -71,7 +72,15 @@ export default function DashboardLayout({
             </button>
 
             {/* Logo for Mobile */}
-            <div className="lg:hidden text-xl font-bold">FLIGHTHOUR</div>
+            <div className="lg:hidden">
+              <Image
+                src="/logo.png"
+                alt="FLIGHTHOUR"
+                width={150}
+                height={40}
+                className="h-8 w-auto"
+              />
+            </div>
 
             {/* User Info */}
             <div className="ml-auto flex items-center gap-4">
