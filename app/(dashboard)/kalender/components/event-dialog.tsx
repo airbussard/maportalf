@@ -32,6 +32,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [employees, setEmployees] = useState<any[]>([])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -99,6 +100,13 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     }
   }, [event, open])
 
+  // Load employees for FI assignment
+  useEffect(() => {
+    if (open) {
+      getEmployees().then(data => setEmployees(data)).catch(console.error)
+    }
+  }, [open])
+
   // Calculate duration when times change
   useEffect(() => {
     if (formData.start_time && formData.end_time) {
@@ -116,15 +124,28 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     setIsLoading(true)
 
     try {
+      // Prepare data
+      let submitData = { ...formData }
+
+      // For all-day FI events, set dummy times (required by schema)
+      if (formData.event_type === 'fi_assignment' && formData.is_all_day) {
+        const today = new Date()
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0)
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0)
+        submitData.start_time = startOfDay.toISOString().slice(0, 16)
+        submitData.end_time = endOfDay.toISOString().slice(0, 16)
+        submitData.duration = 60
+      }
+
       if (event) {
         // Update existing event
-        await updateCalendarEvent(event.id, formData)
+        await updateCalendarEvent(event.id, submitData)
         toast.success('Event erfolgreich aktualisiert')
         router.refresh()
         onOpenChange(false)
       } else {
         // Create new event
-        await createCalendarEvent(formData)
+        await createCalendarEvent(submitData)
         toast.success('Event erfolgreich erstellt')
         router.refresh()
         onOpenChange(false)
@@ -176,6 +197,30 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          {/* Event Type Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Event-Typ
+            </Label>
+            <RadioGroup
+              value={formData.event_type}
+              onValueChange={(value) => setFormData({...formData, event_type: value as 'booking' | 'fi_assignment'})}
+              disabled={isReadOnly}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="booking" id="booking" />
+                <Label htmlFor="booking" className="font-normal cursor-pointer">Buchung</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="fi_assignment" id="fi" />
+                <Label htmlFor="fi" className="font-normal cursor-pointer">FI-Mitarbeiter</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {formData.event_type === 'booking' ? (
+          <>
           {/* Customer Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -318,6 +363,90 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               placeholder="Zusätzliche Informationen..."
             />
           </div>
+          </>
+          ) : (
+          <>
+          {/* FI Assignment Fields */}
+          {/* Instructor Name */}
+          <div>
+            <Label htmlFor="instructor_name" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Mitarbeiter *
+            </Label>
+            <Input
+              id="instructor_name"
+              value={formData.assigned_instructor_name}
+              onChange={(e) => setFormData({ ...formData, assigned_instructor_name: e.target.value })}
+              required={formData.event_type === 'fi_assignment'}
+              disabled={isReadOnly}
+              placeholder="Name eingeben..."
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Später: Mitarbeiter aus Liste auswählen
+            </p>
+          </div>
+
+          {/* All Day Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="is_all_day"
+              checked={formData.is_all_day}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_all_day: checked as boolean })}
+              disabled={isReadOnly}
+            />
+            <Label htmlFor="is_all_day" className="font-normal cursor-pointer">
+              Ganztägig
+            </Label>
+          </div>
+
+          {/* Time fields only if not all day */}
+          {!formData.is_all_day && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start_time" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Start *
+                </Label>
+                <Input
+                  id="start_time"
+                  type="datetime-local"
+                  value={formData.start_time}
+                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="end_time">Ende *</Label>
+                <Input
+                  id="end_time"
+                  type="datetime-local"
+                  value={formData.end_time}
+                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  required
+                  disabled={isReadOnly}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Remarks for FI */}
+          <div>
+            <Label htmlFor="fi_remarks" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Bemerkungen
+            </Label>
+            <Textarea
+              id="fi_remarks"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+              disabled={isReadOnly}
+              rows={3}
+              placeholder="Zusätzliche Informationen..."
+            />
+          </div>
+          </>
+          )}
 
           {/* Sync Status */}
           {event && (
