@@ -481,3 +481,64 @@ export async function getManagers() {
     return { success: false, error: 'Ein Fehler ist aufgetreten', data: [] }
   }
 }
+
+export async function bulkUpdateTicketStatus(ticketIds: string[], status: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Validate status
+    if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+      return { success: false, error: 'Ungültiger Status' }
+    }
+
+    // Update all tickets
+    const { error } = await supabase
+      .from('tickets')
+      .update({ status })
+      .in('id', ticketIds)
+
+    if (error) {
+      console.error('Bulk update error:', error)
+      return { success: false, error: 'Fehler beim Aktualisieren' }
+    }
+
+    revalidatePath('/tickets')
+    return { success: true, updated: ticketIds.length }
+  } catch (error) {
+    console.error('Bulk update error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+export async function bulkDeleteTickets(ticketIds: string[]) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Move tickets to spam (soft delete)
+    const { error } = await supabase
+      .from('tickets')
+      .update({ is_spam: true })
+      .in('id', ticketIds)
+
+    if (error) {
+      console.error('Bulk delete error:', error)
+      return { success: false, error: 'Fehler beim Löschen' }
+    }
+
+    revalidatePath('/tickets')
+    return { success: true, deleted: ticketIds.length }
+  } catch (error) {
+    console.error('Bulk delete error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}

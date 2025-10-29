@@ -9,13 +9,18 @@ import { de } from 'date-fns/locale'
 import Link from 'next/link'
 import { Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export function TicketRow({
   ticket,
-  isManagerOrAdmin
+  isManagerOrAdmin,
+  isSelected,
+  onSelect
 }: {
   ticket: Ticket
   isManagerOrAdmin: boolean
+  isSelected?: boolean
+  onSelect?: (ticketId: string, checked: boolean) => void
 }) {
   const ticketNumber = ticket.ticket_number
     ? `TICKET-${ticket.ticket_number.toString().padStart(6, '0')}`
@@ -28,6 +33,14 @@ export function TicketRow({
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
       <div className="flex flex-col md:flex-row md:items-center gap-4">
+        {onSelect && (
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => onSelect(ticket.id, checked as boolean)}
+            />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-sm font-mono text-muted-foreground">
