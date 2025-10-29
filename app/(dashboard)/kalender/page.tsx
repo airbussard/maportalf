@@ -6,14 +6,59 @@
 
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { getCalendarEvents } from '@/app/actions/calendar-events'
+import { getCalendarEvents, syncGoogleCalendar } from '@/app/actions/calendar-events'
 import { CalendarView } from './components/calendar-view'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
   title: 'Kalender | Flighthour',
   description: 'Google Calendar Events verwalten'
+}
+
+/**
+ * Server Action for Sync Button
+ * Runs completely server-side to avoid cache issues
+ */
+async function handleSyncAction() {
+  'use server'
+
+  const supabase = await createClient()
+
+  // Check authentication
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Check permissions
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isManager = profile?.role === 'manager'
+  const isAdmin = profile?.role === 'admin'
+
+  if (!isManager && !isAdmin) {
+    redirect('/dashboard')
+  }
+
+  // Trigger sync
+  const result = await syncGoogleCalendar()
+
+  // Revalidate calendar data
+  revalidatePath('/kalender')
+
+  // Redirect with result in URL params for toast notification
+  if (result.success) {
+    redirect(`/kalender?syncSuccess=true&imported=${result.imported}&exported=${result.exported}&updated=${result.updated}`)
+  } else {
+    const errorMessage = result.errors?.[0] || 'Unbekannter Fehler'
+    redirect(`/kalender?syncSuccess=false&error=${encodeURIComponent(errorMessage)}`)
+  }
 }
 
 async function CalendarPageContent() {
@@ -63,6 +108,7 @@ async function CalendarPageContent() {
       events={events}
       lastSync={lastSync}
       userName={`${profile?.first_name} ${profile?.last_name}`}
+      syncAction={handleSyncAction}
     />
   )
 }

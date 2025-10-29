@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
 import { Calendar, Plus, RefreshCw, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,9 +9,30 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EventDialog } from './event-dialog'
 import { EventCard } from './event-card'
-import { syncGoogleCalendar, getCalendarEventsByMonth } from '@/app/actions/calendar-events'
+import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+
+/**
+ * Sync Button Component with loading state
+ * Uses useFormStatus to show spinner during server-side sync
+ */
+function SyncButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <Button
+      type="submit"
+      variant="outline"
+      disabled={pending}
+      className="flex-1 md:flex-none"
+    >
+      <RefreshCw className={`h-4 w-4 mr-2 ${pending ? 'animate-spin' : ''}`} />
+      <span className="hidden sm:inline">{pending ? 'Synchronisiere...' : 'Sync'}</span>
+      <span className="sm:hidden">{pending ? '...' : 'Sync'}</span>
+    </Button>
+  )
+}
 
 interface CalendarEvent {
   id: string
@@ -42,18 +64,40 @@ interface CalendarViewProps {
   events: CalendarEvent[]
   lastSync: LastSync | null
   userName: string
+  syncAction: () => Promise<void>
 }
 
-export function CalendarView({ events: initialEvents, lastSync, userName }: CalendarViewProps) {
+export function CalendarView({ events: initialEvents, lastSync, userName, syncAction }: CalendarViewProps) {
   const router = useRouter()
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
+
+  // Show sync result toast based on URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const syncSuccess = params.get('syncSuccess')
+
+    if (syncSuccess === 'true') {
+      const imported = params.get('imported') || '0'
+      const exported = params.get('exported') || '0'
+      const updated = params.get('updated') || '0'
+      toast.success(`Sync erfolgreich! ${imported} importiert, ${exported} exportiert, ${updated} aktualisiert`)
+
+      // Clean URL
+      window.history.replaceState({}, '', '/kalender')
+    } else if (syncSuccess === 'false') {
+      const error = params.get('error') || 'Unbekannter Fehler'
+      toast.error(`Sync fehlgeschlagen: ${decodeURIComponent(error)}`)
+
+      // Clean URL
+      window.history.replaceState({}, '', '/kalender')
+    }
+  }, [])
 
   // Group events by date (exclude cancelled events)
   const eventsByDate = events
@@ -108,23 +152,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName }: Cale
   // Add days of month
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day)
-  }
-
-  const handleSync = async () => {
-    setIsSyncing(true)
-    try {
-      const result = await syncGoogleCalendar()
-      if (result.success) {
-        toast.success(`Sync erfolgreich! ${result.imported} importiert, ${result.exported} exportiert, ${result.updated} aktualisiert`)
-        router.refresh()
-      } else {
-        toast.error('Sync fehlgeschlagen: ' + (result.errors?.[0] || 'Unbekannter Fehler'))
-      }
-    } catch (error) {
-      toast.error('Sync fehlgeschlagen')
-    } finally {
-      setIsSyncing(false)
-    }
   }
 
   const handleEventClick = (event: CalendarEvent) => {
@@ -200,16 +227,9 @@ export function CalendarView({ events: initialEvents, lastSync, userName }: Cale
         </div>
 
         <div className="flex gap-2 w-full md:w-auto">
-          <Button
-            variant="outline"
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="flex-1 md:flex-none"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{isSyncing ? 'Synchronisiere...' : 'Sync'}</span>
-            <span className="sm:hidden">{isSyncing ? '...' : 'Sync'}</span>
-          </Button>
+          <form action={syncAction}>
+            <SyncButton />
+          </form>
           <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
             <Plus className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Neues Event</span>
