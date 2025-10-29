@@ -252,7 +252,8 @@ export async function createGoogleCalendarEvent(
       dateTime: endDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
-    status: eventData.status || 'confirmed'
+    status: eventData.status || 'confirmed',
+    colorId: isFIEvent ? '5' : undefined // '5' = Gelb/Banana für FI-Events
   }
 
   const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events`
@@ -344,7 +345,8 @@ export async function updateGoogleCalendarEvent(
       dateTime: endDate.toISOString(),
       timeZone: 'Europe/Berlin'
     },
-    status: eventData.status || 'confirmed'
+    status: eventData.status || 'confirmed',
+    colorId: isFIEvent ? '5' : undefined // '5' = Gelb/Banana für FI-Events
   }
 
   const url = `${CALENDAR_API_BASE}/calendars/${encodeURIComponent(GOOGLE_CALENDAR_ID)}/events/${eventId}`

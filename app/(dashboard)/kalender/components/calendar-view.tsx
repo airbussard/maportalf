@@ -7,6 +7,8 @@ import { Calendar, Plus, RefreshCw, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { EventDialog } from './event-dialog'
 import { EventCard } from './event-card'
 import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
@@ -82,6 +84,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
+  const [showFINames, setShowFINames] = useState(false)
 
   // Show sync result toast based on URL params
   useEffect(() => {
@@ -232,15 +235,27 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
           </p>
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
-          <form action={syncAction}>
-            <SyncButton />
-          </form>
-          <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
-            <Plus className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Neues Event</span>
-            <span className="sm:hidden">Neu</span>
-          </Button>
+        <div className="flex flex-col gap-2 w-full md:w-auto">
+          <div className="flex gap-2">
+            <form action={syncAction}>
+              <SyncButton />
+            </form>
+            <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Neues Event</span>
+              <span className="sm:hidden">Neu</span>
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="show-fi-names"
+              checked={showFINames}
+              onCheckedChange={(checked) => setShowFINames(checked === true)}
+            />
+            <Label htmlFor="show-fi-names" className="text-sm cursor-pointer">
+              FI-Namen anzeigen
+            </Label>
+          </div>
         </div>
       </div>
 
@@ -377,6 +392,24 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                     <div className="hidden sm:block text-xs text-muted-foreground">
                       {dayEvents.length} {dayEvents.length === 1 ? 'Event' : 'Events'}
                     </div>
+                    {/* FI Names when checkbox is enabled */}
+                    {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
+                      <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
+                        {dayEvents
+                          .filter(e => e.event_type === 'fi_assignment')
+                          .map(e => (
+                            <div
+                              key={e.id}
+                              className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
+                              title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
+                            >
+                              {e.assigned_instructor_name}
+                              {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
                   </>
                 )}
               </div>
