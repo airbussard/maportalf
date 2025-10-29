@@ -490,8 +490,11 @@ export async function approveWorkRequest(requestId: string): Promise<WorkRequest
     // Create calendar event as FI assignment (fixed 8:00-9:00 in Google Calendar)
     const requestDate = existingRequest.request_date
 
-    // FI event title with employee number
-    const eventTitle = `FI: ${employee.first_name} ${employee.last_name}${employee.employee_number ? ` (${employee.employee_number})` : ''}`
+    // FI event title with employee number and time range (if partial day)
+    let eventTitle = `FI: ${employee.first_name} ${employee.last_name}${employee.employee_number ? ` (${employee.employee_number})` : ''}`
+    if (!existingRequest.is_full_day && existingRequest.start_time && existingRequest.end_time) {
+      eventTitle += ` ${existingRequest.start_time.slice(0, 5)}-${existingRequest.end_time.slice(0, 5)}`
+    }
 
     const remarks = existingRequest.is_full_day
       ? 'Ganztägiger Arbeitstag (genehmigter Request)'
@@ -512,6 +515,10 @@ export async function approveWorkRequest(requestId: string): Promise<WorkRequest
       assigned_instructor_name: `${employee.first_name} ${employee.last_name}`,
       is_all_day: existingRequest.is_full_day,
       request_id: requestId,  // Link back to work request
+
+      // Actual work times (for display and editing)
+      actual_work_start_time: existingRequest.is_full_day ? null : existingRequest.start_time,
+      actual_work_end_time: existingRequest.is_full_day ? null : existingRequest.end_time,
 
       // Empty customer fields (not used for FI events)
       customer_first_name: '',

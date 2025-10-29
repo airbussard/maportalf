@@ -214,14 +214,26 @@ export async function createGoogleCalendarEvent(
 
   // Build summary with validation
   let summary = ''
-  if (isFIEvent) {
+
+  // Use pre-generated title if provided (includes actual work times for FI events)
+  if (eventData.title) {
+    summary = eventData.title
+  } else if (isFIEvent) {
     const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
     const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
     summary = `FI: ${instructorName}${instructorNumber}`
 
+    // Add actual work time to title if partial day
+    if (!eventData.is_all_day && eventData.actual_work_start_time && eventData.actual_work_end_time) {
+      summary += ` ${eventData.actual_work_start_time.slice(0, 5)}-${eventData.actual_work_end_time.slice(0, 5)}`
+    }
+
     console.log('[Google Calendar CREATE] FI Event:', {
       instructorName: eventData.assigned_instructor_name,
       instructorNumber: eventData.assigned_instructor_number,
+      actualWorkTimes: eventData.actual_work_start_time && eventData.actual_work_end_time
+        ? `${eventData.actual_work_start_time} - ${eventData.actual_work_end_time}`
+        : 'all-day',
       summary
     })
   } else {
@@ -293,15 +305,27 @@ export async function updateGoogleCalendarEvent(
 
   // Build summary with validation
   let summary = ''
-  if (isFIEvent) {
+
+  // Use pre-generated title if provided (includes actual work times for FI events)
+  if (eventData.title) {
+    summary = eventData.title
+  } else if (isFIEvent) {
     const instructorName = eventData.assigned_instructor_name || 'Unbekannt'
     const instructorNumber = eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''
     summary = `FI: ${instructorName}${instructorNumber}`
+
+    // Add actual work time to title if partial day
+    if (!eventData.is_all_day && eventData.actual_work_start_time && eventData.actual_work_end_time) {
+      summary += ` ${eventData.actual_work_start_time.slice(0, 5)}-${eventData.actual_work_end_time.slice(0, 5)}`
+    }
 
     console.log('[Google Calendar UPDATE] FI Event:', {
       eventId,
       instructorName: eventData.assigned_instructor_name,
       instructorNumber: eventData.assigned_instructor_number,
+      actualWorkTimes: eventData.actual_work_start_time && eventData.actual_work_end_time
+        ? `${eventData.actual_work_start_time} - ${eventData.actual_work_end_time}`
+        : 'all-day',
       summary
     })
   } else {
@@ -369,18 +393,12 @@ export async function deleteGoogleCalendarEvent(eventId: string): Promise<void> 
 function formatEventDescription(eventData: CalendarEventData): string {
   const parts = []
 
-  // For FI events with specific times (not all-day), include actual times
+  // For FI events with specific times (not all-day), include actual work times
   if (eventData.event_type === 'fi_assignment' && !eventData.is_all_day) {
-    const startDate = new Date(eventData.start_time)
-    const endDate = new Date(eventData.end_time)
-    parts.push(`Tatsächliche Zeiten: ${startDate.toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })} - ${endDate.toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })}`)
-    parts.push('') // Empty line for readability
+    if (eventData.actual_work_start_time && eventData.actual_work_end_time) {
+      parts.push(`Tatsächliche Arbeitszeiten: ${eventData.actual_work_start_time.slice(0, 5)} - ${eventData.actual_work_end_time.slice(0, 5)}`)
+      parts.push('') // Empty line for readability
+    }
   }
 
   if (eventData.customer_phone) {

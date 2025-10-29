@@ -51,7 +51,9 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     assigned_instructor_id: '',
     assigned_instructor_number: '',
     assigned_instructor_name: '',
-    is_all_day: false
+    is_all_day: false,
+    actual_work_start_time: '',
+    actual_work_end_time: ''
   })
 
   // Separate state for all-day event date selection
@@ -79,7 +81,9 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         assigned_instructor_id: event.assigned_instructor_id || '',
         assigned_instructor_number: event.assigned_instructor_number || '',
         assigned_instructor_name: event.assigned_instructor_name || '',
-        is_all_day: event.is_all_day || false
+        is_all_day: event.is_all_day || false,
+        actual_work_start_time: event.actual_work_start_time || '',
+        actual_work_end_time: event.actual_work_end_time || ''
       })
     } else {
       // Creating new event - reset to defaults
@@ -105,6 +109,8 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         assigned_instructor_id: '',
         assigned_instructor_number: '',
         assigned_instructor_name: '',
+        actual_work_start_time: '',
+        actual_work_end_time: '',
         is_all_day: false
       })
     }
@@ -137,14 +143,48 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
       // Prepare data
       let submitData = { ...formData }
 
-      // For all-day FI events, set dummy times (required by schema)
-      if (formData.event_type === 'fi_assignment' && formData.is_all_day) {
-        const today = new Date()
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0)
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0)
-        submitData.start_time = startOfDay.toISOString().slice(0, 16)
-        submitData.end_time = endOfDay.toISOString().slice(0, 16)
-        submitData.duration = 60
+      // FI Assignment Events - special handling
+      if (formData.event_type === 'fi_assignment') {
+        // Validation
+        if (!formData.assigned_instructor_name) {
+          throw new Error('Bitte wählen Sie einen Mitarbeiter aus')
+        }
+
+        // Ganztägiges Event
+        if (formData.is_all_day) {
+          if (!selectedDate) {
+            throw new Error('Bitte wählen Sie ein Datum aus')
+          }
+          submitData.start_time = `${selectedDate}T08:00:00`
+          submitData.end_time = `${selectedDate}T09:00:00`
+          submitData.duration = 60
+          submitData.actual_work_start_time = ''
+          submitData.actual_work_end_time = ''
+        }
+        // Mit Arbeitszeiten
+        else {
+          if (!selectedDate) {
+            throw new Error('Bitte wählen Sie ein Datum aus')
+          }
+          if (!formData.actual_work_start_time || !formData.actual_work_end_time) {
+            throw new Error('Bitte geben Sie Arbeitszeiten an')
+          }
+
+          // Use selected date with fixed 08:00-09:00 for Google Calendar
+          submitData.start_time = `${selectedDate}T08:00:00`
+          submitData.end_time = `${selectedDate}T09:00:00`
+
+          // Convert HH:MM to HH:MM:SS for actual work times
+          submitData.actual_work_start_time = `${formData.actual_work_start_time}:00`
+          submitData.actual_work_end_time = `${formData.actual_work_end_time}:00`
+
+          // Calculate duration from actual work times
+          const [startH, startM] = formData.actual_work_start_time.split(':').map(Number)
+          const [endH, endM] = formData.actual_work_end_time.split(':').map(Number)
+          const startMinutes = startH * 60 + startM
+          const endMinutes = endH * 60 + endM
+          submitData.duration = endMinutes - startMinutes
+        }
       }
 
       if (event) {
@@ -303,7 +343,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
             </div>
           </div>
 
-          {/* Time */}
+          {/* Time Fields - Booking events only */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="start_time" className="flex items-center gap-2">
@@ -394,17 +434,38 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               <Users className="h-4 w-4" />
               Mitarbeiter *
             </Label>
-            <Input
-              id="instructor_name"
-              value={formData.assigned_instructor_name}
-              onChange={(e) => setFormData({ ...formData, assigned_instructor_name: e.target.value })}
-              required={formData.event_type === 'fi_assignment'}
+            <Select
+              value={formData.assigned_instructor_id || ''}
+              onValueChange={(value) => {
+                const selectedEmployee = employees.find(emp => emp.id === value)
+                if (selectedEmployee) {
+                  setFormData({
+                    ...formData,
+                    assigned_instructor_id: selectedEmployee.id,
+                    assigned_instructor_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
+                    assigned_instructor_number: selectedEmployee.employee_number || ''
+                  })
+                }
+              }}
               disabled={isReadOnly}
-              placeholder="Name eingeben..."
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Später: Mitarbeiter aus Liste auswählen
-            </p>
+            >
+              <SelectTrigger id="instructor_name">
+                <SelectValue placeholder="Mitarbeiter auswählen..." />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.first_name} {employee.last_name}
+                    {employee.employee_number && ` (${employee.employee_number})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {formData.assigned_instructor_name && !formData.assigned_instructor_id && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Hinweis: Dieser Eintrag hat keinen verknüpften Mitarbeiter. Name: {formData.assigned_instructor_name}
+              </p>
+            )}
           </div>
 
           {/* All Day Checkbox */}
@@ -446,34 +507,59 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
               />
             </div>
           ) : (
-            /* Time fields for non-all-day events */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            /* Actual work time fields for non-all-day FI events */
+            <>
               <div>
-                <Label htmlFor="start_time" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Start *
+                <Label htmlFor="event_date" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Datum *
                 </Label>
                 <Input
-                  id="start_time"
-                  type="datetime-local"
-                  value={formData.start_time}
-                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  id="event_date"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    const dateStr = e.target.value
+                    setSelectedDate(dateStr)
+                    // Update formData with the selected date (keep 08:00-09:00 for Google)
+                    setFormData({
+                      ...formData,
+                      start_time: `${dateStr}T08:00`,
+                      end_time: `${dateStr}T09:00`
+                    })
+                  }}
                   required
                   disabled={isReadOnly}
                 />
               </div>
-              <div>
-                <Label htmlFor="end_time">Ende *</Label>
-                <Input
-                  id="end_time"
-                  type="datetime-local"
-                  value={formData.end_time}
-                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  required
-                  disabled={isReadOnly}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="actual_work_start_time" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Arbeits-Start *
+                  </Label>
+                  <Input
+                    id="actual_work_start_time"
+                    type="time"
+                    value={formData.actual_work_start_time}
+                    onChange={(e) => setFormData({ ...formData, actual_work_start_time: e.target.value })}
+                    required
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="actual_work_end_time">Arbeits-Ende *</Label>
+                  <Input
+                    id="actual_work_end_time"
+                    type="time"
+                    value={formData.actual_work_end_time}
+                    onChange={(e) => setFormData({ ...formData, actual_work_end_time: e.target.value })}
+                    required
+                    disabled={isReadOnly}
+                  />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Remarks for FI */}

@@ -129,8 +129,36 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
   }
 
   try {
-    // Create event in Google Calendar first
-    const googleEvent = await createGoogleCalendarEvent(eventData)
+    // Generate title for FI events with actual work times
+    let eventTitle: string
+    if (eventData.event_type === 'fi_assignment') {
+      eventTitle = `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
+      // Add time range if partial day
+      if (!eventData.is_all_day && eventData.actual_work_start_time && eventData.actual_work_end_time) {
+        eventTitle += ` ${eventData.actual_work_start_time.slice(0, 5)}-${eventData.actual_work_end_time.slice(0, 5)}`
+      }
+    } else {
+      eventTitle = `${eventData.customer_first_name} ${eventData.customer_last_name}`
+    }
+
+    // For FI events with actual work times, use fixed 08:00-09:00 for Google Calendar
+    let gcStartTime = eventData.start_time
+    let gcEndTime = eventData.end_time
+
+    if (eventData.event_type === 'fi_assignment' && !eventData.is_all_day && eventData.actual_work_start_time) {
+      // Extract date from start_time and use fixed 08:00-09:00
+      const eventDate = eventData.start_time.split('T')[0]
+      gcStartTime = `${eventDate}T08:00:00`
+      gcEndTime = `${eventDate}T09:00:00`
+    }
+
+    // Create event in Google Calendar first (with fixed times for FI events)
+    const googleEvent = await createGoogleCalendarEvent({
+      ...eventData,
+      title: eventTitle,
+      start_time: gcStartTime,
+      end_time: gcEndTime
+    })
 
     // Generate UUID for id (calendar_events.id is TEXT type)
     const eventId = crypto.randomUUID()
@@ -142,9 +170,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         id: eventId,
         user_id: user.id, // Schema uses user_id, not created_by
         google_event_id: googleEvent.id,
-        title: eventData.event_type === 'fi_assignment'
-          ? `FI: ${eventData.assigned_instructor_name}${eventData.assigned_instructor_number ? ` (${eventData.assigned_instructor_number})` : ''}`
-          : `${eventData.customer_first_name} ${eventData.customer_last_name}`,
+        title: eventTitle,
         description: eventData.remarks || '',
         event_type: eventData.event_type || 'booking',
         customer_first_name: eventData.customer_first_name || '',
@@ -156,8 +182,10 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         assigned_instructor_name: eventData.assigned_instructor_name,
         is_all_day: eventData.is_all_day || false,
         request_id: eventData.request_id || null,
-        start_time: eventData.start_time,
-        end_time: eventData.end_time,
+        start_time: gcStartTime,
+        end_time: gcEndTime,
+        actual_work_start_time: eventData.actual_work_start_time || null,
+        actual_work_end_time: eventData.actual_work_end_time || null,
         duration: eventData.duration,
         attendee_count: eventData.attendee_count,
         remarks: eventData.remarks,
@@ -234,6 +262,8 @@ export async function updateCalendarEvent(
       is_all_day: eventData.is_all_day ?? existingEvent.is_all_day,
       start_time: eventData.start_time || existingEvent.start_time,
       end_time: eventData.end_time || existingEvent.end_time,
+      actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
+      actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
       duration: eventData.duration || existingEvent.duration,
       attendee_count: eventData.attendee_count ?? existingEvent.attendee_count,
       remarks: eventData.remarks ?? existingEvent.remarks,
@@ -241,11 +271,39 @@ export async function updateCalendarEvent(
       status: eventData.status || existingEvent.status
     }
 
+    // Generate title for FI events with actual work times
+    let eventTitle: string
+    if (mergedData.event_type === 'fi_assignment') {
+      eventTitle = `FI: ${mergedData.assigned_instructor_name}${mergedData.assigned_instructor_number ? ` (${mergedData.assigned_instructor_number})` : ''}`
+      // Add time range if partial day
+      if (!mergedData.is_all_day && mergedData.actual_work_start_time && mergedData.actual_work_end_time) {
+        eventTitle += ` ${mergedData.actual_work_start_time.slice(0, 5)}-${mergedData.actual_work_end_time.slice(0, 5)}`
+      }
+    } else {
+      eventTitle = `${mergedData.customer_first_name} ${mergedData.customer_last_name}`
+    }
+
+    // For FI events with actual work times, use fixed 08:00-09:00 for Google Calendar
+    let gcStartTime = mergedData.start_time
+    let gcEndTime = mergedData.end_time
+
+    if (mergedData.event_type === 'fi_assignment' && !mergedData.is_all_day && mergedData.actual_work_start_time) {
+      // Extract date from start_time and use fixed 08:00-09:00
+      const eventDate = mergedData.start_time.split('T')[0]
+      gcStartTime = `${eventDate}T08:00:00`
+      gcEndTime = `${eventDate}T09:00:00`
+    }
+
     // Update in Google Calendar if google_event_id exists
     if (existingEvent.google_event_id) {
       const googleEvent = await updateGoogleCalendarEvent(
         existingEvent.google_event_id,
-        mergedData
+        {
+          ...mergedData,
+          title: eventTitle,
+          start_time: gcStartTime,
+          end_time: gcEndTime
+        }
       )
 
       // Update in Supabase with new etag
@@ -253,6 +311,11 @@ export async function updateCalendarEvent(
         .from('calendar_events')
         .update({
           ...sanitizeUuidFields(eventData),
+          title: eventTitle,
+          start_time: gcStartTime,
+          end_time: gcEndTime,
+          actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
+          actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
           etag: googleEvent.etag,
           sync_status: 'synced',
           last_synced_at: new Date().toISOString(),
@@ -277,6 +340,11 @@ export async function updateCalendarEvent(
         .from('calendar_events')
         .update({
           ...sanitizeUuidFields(eventData),
+          title: eventTitle,
+          start_time: gcStartTime,
+          end_time: gcEndTime,
+          actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
+          actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
           sync_status: 'pending',
           last_modified_at: new Date().toISOString()
         })

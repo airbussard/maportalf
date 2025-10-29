@@ -19,6 +19,8 @@ interface EventCardProps {
     assigned_instructor_name?: string
     assigned_instructor_number?: string
     is_all_day?: boolean
+    actual_work_start_time?: string
+    actual_work_end_time?: string
   }
   onClick: () => void
 }
@@ -53,7 +55,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
       <div className="sm:hidden space-y-2">
         {/* Row 1: Time and Name */}
         <div className="flex items-center gap-2">
-          {!event.is_all_day && (
+          {/* Hide time for FI events, show for bookings */}
+          {!event.is_all_day && !isFIEvent && (
             <div className="flex items-center gap-1 text-xs min-w-[70px]">
               <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <span className="font-medium">
@@ -71,6 +74,11 @@ export function EventCard({ event, onClick }: EventCardProps) {
                 <>
                   FI: {event.assigned_instructor_name}
                   {event.assigned_instructor_number && ` (${event.assigned_instructor_number})`}
+                  {event.actual_work_start_time && event.actual_work_end_time && (
+                    <span className="text-muted-foreground ml-1">
+                      {event.actual_work_start_time.slice(0,5)}-{event.actual_work_end_time.slice(0,5)}
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
@@ -110,8 +118,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
 
       {/* Desktop Layout (>= sm) */}
       <div className="hidden sm:flex items-center gap-4">
-        {/* Time - hide for all-day FI events */}
-        {!event.is_all_day && (
+        {/* Time - hide for FI events completely, show for bookings */}
+        {!event.is_all_day && !isFIEvent && (
           <div className="flex items-center gap-2 text-sm min-w-[100px] lg:min-w-[140px]">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
@@ -138,6 +146,11 @@ export function EventCard({ event, onClick }: EventCardProps) {
               <>
                 FI: {event.assigned_instructor_name}
                 {event.assigned_instructor_number && ` (${event.assigned_instructor_number})`}
+                {event.actual_work_start_time && event.actual_work_end_time && (
+                  <span className="text-muted-foreground ml-2">
+                    {event.actual_work_start_time.slice(0,5)}-{event.actual_work_end_time.slice(0,5)}
+                  </span>
+                )}
               </>
             ) : (
               <>

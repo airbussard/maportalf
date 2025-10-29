@@ -50,6 +50,12 @@ interface CalendarEvent {
   status: string
   sync_status: string
   google_event_id: string | null
+  assigned_instructor_name?: string
+  assigned_instructor_number?: string
+  assigned_instructor_id?: string
+  is_all_day?: boolean
+  actual_work_start_time?: string
+  actual_work_end_time?: string
 }
 
 interface LastSync {
