@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EventDialog } from './event-dialog'
 import { EventCard } from './event-card'
-import { syncGoogleCalendar } from '@/app/actions/calendar-events'
+import { syncGoogleCalendar, getCalendarEventsByMonth } from '@/app/actions/calendar-events'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -43,13 +43,15 @@ interface CalendarViewProps {
   userName: string
 }
 
-export function CalendarView({ events, lastSync, userName }: CalendarViewProps) {
+export function CalendarView({ events: initialEvents, lastSync, userName }: CalendarViewProps) {
   const router = useRouter()
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
 
   // Group events by date (exclude cancelled events)
   const eventsByDate = events
@@ -136,12 +138,30 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
   const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
   const weekDays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
-  const previousMonth = () => {
-    setSelectedDate(new Date(currentYear, currentMonth - 1, 1))
+  const loadMonth = async (year: number, month: number) => {
+    setIsLoadingMonth(true)
+    try {
+      const newEvents = await getCalendarEventsByMonth(year, month)
+      setEvents(newEvents)
+      setSelectedDay(null) // Reset selected day when changing months
+    } catch (error) {
+      toast.error('Fehler beim Laden der Events')
+      console.error('Error loading month:', error)
+    } finally {
+      setIsLoadingMonth(false)
+    }
   }
 
-  const nextMonth = () => {
-    setSelectedDate(new Date(currentYear, currentMonth + 1, 1))
+  const previousMonth = async () => {
+    const newDate = new Date(currentYear, currentMonth - 1, 1)
+    setSelectedDate(newDate)
+    await loadMonth(newDate.getFullYear(), newDate.getMonth())
+  }
+
+  const nextMonth = async () => {
+    const newDate = new Date(currentYear, currentMonth + 1, 1)
+    setSelectedDate(newDate)
+    await loadMonth(newDate.getFullYear(), newDate.getMonth())
   }
 
   return (
@@ -211,17 +231,39 @@ export function CalendarView({ events, lastSync, userName }: CalendarViewProps) 
       )}
 
       {/* Calendar Grid */}
-      <Card className="p-3 sm:p-4 md:p-6">
+      <Card className="p-3 sm:p-4 md:p-6 relative">
+        {/* Loading Overlay */}
+        {isLoadingMonth && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="flex flex-col items-center gap-2">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Lade Monat...</p>
+            </div>
+          </div>
+        )}
+
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-4 md:mb-6">
-          <Button variant="outline" size="sm" onClick={previousMonth} className="h-9 w-9 p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={previousMonth}
+            className="h-9 w-9 p-0"
+            disabled={isLoadingMonth}
+          >
             ←
           </Button>
           <h2 className="text-base sm:text-lg md:text-xl font-semibold">
             <span className="hidden sm:inline">{monthNames[currentMonth]} {currentYear}</span>
             <span className="sm:hidden">{monthNames[currentMonth].slice(0, 3)} {currentYear}</span>
           </h2>
-          <Button variant="outline" size="sm" onClick={nextMonth} className="h-9 w-9 p-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={nextMonth}
+            className="h-9 w-9 p-0"
+            disabled={isLoadingMonth}
+          >
             →
           </Button>
         </div>

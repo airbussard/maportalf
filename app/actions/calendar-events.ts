@@ -63,6 +63,25 @@ export async function getCalendarEvents(
 }
 
 /**
+ * Get calendar events for a specific month
+ * Optimized for client-side month navigation
+ */
+export async function getCalendarEventsByMonth(
+  year: number,
+  month: number // 0-indexed (0 = January, 11 = December)
+) {
+  // Calculate month boundaries
+  const startOfMonth = new Date(year, month, 1)
+  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59)
+
+  // Fetch events for this month only
+  return getCalendarEvents(
+    startOfMonth.toISOString(),
+    endOfMonth.toISOString()
+  )
+}
+
+/**
  * Get a single calendar event by ID
  */
 export async function getCalendarEvent(id: string) {

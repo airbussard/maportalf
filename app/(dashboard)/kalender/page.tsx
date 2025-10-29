@@ -39,8 +39,15 @@ async function CalendarPageContent() {
     redirect('/dashboard')
   }
 
-  // Load calendar events
-  const events = await getCalendarEvents()
+  // Load only current month's events for better performance
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+
+  const events = await getCalendarEvents(
+    startOfMonth.toISOString(),
+    endOfMonth.toISOString()
+  )
 
   // Get last sync info
   const { data: lastSync } = await supabase
