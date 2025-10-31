@@ -1,26 +1,21 @@
 /**
  * Work Requests Page (Employee View)
  *
- * Read-only calendar view showing all events
- * Uses the same CalendarView component as manager view but in read-only mode
+ * Main page for employees to manage their work requests and view calendar
+ * Features: Tab navigation (Requests List / Calendar), Create/Edit dialogs
  */
 
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getMyWorkRequests } from '@/app/actions/work-requests'
 import { getCalendarEvents } from '@/app/actions/calendar-events'
-import { CalendarView } from '@/app/(dashboard)/kalender/components/calendar-view'
+import { RequestsContent } from './requests-content'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
-  title: 'Mein Kalender | Flighthour',
-  description: 'Kalenderübersicht (nur lesend)'
-}
-
-// Dummy sync action that does nothing (required by CalendarView)
-async function dummySyncAction() {
-  'use server'
-  // No-op for read-only view
+  title: 'Meine Requests | Flighthour',
+  description: 'Arbeitstage verwalten und Kalender einsehen'
 }
 
 async function RequestsPageContent() {
@@ -43,23 +38,25 @@ async function RequestsPageContent() {
     ? `${profile.first_name} ${profile.last_name}`
     : user.email || 'Unbekannt'
 
-  // Load only current month's events
+  // Load work requests
+  const requests = await getMyWorkRequests()
+
+  // Load calendar events for current month
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-  const events = await getCalendarEvents(
+  const calendarEvents = await getCalendarEvents(
     startOfMonth.toISOString(),
     endOfMonth.toISOString()
   )
 
   return (
-    <CalendarView
-      events={events}
-      lastSync={null}
+    <RequestsContent
+      requests={requests}
+      calendarEvents={calendarEvents}
+      userId={user.id}
       userName={userName}
-      syncAction={dummySyncAction}
-      isReadOnly={true}
     />
   )
 }
