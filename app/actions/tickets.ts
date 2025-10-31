@@ -402,6 +402,54 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
       return { success: false, error: 'Fehler beim Senden der Nachricht' }
     }
 
+    // Send email notification for non-internal messages
+    if (!isInternal) {
+      try {
+        // Get ticket details
+        const { data: ticket } = await supabase
+          .from('tickets')
+          .select('subject, ticket_number, created_from_email')
+          .eq('id', ticketId)
+          .single()
+
+        // Get sender profile
+        const { data: sender } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', user.id)
+          .single()
+
+        // Only send email if ticket was created from email
+        if (ticket && ticket.created_from_email && sender) {
+          const ticketNumber = ticket.ticket_number
+            ? ticket.ticket_number.toString().padStart(6, '0')
+            : ticketId.substring(0, 8)
+
+          const senderName = `${sender.first_name} ${sender.last_name}`.trim() || sender.email
+
+          // Queue email for background processing
+          await supabase
+            .from('email_queue')
+            .insert({
+              type: 'ticket_reply',
+              ticket_id: ticketId,
+              recipient_email: ticket.created_from_email,
+              subject: `[TICKET-${ticketNumber}] ${ticket.subject}`,
+              content,
+              status: 'pending',
+              attempts: 0
+            })
+
+          console.log('[Ticket Reply] Email queued for:', ticket.created_from_email)
+        } else {
+          console.log('[Ticket Reply] No email sent - ticket was not created from email')
+        }
+      } catch (emailError) {
+        console.error('[Ticket Reply] Failed to queue email:', emailError)
+        // Don't fail the message creation if email queueing fails
+      }
+    }
+
     revalidatePath(`/tickets/${ticketId}`)
     return { success: true, data: message }
   } catch (error) {

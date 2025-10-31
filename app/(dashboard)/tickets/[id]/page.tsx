@@ -76,7 +76,21 @@ export default async function TicketDetailPage({
 
         <Card>
           <CardContent className="pt-6">
-            <h3 className="font-semibold mb-2">Beschreibung</h3>
+            {ticket.created_from_email ? (
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="text-muted-foreground">Von:</span>
+                <span className="text-primary">{ticket.created_from_email}</span>
+              </h3>
+            ) : ticket.creator ? (
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="text-muted-foreground">Erstellt von:</span>
+                <span className="text-primary">
+                  {ticket.creator.first_name} {ticket.creator.last_name}
+                </span>
+              </h3>
+            ) : (
+              <h3 className="font-semibold mb-2">Beschreibung</h3>
+            )}
             <FormattedContent content={ticket.description} className="text-sm" />
             <AttachmentList attachments={ticketAttachments} title="Anhänge" />
           </CardContent>
