@@ -48,26 +48,58 @@ export async function getBookingStats(
       throw new Error('Unauthorized - Manager or Admin access required')
     }
 
-    // Fetch all booking events (not cancelled)
-    const { data: events, error } = await supabase
-      .from('calendar_events')
-      .select('start_time, created_at')
-      .eq('event_type', 'booking')
-      .neq('status', 'cancelled')
-      .order('start_time', { ascending: true })
+    // Fetch all booking events with pagination to bypass 1000 limit
+    let allEvents: { start_time: string; created_at: string }[] = []
+    let page = 0
+    const pageSize = 1000
 
-    if (error) {
-      console.error('Error fetching booking stats:', error)
-      throw error
+    console.log('[Booking Stats] Starting pagination fetch...')
+
+    while (true) {
+      const rangeStart = page * pageSize
+      const rangeEnd = (page + 1) * pageSize - 1
+
+      const { data: pageEvents, error } = await supabase
+        .from('calendar_events')
+        .select('start_time, created_at')
+        .eq('event_type', 'booking')
+        .neq('status', 'cancelled')
+        .order('start_time', { ascending: true })
+        .range(rangeStart, rangeEnd)
+
+      if (error) {
+        console.error('[Booking Stats] Error fetching page', page, ':', error)
+        throw error
+      }
+
+      if (!pageEvents || pageEvents.length === 0) {
+        console.log('[Booking Stats] No more events, stopping at page', page)
+        break
+      }
+
+      console.log(`[Booking Stats] Page ${page}: fetched ${pageEvents.length} events`)
+      allEvents.push(...pageEvents)
+
+      // If we got less than pageSize, this was the last page
+      if (pageEvents.length < pageSize) {
+        console.log('[Booking Stats] Last page reached')
+        break
+      }
+
+      page++
     }
 
-    if (!events || events.length === 0) {
+    console.log('[Booking Stats] Total events fetched:', allEvents.length)
+
+    if (allEvents.length === 0) {
       return {
         totalBookings: 0,
         data: [],
         availableYears: []
       }
     }
+
+    const events = allEvents
 
     // Group events by selected period
     const groupedData = new Map<string, number>()
