@@ -357,3 +357,109 @@ export async function createEmployee(input: {
     return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
   }
 }
+
+// Delete employee (Admin only)
+export async function deleteEmployee(employeeId: string): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Nur Administratoren können Mitarbeiter löschen' }
+    }
+
+    // Prevent admin from deleting themselves
+    if (employeeId === user.id) {
+      return { success: false, error: 'Sie können sich nicht selbst löschen' }
+    }
+
+    // Delete user via Supabase Admin API
+    // This will CASCADE delete the profile and related data
+    const adminSupabase = createAdminClient()
+    const { error: deleteError } = await adminSupabase.auth.admin.deleteUser(employeeId)
+
+    if (deleteError) {
+      console.error('Error deleting employee:', deleteError)
+      return { success: false, error: 'Fehler beim Löschen des Mitarbeiters' }
+    }
+
+    revalidatePath('/mitarbeiter')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in deleteEmployee:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
+  }
+}
+
+// Resend invitation email (Admin only)
+export async function resendInvitationEmail(employeeId: string): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Nur Administratoren können Einladungen versenden' }
+    }
+
+    // Get employee data
+    const { data: employee, error: employeeError } = await supabase
+      .from('profiles')
+      .select('email, first_name, last_name')
+      .eq('id', employeeId)
+      .single()
+
+    if (employeeError || !employee) {
+      return { success: false, error: 'Mitarbeiter nicht gefunden' }
+    }
+
+    // Generate NEW temporary password
+    const tempPassword = `Flighthour${new Date().getFullYear()}!`
+
+    // Update password via Admin API
+    const adminSupabase = createAdminClient()
+    const { error: updateError } = await adminSupabase.auth.admin.updateUserById(
+      employeeId,
+      { password: tempPassword }
+    )
+
+    if (updateError) {
+      console.error('Error updating password:', updateError)
+      return { success: false, error: 'Fehler beim Aktualisieren des Passworts' }
+    }
+
+    // Send invitation email
+    const name = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email
+    await sendEmployeeInvitationEmail({
+      email: employee.email,
+      name,
+      tempPassword
+    })
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in resendInvitationEmail:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
+  }
+}

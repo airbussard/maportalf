@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import type { Employee } from '@/app/actions/employees'
 import type { EmployeeSettings } from '@/lib/types/time-tracking'
-import { updateEmployeeRole, toggleEmployeeStatus } from '@/app/actions/employees'
+import { updateEmployeeRole, toggleEmployeeStatus, deleteEmployee, resendInvitationEmail } from '@/app/actions/employees'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro } from 'lucide-react'
+import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro, Trash2, Send } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { CompensationConfigDialog } from '@/app/(dashboard)/zeiterfassung/verwaltung/components/compensation-config-dialog'
@@ -101,6 +102,47 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
   const handleCompensationSaved = () => {
     setCompensationDialogOpen(false)
     router.refresh()
+  }
+
+  const handleResendInvitation = async () => {
+    if (!confirm('Einladungs-E-Mail erneut senden? Ein neues Passwort wird generiert.')) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await resendInvitationEmail(employee.id)
+
+    if (result.success) {
+      toast.success('Einladung wurde erneut versendet!')
+      onClose()
+    } else {
+      setError(result.error || 'Fehler beim Versenden der Einladung')
+    }
+
+    setLoading(false)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm(`Mitarbeiter "${getEmployeeName()}" wirklich löschen?\n\nDies kann nicht rückgängig gemacht werden!`)) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await deleteEmployee(employee.id)
+
+    if (result.success) {
+      toast.success('Mitarbeiter wurde gelöscht')
+      router.refresh()
+      onClose()
+    } else {
+      setError(result.error || 'Fehler beim Löschen des Mitarbeiters')
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -246,6 +288,34 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
                 >
                   <Euro className="w-4 h-4 mr-2" />
                   Vergütung bearbeiten
+                </Button>
+              </div>
+
+              {/* Resend Invitation */}
+              <div className="space-y-2">
+                <Label>Einladung</Label>
+                <Button
+                  onClick={handleResendInvitation}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full justify-start"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Einladung erneut senden
+                </Button>
+              </div>
+
+              {/* Delete Employee */}
+              <div className="space-y-2 pt-4 border-t border-destructive/20">
+                <Label className="text-destructive">Gefahrenzone</Label>
+                <Button
+                  onClick={handleDelete}
+                  disabled={loading}
+                  variant="destructive"
+                  className="w-full justify-start"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Mitarbeiter löschen
                 </Button>
               </div>
             </div>

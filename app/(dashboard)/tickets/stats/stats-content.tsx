@@ -154,11 +154,11 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
 
       {/* Charts Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="distribution">Verteilung</TabsTrigger>
           <TabsTrigger value="time">Zeitanalyse</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
+          {/* <TabsTrigger value="team">Team</TabsTrigger> */}
         </TabsList>
 
         {/* Overview Tab */}
@@ -240,8 +240,8 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
           </div>
         </TabsContent>
 
-        {/* Team Tab */}
-        <TabsContent value="team" className="space-y-4">
+        {/* Team Tab - Temporarily Hidden */}
+        {/* <TabsContent value="team" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Team-Auslastung</CardTitle>
@@ -251,7 +251,7 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
               <TeamWorkloadTable data={stats.teamWorkload} />
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   )
