@@ -561,8 +561,8 @@ export async function getOpenTicketsCount() {
     const { count, error } = await supabase
       .from('tickets')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['open', 'in_progress'])
-      .or('is_spam.is.null,is_spam.eq.false')
+      .eq('status', 'open')
+      .eq('is_spam', false)
 
     if (error) {
       console.error('Failed to get open tickets count:', error)
@@ -572,6 +572,28 @@ export async function getOpenTicketsCount() {
     return count || 0
   } catch (error) {
     console.error('Failed to get open tickets count:', error)
+    return 0
+  }
+}
+
+export async function getInProgressTicketsCount() {
+  try {
+    const supabase = await createClient()
+
+    const { count, error } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'in_progress')
+      .eq('is_spam', false)
+
+    if (error) {
+      console.error('Failed to get in_progress tickets count:', error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Failed to get in_progress tickets count:', error)
     return 0
   }
 }

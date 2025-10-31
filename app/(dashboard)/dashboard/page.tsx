@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { SystemStatusWidget } from './components/system-status'
 import { getTodaysEvents } from '@/app/actions/calendar-events'
-import { getOpenTicketsCount } from '@/app/actions/tickets'
+import { getOpenTicketsCount, getInProgressTicketsCount } from '@/app/actions/tickets'
 import { getPendingRequestsCount } from '@/app/actions/work-requests'
 import { EventCard } from '@/app/(dashboard)/kalender/components/event-card'
 import { Calendar, Ticket, FileText } from 'lucide-react'
@@ -33,6 +33,7 @@ export default async function DashboardPage() {
 
   // Fetch stats for managers/admins
   const openTicketsCount = isManagerOrAdmin ? await getOpenTicketsCount() : 0
+  const inProgressTicketsCount = isManagerOrAdmin ? await getInProgressTicketsCount() : 0
   const pendingRequestsCount = isManagerOrAdmin ? await getPendingRequestsCount() : 0
 
   return (
@@ -46,8 +47,8 @@ export default async function DashboardPage() {
 
       {/* Manager/Admin Stats */}
       {isManagerOrAdmin && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Link href="/tickets">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Link href="/tickets?status=open">
             <Card className="hover:bg-accent transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Offene Tickets</CardTitle>
@@ -55,7 +56,20 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{openTicketsCount}</div>
-                <p className="text-xs text-muted-foreground">Klicken zum Öffnen →</p>
+                <p className="text-xs text-muted-foreground">Status: Offen →</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/tickets?status=in_progress">
+            <Card className="hover:bg-accent transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">In Bearbeitung</CardTitle>
+                <Ticket className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{inProgressTicketsCount}</div>
+                <p className="text-xs text-muted-foreground">Status: In Bearbeitung →</p>
               </CardContent>
             </Card>
           </Link>
@@ -68,7 +82,7 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{pendingRequestsCount}</div>
-                <p className="text-xs text-muted-foreground">Klicken zum Öffnen →</p>
+                <p className="text-xs text-muted-foreground">Ausstehende Genehmigungen →</p>
               </CardContent>
             </Card>
           </Link>
