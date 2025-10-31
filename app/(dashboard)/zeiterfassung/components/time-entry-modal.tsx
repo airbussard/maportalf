@@ -58,7 +58,7 @@ export function TimeEntryModal({
       const hours = Math.floor(entry.duration_minutes / 60)
       const minutes = entry.duration_minutes % 60
       setDuration(`${hours}:${String(minutes).padStart(2, '0')}`)
-      setCategoryId(entry.category_id || '')
+      setCategoryId(entry.category_id || 'none')
       setDescription(entry.description || '')
     } else {
       // Set default date to today (if in current month) or first day of selected month
@@ -101,7 +101,7 @@ export function TimeEntryModal({
       start_time: startTime || undefined,
       end_time: endTime || undefined,
       duration_minutes: durationMinutes,
-      category_id: categoryId || undefined,
+      category_id: categoryId === 'none' ? undefined : categoryId || undefined,
       description: description || undefined,
     }
 
@@ -194,12 +194,12 @@ export function TimeEntryModal({
             {/* Category */}
             <div className="grid gap-2">
               <Label htmlFor="category">Kategorie</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId || 'none'} onValueChange={setCategoryId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Keine Kategorie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Keine Kategorie</SelectItem>
+                  <SelectItem value="none">Keine Kategorie</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
