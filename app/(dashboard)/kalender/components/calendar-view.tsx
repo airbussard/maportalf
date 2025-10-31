@@ -126,6 +126,17 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         })
         .catch(error => {
           console.error('Auto-refresh failed:', error)
+
+          // Check if this is a Server Action deployment mismatch error
+          const errorMessage = error?.message || String(error)
+          if (errorMessage.includes('Failed to find Server Action')) {
+            console.warn('Server Action version mismatch detected - deployment likely occurred. Reloading page in 3 seconds...')
+
+            // Give user a moment to see what they're working on, then reload
+            setTimeout(() => {
+              window.location.reload()
+            }, 3000)
+          }
         })
     }, 60000) // 60 seconds
 

@@ -146,10 +146,9 @@ export async function createTimeEntry(
       return { success: false, error: 'Dauer muss größer als 0 sein' }
     }
 
-    // Extract year and month from date
-    const entryDate = new Date(formData.date)
-    const year = entryDate.getFullYear()
-    const month = entryDate.getMonth() + 1
+    // Extract year and month from date string directly (avoid timezone issues)
+    // formData.date is in format "YYYY-MM-DD"
+    const [year, month] = formData.date.split('-').map(Number)
 
     // Check if month is closed
     const monthClosed = await isMonthClosed(year, month)
@@ -215,10 +214,9 @@ export async function updateTimeEntry(
       return { success: false, error: 'Genehmigte Einträge können nicht bearbeitet werden' }
     }
 
-    // Extract year and month from date
-    const entryDate = new Date(formData.date)
-    const year = entryDate.getFullYear()
-    const month = entryDate.getMonth() + 1
+    // Extract year and month from date string directly (avoid timezone issues)
+    // formData.date is in format "YYYY-MM-DD"
+    const [year, month] = formData.date.split('-').map(Number)
 
     // Check if month is closed
     const monthClosed = await isMonthClosed(year, month)

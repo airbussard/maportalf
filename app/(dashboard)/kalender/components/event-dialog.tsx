@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro } from 'lucide-react'
-import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat } from '@/lib/utils/timezone'
+import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat, extractLocalTimeFromISO, trimSecondsFromTime } from '@/lib/utils/timezone'
 import {
   Dialog,
   DialogContent,
@@ -75,8 +75,16 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
     if (event) {
       // Viewing/Editing existing event
       const startDate = event.start_time ? new Date(event.start_time).toISOString().slice(0, 10) : ''
-      const startTimeOnly = event.start_time ? new Date(event.start_time).toTimeString().slice(0, 5) : ''
-      const endTimeOnly = event.end_time ? new Date(event.end_time).toTimeString().slice(0, 5) : ''
+
+      // Use extractLocalTimeFromISO to correctly convert UTC timestamps back to local time
+      const startTimeOnly = event.start_time ? extractLocalTimeFromISO(event.start_time) : ''
+      const endTimeOnly = event.end_time ? extractLocalTimeFromISO(event.end_time) : ''
+
+      // For actual_work_start_time and actual_work_end_time: These are TIME fields (HH:MM:SS), not timestamps
+      // Just trim the seconds off
+      const workStartTime = event.actual_work_start_time ? trimSecondsFromTime(event.actual_work_start_time) : ''
+      const workEndTime = event.actual_work_end_time ? trimSecondsFromTime(event.actual_work_end_time) : ''
+
       setSelectedDate(startDate)
 
       setFormData({
@@ -95,8 +103,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         assigned_instructor_number: event.assigned_instructor_number || '',
         assigned_instructor_name: event.assigned_instructor_name || '',
         is_all_day: event.is_all_day || false,
-        actual_work_start_time: event.actual_work_start_time || '',
-        actual_work_end_time: event.actual_work_end_time || '',
+        actual_work_start_time: workStartTime,
+        actual_work_end_time: workEndTime,
         blocker_title: event.title || '',
         booking_date: startDate,
         start_time_only: startTimeOnly,

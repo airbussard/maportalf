@@ -48,3 +48,28 @@ export function isValidTimeFormat(time: string): boolean {
   const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
   return timeRegex.test(time)
 }
+
+/**
+ * Extracts local time from ISO string (converts UTC back to local timezone)
+ * This is the REVERSE of convertToISOWithTimezone
+ *
+ * Beispiel:
+ * - Input: "2025-10-31T09:00:00.000Z" (UTC)
+ * - Browser timezone: Berlin (UTC+1)
+ * - Output: "10:00" (local time)
+ */
+export function extractLocalTimeFromISO(isoString: string): string {
+  const date = new Date(isoString)
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+/**
+ * Extracts HH:MM from HH:MM:SS time string
+ * Beispiel: "10:30:00" → "10:30"
+ */
+export function trimSecondsFromTime(time: string): string {
+  if (!time) return ''
+  return time.substring(0, 5)
+}
