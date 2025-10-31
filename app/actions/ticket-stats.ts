@@ -10,7 +10,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export type TimeRange = 'day' | 'week' | 'month' | 'year'
+export type TimeRange = 'day' | 'week' | '4weeks' | 'month' | 'year'
 
 export interface TicketStats {
   // KPIs
@@ -88,6 +88,9 @@ export async function getTicketStats(timeRange: TimeRange = 'month'): Promise<Ti
       case 'week':
         startDate.setDate(now.getDate() - 7)
         break
+      case '4weeks':
+        startDate.setDate(now.getDate() - 28)
+        break
       case 'month':
         startDate.setMonth(now.getMonth() - 1)
         break
@@ -155,17 +158,43 @@ export async function getTicketStats(timeRange: TimeRange = 'month'): Promise<Ti
       ? resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length
       : null
 
-    // Team workload
+    // Team workload - include all managers/admins who are involved in tickets
     const workloadMap = new Map<string, number>()
+
+    // Get all managers and admins from the database
+    const { data: teamMembers } = await dataClient
+      .from('profiles')
+      .select('id, first_name, last_name, role')
+      .in('role', ['manager', 'admin'])
+
+    // Initialize map with all team members (ensures managers show up even with 0 tickets)
+    teamMembers?.forEach(member => {
+      const name = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Unknown'
+      workloadMap.set(member.id, { name, count: 0 })
+    })
+
+    // Count tickets where they are assigned
     tickets.filter(t => !t.is_spam && t.assigned_to).forEach(ticket => {
       const employee = ticket.assigned_user as any
-      if (employee) {
-        const name = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Unknown'
-        workloadMap.set(name, (workloadMap.get(name) || 0) + 1)
+      if (employee && workloadMap.has(employee.id)) {
+        const current = workloadMap.get(employee.id)!
+        workloadMap.set(employee.id, { ...current, count: current.count + 1 })
       }
     })
-    const teamWorkload = Array.from(workloadMap.entries())
-      .map(([employeeName, ticketCount]) => ({ employeeName, ticketCount }))
+
+    // Also count tickets they created (shows involvement)
+    tickets.filter(t => !t.is_spam && t.created_by).forEach(ticket => {
+      if (workloadMap.has(ticket.created_by)) {
+        // Don't double-count if they're also assigned
+        if (ticket.assigned_to !== ticket.created_by) {
+          const current = workloadMap.get(ticket.created_by)!
+          workloadMap.set(ticket.created_by, { ...current, count: current.count + 1 })
+        }
+      }
+    })
+
+    const teamWorkload = Array.from(workloadMap.values())
+      .map(({ name, count }) => ({ employeeName: name, ticketCount: count }))
       .sort((a, b) => b.ticketCount - a.ticketCount)
 
     // Tickets over time (group by date)

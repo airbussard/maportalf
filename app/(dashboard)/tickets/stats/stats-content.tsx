@@ -58,14 +58,15 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
 
         {/* Time Range Filter */}
         <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="day">Letzter Tag</SelectItem>
+            <SelectItem value="4weeks">Letzte 4 Wochen</SelectItem>
             <SelectItem value="week">Letzte Woche</SelectItem>
             <SelectItem value="month">Letzter Monat</SelectItem>
             <SelectItem value="year">Letztes Jahr</SelectItem>
+            <SelectItem value="day">Letzter Tag</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -35,7 +35,7 @@ export default async function TicketStatsPage({
   }
 
   // Get statistics
-  const timeRange = (resolvedSearchParams.range as any) || 'month'
+  const timeRange = (resolvedSearchParams.range as any) || '4weeks'
   const stats = await getTicketStats(timeRange)
 
   return (

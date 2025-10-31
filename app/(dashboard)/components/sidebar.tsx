@@ -226,7 +226,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.014
+            Version 2.015
           </p>
         </div>
       </aside>
