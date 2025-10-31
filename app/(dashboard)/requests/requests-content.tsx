@@ -135,11 +135,13 @@ export function RequestsContent({ requests, calendarEvents, userId, userName, du
         onOpenChange={setCreateDialogOpen}
       />
 
-      <EditRequestDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        request={selectedRequest}
-      />
+      {selectedRequest && (
+        <EditRequestDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          request={selectedRequest}
+        />
+      )}
     </div>
   )
 }
