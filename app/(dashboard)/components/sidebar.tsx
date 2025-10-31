@@ -128,6 +128,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           label: 'E-Mail Warteschlange',
           icon: <Mail className="w-5 h-5" />,
         },
+        {
+          href: '/admin/cron-jobs',
+          label: 'Cron Jobs',
+          icon: <Settings className="w-5 h-5" />,
+        },
       ],
     },
   ]
@@ -226,7 +231,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.024
+            Version 2.026
           </p>
         </div>
       </aside>
