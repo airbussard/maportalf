@@ -256,7 +256,6 @@ export async function createEmployee(input: {
   role: 'employee' | 'manager' | 'admin'
   department?: string
   phone?: string
-  employee_number?: string
 }): Promise<ActionResponse<{ userId: string }>> {
   try {
     const supabase = await createClient()
@@ -315,6 +314,7 @@ export async function createEmployee(input: {
 
     // Update profile with additional data
     // (Profile is automatically created by database trigger)
+    // Note: employee_number is auto-assigned by database trigger
     const { error: profileError } = await adminSupabase
       .from('profiles')
       .update({
@@ -323,7 +323,6 @@ export async function createEmployee(input: {
         role: input.role,
         department: input.department || null,
         phone: input.phone || null,
-        employee_number: input.employee_number || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', newUser.user.id)

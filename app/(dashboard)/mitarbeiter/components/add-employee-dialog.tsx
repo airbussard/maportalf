@@ -38,8 +38,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
     last_name: '',
     role: 'employee' as 'employee' | 'manager' | 'admin',
     department: '',
-    phone: '',
-    employee_number: ''
+    phone: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,8 +59,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
         last_name: formData.last_name,
         role: formData.role,
         department: formData.department || undefined,
-        phone: formData.phone || undefined,
-        employee_number: formData.employee_number || undefined
+        phone: formData.phone || undefined
       })
 
       if (result.success) {
@@ -74,8 +72,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
           last_name: '',
           role: 'employee',
           department: '',
-          phone: '',
-          employee_number: ''
+          phone: ''
         })
 
         router.refresh()
@@ -175,31 +172,17 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Employee Number */}
-            <div className="space-y-2">
-              <Label htmlFor="employee_number">FH-Nummer</Label>
-              <Input
-                id="employee_number"
-                value={formData.employee_number}
-                onChange={(e) => handleChange('employee_number', e.target.value)}
-                placeholder="FH001"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Phone */}
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="+49 123 456789"
-                disabled={isLoading}
-              />
-            </div>
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefon</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="+49 123 456789"
+              disabled={isLoading}
+            />
           </div>
 
           {/* Department */}
