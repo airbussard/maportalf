@@ -48,14 +48,10 @@ interface RequestsContentProps {
   calendarEvents: CalendarEvent[]
   userId: string
   userName: string
+  dummySyncAction: () => Promise<void>
 }
 
-// Dummy sync action for calendar (not used in read-only mode)
-async function dummySyncAction() {
-  'use server'
-}
-
-export function RequestsContent({ requests, calendarEvents, userId, userName }: RequestsContentProps) {
+export function RequestsContent({ requests, calendarEvents, userId, userName, dummySyncAction }: RequestsContentProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'requests' | 'calendar'>('requests')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)

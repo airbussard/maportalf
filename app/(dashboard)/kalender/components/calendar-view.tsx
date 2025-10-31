@@ -72,7 +72,7 @@ interface CalendarViewProps {
   events: CalendarEvent[]
   lastSync: LastSync | null
   userName: string
-  syncAction: () => Promise<void>
+  syncAction?: () => Promise<void>
   isReadOnly?: boolean
 }
 
@@ -276,7 +276,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         </div>
 
         <div className="flex flex-col gap-2 w-full md:w-auto">
-          {!isReadOnly && (
+          {!isReadOnly && syncAction && (
             <div className="flex gap-2">
               <form action={syncAction}>
                 <SyncButton />
@@ -287,6 +287,13 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 <span className="sm:hidden">Neu</span>
               </Button>
             </div>
+          )}
+          {!isReadOnly && !syncAction && (
+            <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Neues Event</span>
+              <span className="sm:hidden">Neu</span>
+            </Button>
           )}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">

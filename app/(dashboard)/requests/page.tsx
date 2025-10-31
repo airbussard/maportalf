@@ -18,6 +18,12 @@ export const metadata = {
   description: 'Arbeitstage verwalten und Kalender einsehen'
 }
 
+// Dummy sync action for read-only calendar (no-op)
+async function dummySyncAction() {
+  'use server'
+  // No-op for read-only view
+}
+
 async function RequestsPageContent() {
   // Check authentication
   const supabase = await createClient()
@@ -57,6 +63,7 @@ async function RequestsPageContent() {
       calendarEvents={calendarEvents}
       userId={user.id}
       userName={userName}
+      dummySyncAction={dummySyncAction}
     />
   )
 }
