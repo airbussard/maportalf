@@ -6,8 +6,10 @@ import type { EmployeeSettings } from '@/lib/types/time-tracking'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, UserCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, UserCircle, UserPlus } from 'lucide-react'
 import { EmployeeDetailModal } from './employee-detail-modal'
+import { AddEmployeeDialog } from './add-employee-dialog'
 
 interface EmployeesTableProps {
   employees: Employee[]
@@ -21,6 +23,7 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
 
   // Create a map for quick lookup
   const settingsMap = new Map(employeeSettings.map(s => [s.employee_id, s]))
@@ -74,6 +77,16 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
     <>
       <Card>
         <CardContent className="pt-6">
+          {/* Header with Add Button */}
+          {isAdmin && (
+            <div className="flex justify-end mb-4">
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Mitarbeiter hinzufügen
+              </Button>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
@@ -198,6 +211,12 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
           onClose={() => setSelectedEmployee(null)}
         />
       )}
+
+      {/* Add Employee Dialog */}
+      <AddEmployeeDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+      />
     </>
   )
 }

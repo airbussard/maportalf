@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { sendEmployeeInvitationEmail } from '@/lib/email/send-invitation'
 
 interface ActionResponse<T = any> {
   success: boolean
@@ -244,5 +245,113 @@ export async function updateEmployeeProfile(
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
+  }
+}
+
+// Create new employee (Admin only)
+export async function createEmployee(input: {
+  email: string
+  first_name: string
+  last_name: string
+  role: 'employee' | 'manager' | 'admin'
+  department?: string
+  phone?: string
+  employee_number?: string
+}): Promise<ActionResponse<{ userId: string }>> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Nur Administratoren können Mitarbeiter anlegen' }
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(input.email)) {
+      return { success: false, error: 'Ungültige E-Mail-Adresse' }
+    }
+
+    // Generate temporary password
+    const tempPassword = `Flighthour${new Date().getFullYear()}!`
+
+    // Create user via Supabase Admin API
+    const adminSupabase = createAdminClient()
+    const { data: newUser, error: authError } = await adminSupabase.auth.admin.createUser({
+      email: input.email,
+      password: tempPassword,
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        first_name: input.first_name,
+        last_name: input.last_name
+      }
+    })
+
+    if (authError) {
+      console.error('Error creating user:', authError)
+
+      // Check for duplicate email
+      if (authError.message.includes('already') || authError.message.includes('duplicate')) {
+        return { success: false, error: 'Diese E-Mail-Adresse ist bereits registriert' }
+      }
+
+      return { success: false, error: authError.message }
+    }
+
+    if (!newUser?.user) {
+      return { success: false, error: 'Benutzer konnte nicht erstellt werden' }
+    }
+
+    // Update profile with additional data
+    // (Profile is automatically created by database trigger)
+    const { error: profileError } = await adminSupabase
+      .from('profiles')
+      .update({
+        first_name: input.first_name,
+        last_name: input.last_name,
+        role: input.role,
+        department: input.department || null,
+        phone: input.phone || null,
+        employee_number: input.employee_number || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', newUser.user.id)
+
+    if (profileError) {
+      console.error('Error updating profile:', profileError)
+      // Don't fail here - user is created, profile update is secondary
+    }
+
+    // Send invitation email
+    try {
+      await sendEmployeeInvitationEmail({
+        email: input.email,
+        name: `${input.first_name} ${input.last_name}`,
+        tempPassword
+      })
+    } catch (emailError) {
+      console.error('Error sending invitation email:', emailError)
+      // Don't fail here - user is created, email is secondary
+    }
+
+    revalidatePath('/mitarbeiter')
+    return {
+      success: true,
+      data: { userId: newUser.user.id }
+    }
+  } catch (error: any) {
+    console.error('Error in createEmployee:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
   }
 }
