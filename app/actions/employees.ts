@@ -312,20 +312,23 @@ export async function createEmployee(input: {
       return { success: false, error: 'Benutzer konnte nicht erstellt werden' }
     }
 
-    // Update profile with additional data
-    // (Profile is automatically created by database trigger)
-    // Note: employee_number is auto-assigned by database trigger
+    // Upsert profile (INSERT or UPDATE if exists)
+    // This is robust even if the auth trigger fails or hasn't been executed yet
+    // Note: employee_number is auto-assigned by database trigger on INSERT
     const { error: profileError } = await adminSupabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: newUser.user.id,
+        email: input.email,
         first_name: input.first_name,
         last_name: input.last_name,
         role: input.role,
         department: input.department || null,
         phone: input.phone || null,
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'id'
       })
-      .eq('id', newUser.user.id)
 
     if (profileError) {
       console.error('Error updating profile:', profileError)
