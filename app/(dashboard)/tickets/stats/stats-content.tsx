@@ -1,30 +1,60 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, TrendingUp, Clock, Users, AlertCircle, Shield } from 'lucide-react'
+import { BarChart3, TrendingUp, Clock, Users, AlertCircle, Shield, Calendar } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TicketStats, TimeRange } from '@/app/actions/ticket-stats'
+import type { BookingStats, GroupBy } from '@/app/actions/calendar-stats'
+import { getBookingStats } from '@/app/actions/calendar-stats'
 import { TicketVolumeChart } from './components/ticket-volume-chart'
 import { StatusDistributionChart } from './components/status-distribution-chart'
 import { WeekdayDistributionChart } from './components/weekday-distribution-chart'
 import { TeamWorkloadTable } from './components/team-workload-table'
+import { BookingVolumeChart } from './components/booking-volume-chart'
 
 interface StatsContentProps {
   stats: TicketStats | null
   initialTimeRange: TimeRange
+  bookingStats: BookingStats | null
 }
 
-export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
+export function StatsContent({ stats, initialTimeRange, bookingStats: initialBookingStats }: StatsContentProps) {
   const router = useRouter()
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
+  const [bookingStats, setBookingStats] = useState<BookingStats | null>(initialBookingStats)
+  const [bookingGroupBy, setBookingGroupBy] = useState<GroupBy>('month')
+  const [loadingBookingStats, setLoadingBookingStats] = useState(false)
 
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value as TimeRange)
     router.push(`/tickets/stats?range=${value}`)
   }
+
+  const handleBookingGroupByChange = async (value: string) => {
+    const newGroupBy = value as GroupBy
+    setBookingGroupBy(newGroupBy)
+    setLoadingBookingStats(true)
+
+    try {
+      const limit = newGroupBy === 'year' ? 100 : 12
+      const newStats = await getBookingStats(newGroupBy, limit)
+      setBookingStats(newStats)
+    } catch (error) {
+      console.error('Error loading booking stats:', error)
+    } finally {
+      setLoadingBookingStats(false)
+    }
+  }
+
+  // Load initial booking stats on mount
+  useEffect(() => {
+    if (!initialBookingStats) {
+      handleBookingGroupByChange('month')
+    }
+  }, [])
 
   if (!stats) {
     return (
@@ -154,10 +184,11 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
 
       {/* Charts Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="distribution">Verteilung</TabsTrigger>
           <TabsTrigger value="time">Zeitanalyse</TabsTrigger>
+          <TabsTrigger value="bookings">Buchungen</TabsTrigger>
           {/* <TabsTrigger value="team">Team</TabsTrigger> */}
         </TabsList>
 
@@ -238,6 +269,89 @@ export function StatsContent({ stats, initialTimeRange }: StatsContentProps) {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Bookings Tab */}
+        <TabsContent value="bookings" className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-xl font-semibold">Buchungs-Statistiken</h2>
+              <p className="text-sm text-muted-foreground">Nur Buchungs-Events (keine Blocker, keine FI-Zuweisungen)</p>
+            </div>
+            <Select value={bookingGroupBy} onValueChange={handleBookingGroupByChange} disabled={loadingBookingStats}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">12 Monate</SelectItem>
+                <SelectItem value="week">12 Wochen</SelectItem>
+                <SelectItem value="year">Alle Jahre</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {loadingBookingStats ? (
+            <Card className="p-8">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            </Card>
+          ) : bookingStats ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Gesamt Buchungen</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{bookingStats.totalBookings}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Im gesamten Zeitraum
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {bookingStats.availableYears.length > 0 && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Daten verfügbar</CardTitle>
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {bookingStats.availableYears[bookingStats.availableYears.length - 1]} - {bookingStats.availableYears[0]}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {bookingStats.availableYears.length} {bookingStats.availableYears.length === 1 ? 'Jahr' : 'Jahre'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    Buchungen pro {bookingGroupBy === 'month' ? 'Monat' : bookingGroupBy === 'week' ? 'Woche' : 'Jahr'}
+                  </CardTitle>
+                  <CardDescription>
+                    {bookingGroupBy === 'year'
+                      ? 'Alle verfügbaren Jahre'
+                      : `Letzte ${bookingStats.data.length} ${bookingGroupBy === 'month' ? 'Monate' : 'Wochen'}`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <BookingVolumeChart data={bookingStats.data} groupBy={bookingGroupBy} />
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">Keine Buchungs-Daten verfügbar</p>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Team Tab - Temporarily Hidden */}

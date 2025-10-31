@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getTicketStats } from '@/app/actions/ticket-stats'
+import { getBookingStats } from '@/app/actions/calendar-stats'
 import { StatsContent } from './stats-content'
 
 export const metadata = {
@@ -34,13 +35,16 @@ export default async function TicketStatsPage({
     redirect('/tickets')
   }
 
-  // Get statistics
+  // Get ticket statistics
   const timeRange = (resolvedSearchParams.range as any) || '4weeks'
   const stats = await getTicketStats(timeRange)
 
+  // Get booking statistics (default: 12 months)
+  const bookingStats = await getBookingStats('month', 12)
+
   return (
     <div className="container mx-auto py-8 px-4">
-      <StatsContent stats={stats} initialTimeRange={timeRange} />
+      <StatsContent stats={stats} initialTimeRange={timeRange} bookingStats={bookingStats} />
     </div>
   )
 }
