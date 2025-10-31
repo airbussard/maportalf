@@ -110,6 +110,28 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
     }
   }, [])
 
+  // Auto-refresh every 60 seconds (silent background refresh)
+  useEffect(() => {
+    // Skip if dialog is open (don't interrupt user while editing)
+    if (isEventDialogOpen) return
+
+    const interval = setInterval(() => {
+      // Silent refresh - reload current month without loading overlay
+      const year = selectedDate.getFullYear()
+      const month = selectedDate.getMonth()
+
+      getCalendarEventsByMonth(year, month)
+        .then(newEvents => {
+          setEvents(newEvents)
+        })
+        .catch(error => {
+          console.error('Auto-refresh failed:', error)
+        })
+    }, 60000) // 60 seconds
+
+    return () => clearInterval(interval)
+  }, [selectedDate, isEventDialogOpen])
+
   // Group events by date (exclude cancelled events)
   const eventsByDate = events
     .filter(event => event.status !== 'cancelled')
@@ -176,6 +198,19 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const handleNewEvent = () => {
     setSelectedEvent(null)
     setIsEventDialogOpen(true)
+  }
+
+  // Manual refresh function (called after create/update/delete)
+  const handleRefresh = async () => {
+    const year = selectedDate.getFullYear()
+    const month = selectedDate.getMonth()
+
+    try {
+      const newEvents = await getCalendarEventsByMonth(year, month)
+      setEvents(newEvents)
+    } catch (error) {
+      console.error('Manual refresh failed:', error)
+    }
   }
 
   const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
@@ -509,6 +544,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         open={isEventDialogOpen}
         onOpenChange={setIsEventDialogOpen}
         event={selectedEvent}
+        onRefresh={handleRefresh}
       />
     </div>
   )

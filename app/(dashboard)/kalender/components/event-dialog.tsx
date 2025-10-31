@@ -27,9 +27,10 @@ interface EventDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   event: any | null
+  onRefresh?: () => void
 }
 
-export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
+export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -281,12 +282,14 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
         // Update existing event
         await updateCalendarEvent(event.id, submitData)
         toast.success('Event erfolgreich aktualisiert')
+        onRefresh?.() // Trigger immediate refresh in parent
         router.refresh()
         onOpenChange(false)
       } else {
         // Create new event
         await createCalendarEvent(submitData)
         toast.success('Event erfolgreich erstellt')
+        onRefresh?.() // Trigger immediate refresh in parent
         router.refresh()
         onOpenChange(false)
       }
@@ -307,6 +310,7 @@ export function EventDialog({ open, onOpenChange, event }: EventDialogProps) {
     try {
       await deleteCalendarEvent(event.id)
       toast.success('Event erfolgreich gelöscht')
+      onRefresh?.() // Trigger immediate refresh in parent
       router.refresh()
       onOpenChange(false)
     } catch (error) {
