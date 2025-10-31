@@ -104,10 +104,12 @@ export async function GET(request: NextRequest) {
 
         // Download attachment files from Supabase Storage for email
         const emailAttachments = []
+
+        // Handle ticket attachments (ticket_attachments table)
         if (attachments && attachments.length > 0) {
           for (const att of attachments) {
             try {
-              console.log('[Email Queue] Downloading attachment from storage:', att.storage_path)
+              console.log('[Email Queue] Downloading ticket attachment from storage:', att.storage_path)
 
               const { data: fileData, error: downloadError } = await supabase.storage
                 .from('ticket-attachments')
@@ -126,7 +128,6 @@ export async function GET(request: NextRequest) {
                   filename: att.original_filename,
                   content: buffer,
                   contentType: att.mime_type
-                  // No encoding - Buffer is already binary, Nodemailer handles it automatically
                 })
               } else {
                 console.error('[Email Queue] No file data returned for:', att.storage_path)
@@ -135,6 +136,33 @@ export async function GET(request: NextRequest) {
               console.error('[Email Queue] Attachment download failed:', att.filename, downloadError)
               // Continue without this attachment
             }
+          }
+        }
+
+        // Handle time report attachments (email_queue.attachment_storage_path)
+        if (email.attachment_storage_path) {
+          try {
+            console.log('[Email Queue] Downloading time report from storage:', email.attachment_storage_path)
+
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('time-reports')
+              .download(email.attachment_storage_path)
+
+            if (downloadError) {
+              console.error('[Email Queue] Storage download error:', downloadError)
+            } else if (fileData) {
+              const buffer = Buffer.from(await fileData.arrayBuffer())
+              console.log('[Email Queue] Downloaded time report:', buffer.length, 'bytes')
+
+              emailAttachments.push({
+                filename: email.attachment_filename || 'zeiterfassung.pdf',
+                content: buffer,
+                contentType: 'application/pdf'
+              })
+            }
+          } catch (downloadError) {
+            console.error('[Email Queue] Time report download failed:', downloadError)
+            // Continue without this attachment
           }
         }
 
