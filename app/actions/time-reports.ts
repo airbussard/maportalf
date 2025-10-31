@@ -464,13 +464,25 @@ export async function generateReportData(
           hourlyRate = compensationData.hourly_rate || 0
           interimSalary = (totalHours * hourlyRate) + bonusAmount
           calculatedHours = totalHours // Use actual worked hours
-        } else {
-          // Salary compensation: salary = monthly salary + (worked hours × rate) + bonus
+        } else if (compensationData.compensation_type === 'combined') {
+          // Combined compensation (Model C): Festgehalt + (worked hours × rate) + bonus
+          // This allows a monthly base salary PLUS hourly compensation for worked hours
           // Hours are calculated for export: total salary / hourly rate
           const monthlySalary = compensationData.monthly_salary || 0
-          hourlyRate = compensationData.hourly_rate || 20
+          hourlyRate = compensationData.hourly_rate || 0
           interimSalary = monthlySalary + (totalHours * hourlyRate) + bonusAmount
-          calculatedHours = Math.round((interimSalary / hourlyRate) * 100) / 100 // Calculate hours for export
+          calculatedHours = hourlyRate > 0
+            ? Math.round((interimSalary / hourlyRate) * 100) / 100
+            : totalHours // Fallback to actual hours if hourly_rate is 0
+        } else {
+          // Salary compensation (legacy): salary = monthly salary + bonus
+          // NOTE: In legacy 'salary' type, hourly_rate should be NULL per constraint
+          const monthlySalary = compensationData.monthly_salary || 0
+          hourlyRate = compensationData.hourly_rate || 20
+          interimSalary = monthlySalary + bonusAmount
+          calculatedHours = hourlyRate > 0
+            ? Math.round((interimSalary / hourlyRate) * 100) / 100
+            : 0
         }
       }
 

@@ -94,8 +94,10 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
 
     if (employeeSettings.compensation_type === 'hourly') {
       return `${employeeSettings.hourly_rate?.toFixed(2) || '0.00'}€/Stunde`
+    } else if (employeeSettings.compensation_type === 'combined') {
+      return `${employeeSettings.monthly_salary?.toFixed(0) || '0'}€/Monat + ${employeeSettings.hourly_rate?.toFixed(2) || '0.00'}€/Stunde`
     } else {
-      return `${employeeSettings.monthly_salary?.toFixed(0) || '0'}€/Monat (Stundensatz: ${employeeSettings.hourly_rate?.toFixed(2) || '0.00'}€)`
+      return `${employeeSettings.monthly_salary?.toFixed(0) || '0'}€/Monat (Festgehalt)`
     }
   }
 

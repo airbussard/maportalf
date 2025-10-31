@@ -93,7 +93,7 @@ export async function getEmployeeSettings(
 // Save employee compensation settings - Admin only
 export async function saveEmployeeSettings(data: {
   employee_id: string
-  compensation_type: 'hourly' | 'salary'
+  compensation_type: 'hourly' | 'salary' | 'combined'
   hourly_rate?: number
   monthly_salary?: number
 }): Promise<ActionResponse<EmployeeSettings>> {
@@ -125,17 +125,21 @@ export async function saveEmployeeSettings(data: {
       return { success: false, error: 'Monatsgehalt muss größer als 0 sein' }
     }
 
-    // For salary type, ensure hourly_rate is set (needed for calculation)
-    if (data.compensation_type === 'salary' && (!data.hourly_rate || data.hourly_rate <= 0)) {
-      return { success: false, error: 'Stundensatz muss auch bei Festgehalt angegeben werden' }
+    if (data.compensation_type === 'combined') {
+      if (!data.monthly_salary || data.monthly_salary <= 0) {
+        return { success: false, error: 'Festgehalt muss größer als 0 sein' }
+      }
+      if (!data.hourly_rate || data.hourly_rate <= 0) {
+        return { success: false, error: 'Stundenlohn muss größer als 0 sein' }
+      }
     }
 
     // Prepare upsert data
     const settingsData = {
       employee_id: data.employee_id,
       compensation_type: data.compensation_type,
-      hourly_rate: data.compensation_type === 'hourly' ? data.hourly_rate : data.hourly_rate,
-      monthly_salary: data.compensation_type === 'salary' ? data.monthly_salary : null,
+      hourly_rate: data.compensation_type === 'hourly' || data.compensation_type === 'combined' ? data.hourly_rate : null,
+      monthly_salary: data.compensation_type === 'salary' || data.compensation_type === 'combined' ? data.monthly_salary : null,
       currency: 'EUR',
       updated_by: user.id
     }
@@ -160,8 +164,8 @@ export async function saveEmployeeSettings(data: {
     const historyData = {
       employee_id: data.employee_id,
       compensation_type: data.compensation_type,
-      hourly_rate: data.hourly_rate,
-      monthly_salary: data.compensation_type === 'salary' ? data.monthly_salary : null,
+      hourly_rate: data.compensation_type === 'hourly' || data.compensation_type === 'combined' ? data.hourly_rate : null,
+      monthly_salary: data.compensation_type === 'salary' || data.compensation_type === 'combined' ? data.monthly_salary : null,
       currency: 'EUR',
       valid_from: today,
       created_by: user.id,

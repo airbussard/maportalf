@@ -46,7 +46,7 @@ export interface TimeReport {
 
 export interface EmployeeSettings {
   employee_id: string
-  compensation_type: 'hourly' | 'salary'
+  compensation_type: 'hourly' | 'salary' | 'combined'
   hourly_rate: number | null
   monthly_salary: number | null
   currency: string

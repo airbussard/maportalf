@@ -25,7 +25,7 @@ export function CompensationConfigDialog({
 }: CompensationConfigDialogProps) {
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(false)
-  const [compensationType, setCompensationType] = useState<'hourly' | 'salary'>('hourly')
+  const [compensationType, setCompensationType] = useState<'hourly' | 'salary' | 'combined'>('hourly')
   const [hourlyRate, setHourlyRate] = useState('')
   const [monthlySalary, setMonthlySalary] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -71,13 +71,18 @@ export function CompensationConfigDialog({
       return
     }
 
-    if (compensationType === 'salary') {
+    if (compensationType === 'salary' && (!monthlySalary || parseFloat(monthlySalary) <= 0)) {
+      setError('Bitte geben Sie ein gültiges Monatsgehalt ein')
+      return
+    }
+
+    if (compensationType === 'combined') {
       if (!monthlySalary || parseFloat(monthlySalary) <= 0) {
-        setError('Bitte geben Sie ein gültiges Monatsgehalt ein')
+        setError('Bitte geben Sie ein gültiges Festgehalt ein')
         return
       }
       if (!hourlyRate || parseFloat(hourlyRate) <= 0) {
-        setError('Bitte geben Sie einen gültigen Stundensatz für die Berechnung ein')
+        setError('Bitte geben Sie einen gültigen Stundenlohn ein')
         return
       }
     }
@@ -88,8 +93,8 @@ export function CompensationConfigDialog({
       const result = await saveEmployeeSettings({
         employee_id: employeeId,
         compensation_type: compensationType,
-        hourly_rate: parseFloat(hourlyRate),
-        monthly_salary: compensationType === 'salary' ? parseFloat(monthlySalary) : undefined,
+        hourly_rate: (compensationType === 'hourly' || compensationType === 'combined') ? parseFloat(hourlyRate) : undefined,
+        monthly_salary: (compensationType === 'salary' || compensationType === 'combined') ? parseFloat(monthlySalary) : undefined,
       })
 
       if (result.success) {
@@ -142,7 +147,7 @@ export function CompensationConfigDialog({
 
             <div className="space-y-3">
               <Label>Vergütungsart</Label>
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="radio"
@@ -152,7 +157,7 @@ export function CompensationConfigDialog({
                     onChange={(e) => setCompensationType(e.target.value as 'hourly')}
                     className="w-4 h-4 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm font-medium">Stundenlohn</span>
+                  <span className="text-sm font-medium">Nur Stundenlohn</span>
                 </label>
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
@@ -163,7 +168,18 @@ export function CompensationConfigDialog({
                     onChange={(e) => setCompensationType(e.target.value as 'salary')}
                     className="w-4 h-4 text-primary focus:ring-primary"
                   />
-                  <span className="text-sm font-medium">Festgehalt + Stundenlohn</span>
+                  <span className="text-sm font-medium">Nur Festgehalt (Legacy)</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="compensation_type"
+                    value="combined"
+                    checked={compensationType === 'combined'}
+                    onChange={(e) => setCompensationType(e.target.value as 'combined')}
+                    className="w-4 h-4 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium">Festgehalt + Stundenlohn (Kombiniert)</span>
                 </label>
               </div>
             </div>
@@ -187,11 +203,29 @@ export function CompensationConfigDialog({
             )}
 
             {compensationType === 'salary' && (
+              <div className="space-y-2">
+                <Label htmlFor="monthly_salary">Monatsgehalt (€)</Label>
+                <Input
+                  id="monthly_salary"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={monthlySalary}
+                  onChange={(e) => setMonthlySalary(e.target.value)}
+                  placeholder="z.B. 3000.00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Fester monatlicher Betrag (Legacy-Modus)
+                </p>
+              </div>
+            )}
+
+            {compensationType === 'combined' && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="monthly_salary">Monatsgehalt (€)</Label>
+                  <Label htmlFor="monthly_salary_combined">Festgehalt (€/Monat)</Label>
                   <Input
-                    id="monthly_salary"
+                    id="monthly_salary_combined"
                     type="number"
                     step="0.01"
                     min="0"
@@ -205,9 +239,9 @@ export function CompensationConfigDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="hourly_rate_salary">Stundensatz für Berechnung (€/h)</Label>
+                  <Label htmlFor="hourly_rate_combined">Stundenlohn (€/h)</Label>
                   <Input
-                    id="hourly_rate_salary"
+                    id="hourly_rate_combined"
                     type="number"
                     step="0.01"
                     min="0"
@@ -216,19 +250,18 @@ export function CompensationConfigDialog({
                     placeholder="z.B. 20.00"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Wird für die Stundenberechnung im Export verwendet: (Gehalt + Bonus) / Stundensatz = Stunden
+                    Wird für abgerechnete Stunden zusätzlich zum Festgehalt bezahlt
+                  </p>
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-xs text-blue-800">
+                    <strong>Berechnung:</strong> Festgehalt + (Stunden × Stundenlohn) + Bonus = Gesamtgehalt<br/>
+                    <strong>Export-Stunden:</strong> Gesamtgehalt / Stundenlohn (für Abrechnungssystem)
                   </p>
                 </div>
               </>
             )}
-
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-xs text-blue-800">
-                <strong>Hinweis:</strong> Bei Festgehalt wird die Stundenanzahl im Export automatisch
-                berechnet als: (Monatsgehalt + Bonus) / Stundensatz. Der Bonus kann pro Monat beim
-                Abschließen des Berichts angegeben werden.
-              </p>
-            </div>
           </div>
         )}
 
