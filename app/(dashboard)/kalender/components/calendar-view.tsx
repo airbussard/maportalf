@@ -73,9 +73,10 @@ interface CalendarViewProps {
   lastSync: LastSync | null
   userName: string
   syncAction: () => Promise<void>
+  isReadOnly?: boolean
 }
 
-export function CalendarView({ events: initialEvents, lastSync, userName, syncAction }: CalendarViewProps) {
+export function CalendarView({ events: initialEvents, lastSync, userName, syncAction, isReadOnly = false }: CalendarViewProps) {
   const router = useRouter()
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -84,8 +85,8 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
-  const [showFINames, setShowFINames] = useState(false)
-  const [showBlockers, setShowBlockers] = useState(false)
+  const [showFINames, setShowFINames] = useState(true)
+  const [showBlockers, setShowBlockers] = useState(true)
 
   // Show sync result toast based on URL params
   useEffect(() => {
@@ -165,6 +166,9 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   }
 
   const handleEventClick = (event: CalendarEvent) => {
+    // In read-only mode, don't open the dialog
+    if (isReadOnly) return
+
     setSelectedEvent(event)
     setIsEventDialogOpen(true)
   }
@@ -229,24 +233,26 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Calendar className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-            Kalender
+            {isReadOnly ? 'Mein Kalender' : 'Kalender'}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Google Calendar Events verwalten
+            {isReadOnly ? 'Übersicht aller Termine (nur lesend)' : 'Google Calendar Events verwalten'}
           </p>
         </div>
 
         <div className="flex flex-col gap-2 w-full md:w-auto">
-          <div className="flex gap-2">
-            <form action={syncAction}>
-              <SyncButton />
-            </form>
-            <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Neues Event</span>
-              <span className="sm:hidden">Neu</span>
-            </Button>
-          </div>
+          {!isReadOnly && (
+            <div className="flex gap-2">
+              <form action={syncAction}>
+                <SyncButton />
+              </form>
+              <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Neues Event</span>
+                <span className="sm:hidden">Neu</span>
+              </Button>
+            </div>
+          )}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Checkbox
@@ -273,7 +279,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
       </div>
 
       {/* Last Sync Info */}
-      {lastSync && (
+      {!isReadOnly && lastSync && (
         <Card className="p-3 md:p-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <div className="flex items-center gap-2">

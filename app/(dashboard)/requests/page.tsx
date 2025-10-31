@@ -1,19 +1,26 @@
 /**
  * Work Requests Page (Employee View)
  *
- * Main page for employees to manage their work requests
- * Features: List/Calendar views, Create/Edit dialogs, ICS export
+ * Read-only calendar view showing all events
+ * Uses the same CalendarView component as manager view but in read-only mode
  */
 
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getMyWorkRequests } from '@/app/actions/work-requests'
-import { RequestsContent } from './requests-content'
+import { getCalendarEvents } from '@/app/actions/calendar-events'
+import { CalendarView } from '@/app/(dashboard)/kalender/components/calendar-view'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata = {
-  title: 'Meine Requests | Flighthour',
-  description: 'Arbeitstage verwalten und beantragen'
+  title: 'Mein Kalender | Flighthour',
+  description: 'Kalenderübersicht (nur lesend)'
+}
+
+// Dummy sync action that does nothing (required by CalendarView)
+async function dummySyncAction() {
+  'use server'
+  // No-op for read-only view
 }
 
 async function RequestsPageContent() {
@@ -25,10 +32,10 @@ async function RequestsPageContent() {
     redirect('/login')
   }
 
-  // Fetch user profile for name and employee number
+  // Fetch user profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name, employee_number')
+    .select('role, first_name, last_name')
     .eq('id', user.id)
     .single()
 
@@ -36,38 +43,44 @@ async function RequestsPageContent() {
     ? `${profile.first_name} ${profile.last_name}`
     : user.email || 'Unbekannt'
 
-  const userEmployeeNumber = profile?.employee_number || null
+  // Load only current month's events
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
-  // Load user's requests
-  const requests = await getMyWorkRequests()
+  const events = await getCalendarEvents(
+    startOfMonth.toISOString(),
+    endOfMonth.toISOString()
+  )
 
-  return <RequestsContent requests={requests} userId={user.id} userName={userName} userEmployeeNumber={userEmployeeNumber} />
+  return (
+    <CalendarView
+      events={events}
+      lastSync={null}
+      userName={userName}
+      syncAction={dummySyncAction}
+      isReadOnly={true}
+    />
+  )
 }
 
 export default function RequestsPage() {
   return (
-    <Suspense fallback={<RequestsPageSkeleton />}>
-      <RequestsPageContent />
-    </Suspense>
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <Suspense fallback={<RequestsPageSkeleton />}>
+        <RequestsPageContent />
+      </Suspense>
+    </div>
   )
 }
 
 function RequestsPageSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-8 w-48" />
       </div>
-      <div className="h-10 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div
-            key={i}
-            className="h-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"
-          />
-        ))}
-      </div>
+      <Skeleton className="h-[600px] w-full" />
     </div>
   )
 }
