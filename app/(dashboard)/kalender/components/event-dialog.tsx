@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro } from 'lucide-react'
+import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat } from '@/lib/utils/timezone'
 import {
   Dialog,
   DialogContent,
@@ -168,28 +169,28 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           throw new Error('Bitte geben Sie Datum und Startzeit an')
         }
 
-        // Calculate start_time and end_time from new fields
-        const startDateTime = `${formData.booking_date}T${formData.start_time_only}:00`
+        // Convert to ISO with proper timezone handling
+        const startISO = convertToISOWithTimezone(formData.booking_date, formData.start_time_only)
 
-        let endDateTime: string
+        let endISO: string
         let durationMinutes: number
 
         if (formData.duration_mode === 'duration') {
           // Calculate end time from duration preset
           durationMinutes = formData.duration_preset
-          const startDate = new Date(startDateTime)
+          const startDate = new Date(startISO)
           const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000)
-          endDateTime = endDate.toISOString().slice(0, 19)
+          endISO = endDate.toISOString()
         } else {
           // Use manual end time
           if (!formData.end_time_only) {
             throw new Error('Bitte geben Sie eine Endzeit an')
           }
-          endDateTime = `${formData.booking_date}T${formData.end_time_only}:00`
+          endISO = convertToISOWithTimezone(formData.booking_date, formData.end_time_only)
 
           // Calculate duration
-          const start = new Date(startDateTime)
-          const end = new Date(endDateTime)
+          const start = new Date(startISO)
+          const end = new Date(endISO)
 
           // Validate: end must be after start and on same day
           if (end <= start) {
@@ -202,8 +203,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60))
         }
 
-        submitData.start_time = startDateTime
-        submitData.end_time = endDateTime
+        submitData.start_time = startISO
+        submitData.end_time = endISO
         submitData.duration = durationMinutes
       }
       // Blocker Events - special handling
@@ -218,8 +219,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           if (!selectedDate) {
             throw new Error('Bitte wählen Sie ein Datum aus')
           }
-          submitData.start_time = `${selectedDate}T05:00:00`
-          submitData.end_time = `${selectedDate}T22:00:00`
+          // Convert to ISO with proper timezone handling
+          submitData.start_time = convertToISOWithTimezone(selectedDate, '05:00')
+          submitData.end_time = convertToISOWithTimezone(selectedDate, '22:00')
           submitData.duration = 17 * 60 // 17 Stunden in Minuten
         }
         // Mit individuellen Zeiten
@@ -227,7 +229,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           if (!formData.start_time || !formData.end_time) {
             throw new Error('Bitte geben Sie Start- und Endzeit an')
           }
-          // Times already set in formData
+          // Times already set in formData - keep as is (already in ISO format from datetime-local input)
         }
 
         // Store title in title field for blocker
@@ -246,8 +248,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           if (!selectedDate) {
             throw new Error('Bitte wählen Sie ein Datum aus')
           }
-          submitData.start_time = `${selectedDate}T08:00:00`
-          submitData.end_time = `${selectedDate}T09:00:00`
+          // Convert to ISO with proper timezone handling
+          submitData.start_time = convertToISOWithTimezone(selectedDate, '08:00')
+          submitData.end_time = convertToISOWithTimezone(selectedDate, '09:00')
           submitData.duration = 60
           submitData.actual_work_start_time = ''
           submitData.actual_work_end_time = ''
@@ -257,17 +260,24 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           if (!selectedDate) {
             throw new Error('Bitte wählen Sie ein Datum aus')
           }
-          if (!formData.actual_work_start_time || !formData.actual_work_end_time) {
+
+          // IMPROVED VALIDATION - check for empty strings AND valid time format
+          if (!formData.actual_work_start_time?.trim() || !formData.actual_work_end_time?.trim()) {
             throw new Error('Bitte geben Sie Arbeitszeiten an')
           }
 
-          // Use selected date with fixed 08:00-09:00 for Google Calendar
-          submitData.start_time = `${selectedDate}T08:00:00`
-          submitData.end_time = `${selectedDate}T09:00:00`
+          // Validate time format
+          if (!isValidTimeFormat(formData.actual_work_start_time) || !isValidTimeFormat(formData.actual_work_end_time)) {
+            throw new Error('Ungültiges Zeitformat. Bitte verwenden Sie HH:MM')
+          }
 
-          // Convert HH:MM to HH:MM:SS for actual work times
-          submitData.actual_work_start_time = `${formData.actual_work_start_time}:00`
-          submitData.actual_work_end_time = `${formData.actual_work_end_time}:00`
+          // Use selected date with fixed 08:00-09:00 for Google Calendar (timezone-aware)
+          submitData.start_time = convertToISOWithTimezone(selectedDate, '08:00')
+          submitData.end_time = convertToISOWithTimezone(selectedDate, '09:00')
+
+          // Convert HH:MM to HH:MM:SS for actual work times (stored as TIME type, not TIMESTAMP)
+          submitData.actual_work_start_time = addSecondsToTime(formData.actual_work_start_time)
+          submitData.actual_work_end_time = addSecondsToTime(formData.actual_work_end_time)
 
           // Calculate duration from actual work times
           const [startH, startM] = formData.actual_work_start_time.split(':').map(Number)
@@ -275,6 +285,11 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           const startMinutes = startH * 60 + startM
           const endMinutes = endH * 60 + endM
           submitData.duration = endMinutes - startMinutes
+
+          // Additional validation: end time must be after start time
+          if (submitData.duration <= 0) {
+            throw new Error('Endzeit muss nach der Startzeit liegen')
+          }
         }
       }
 
