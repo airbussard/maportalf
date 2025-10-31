@@ -159,7 +159,7 @@ export async function getTicketStats(timeRange: TimeRange = 'month'): Promise<Ti
       : null
 
     // Team workload - include all managers/admins who are involved in tickets
-    const workloadMap = new Map<string, number>()
+    const workloadMap = new Map<string, { name: string; count: number }>()
 
     // Get all managers and admins from the database
     const { data: teamMembers } = await dataClient
