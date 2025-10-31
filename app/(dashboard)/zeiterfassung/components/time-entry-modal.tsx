@@ -121,11 +121,11 @@ export function TimeEntryModal({
     }
   }
 
-  // Calculate max date (end of current month)
+  // Calculate max date (+4 weeks from today)
   const now = new Date()
-  const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split('T')[0]
+  const maxDate = new Date()
+  maxDate.setDate(maxDate.getDate() + 28) // +4 weeks (28 days)
+  const maxDateString = maxDate.toISOString().split('T')[0]
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -147,7 +147,7 @@ export function TimeEntryModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                max={lastDayOfCurrentMonth}
+                max={maxDateString}
                 required
               />
             </div>
