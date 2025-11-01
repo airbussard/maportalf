@@ -53,6 +53,7 @@ interface EmployeeStats {
   employee: Employee
   stats: MonthlyStats
   isClosed: boolean
+  calculatedSalary: number
 }
 
 export function AdminTimeTrackingView({
@@ -80,6 +81,34 @@ export function AdminTimeTrackingView({
     loadData()
   }, [year, month, employee])
 
+  const calculateSalary = (
+    totalMinutes: number,
+    bonusAmount: number,
+    employeeId: string
+  ): number => {
+    const settings = settingsMap.get(employeeId)
+    if (!settings) return 0
+
+    const totalHours = totalMinutes / 60
+
+    switch (settings.compensation_type) {
+      case 'hourly':
+        // Hourly: hours × rate + bonus
+        return (totalHours * (settings.hourly_rate || 0)) + bonusAmount
+
+      case 'combined':
+        // Combined: monthly salary + (hours × rate) + bonus
+        return (settings.monthly_salary || 0) + (totalHours * (settings.hourly_rate || 0)) + bonusAmount
+
+      case 'salary':
+        // Salary (Legacy): just monthly salary + bonus
+        return (settings.monthly_salary || 0) + bonusAmount
+
+      default:
+        return 0
+    }
+  }
+
   const loadData = async () => {
     setLoading(true)
 
@@ -92,10 +121,18 @@ export function AdminTimeTrackingView({
         const reportResult = await getTimeReport(year, month, emp.id)
 
         if (statsResult.success && statsResult.data) {
+          const bonusAmount = reportResult.data?.bonus_amount || 0
+          const calculatedSalary = calculateSalary(
+            statsResult.data.total_minutes,
+            bonusAmount,
+            emp.id
+          )
+
           allStats.push({
             employee: emp,
             stats: statsResult.data,
             isClosed: reportResult.data?.is_closed || false,
+            calculatedSalary,
           })
         }
       }
@@ -109,11 +146,19 @@ export function AdminTimeTrackingView({
         const reportResult = await getTimeReport(year, month, employee)
 
         if (statsResult.success && statsResult.data) {
+          const bonusAmount = reportResult.data?.bonus_amount || 0
+          const calculatedSalary = calculateSalary(
+            statsResult.data.total_minutes,
+            bonusAmount,
+            emp.id
+          )
+
           setEmployeeStats([
             {
               employee: emp,
               stats: statsResult.data,
               isClosed: reportResult.data?.is_closed || false,
+              calculatedSalary,
             },
           ])
         }
@@ -179,6 +224,13 @@ export function AdminTimeTrackingView({
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return `${hours}h ${mins > 0 ? mins + 'm' : ''}`
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount)
   }
 
   const getEmployeeName = (emp: Employee) => {
@@ -325,6 +377,7 @@ export function AdminTimeTrackingView({
                     <th className="text-right p-4 font-medium">Arbeitstage</th>
                     <th className="text-right p-4 font-medium">Einträge</th>
                     <th className="text-right p-4 font-medium">Status</th>
+                    <th className="text-right p-4 font-medium">Gesamtgehalt</th>
                     <th className="text-right p-4 font-medium">Vergütung</th>
                     <th className="text-right p-4 font-medium">Aktionen</th>
                   </tr>
@@ -346,6 +399,11 @@ export function AdminTimeTrackingView({
                         ) : (
                           <span className="text-muted-foreground">Offen</span>
                         )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`text-lg font-bold ${stat.isClosed ? 'text-green-600 dark:text-green-400' : ''}`}>
+                          {formatCurrency(stat.calculatedSalary)}
+                        </span>
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
