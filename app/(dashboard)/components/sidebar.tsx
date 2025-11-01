@@ -16,7 +16,8 @@ import {
   CalendarCheck,
   Calendar,
   BarChart3,
-  LogOut
+  LogOut,
+  FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -70,6 +71,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/requests',
           label: 'Meine Requests',
           icon: <CalendarClock className="w-5 h-5" />,
+        },
+        {
+          href: '/dokumente',
+          label: 'Dokumente',
+          icon: <FileText className="w-5 h-5" />,
         },
         {
           href: '/einstellungen',
@@ -231,7 +237,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.035
+            Version 2.036
           </p>
         </div>
       </aside>
