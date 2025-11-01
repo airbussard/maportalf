@@ -457,10 +457,21 @@ export async function generateReportData(
         })
 
       const compensationData = compensation?.[0]
+
+      // DEBUG LOGGING - RPC Response
+      const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email
+      console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
+      console.log(`[PDF-Export] RPC Input: p_employee_id=${employee.id}, p_date=${startDate}`)
+      console.log(`[PDF-Export] RPC Response:`, JSON.stringify(compensationData, null, 2))
+
       let hourlyRate = 0
       let interimSalary = 0
       let calculatedHours = totalHours // Default to actual worked hours
       const bonusAmount = report?.bonus_amount || 0
+      const evaluationCount = report?.evaluation_count || 0
+
+      // DEBUG LOGGING - Raw Input Data
+      console.log(`[PDF-Export] Raw Data: totalMinutes=${totalMinutes}, totalHours=${totalHours}, bonusAmount=${bonusAmount}€, evaluationCount=${evaluationCount}`)
 
       if (compensationData) {
         if (compensationData.compensation_type === 'hourly') {
@@ -468,6 +479,12 @@ export async function generateReportData(
           hourlyRate = compensationData.hourly_rate || 0
           interimSalary = (totalHours * hourlyRate) + bonusAmount
           calculatedHours = totalHours // Use actual worked hours
+
+          // DEBUG LOGGING - Hourly Calculation
+          console.log(`[PDF-Export] TYPE: HOURLY`)
+          console.log(`[PDF-Export]   hourly_rate: ${hourlyRate}€`)
+          console.log(`[PDF-Export]   Berechnung: (${totalHours}h × ${hourlyRate}€) + ${bonusAmount}€ = ${interimSalary}€`)
+          console.log(`[PDF-Export]   calculatedHours: ${calculatedHours}h`)
         } else if (compensationData.compensation_type === 'combined') {
           // Combined compensation (Model C): Festgehalt + (worked hours × rate) + bonus
           // This allows a monthly base salary PLUS hourly compensation for worked hours
@@ -478,6 +495,16 @@ export async function generateReportData(
           calculatedHours = hourlyRate > 0
             ? Math.round((interimSalary / hourlyRate) * 100) / 100
             : totalHours // Fallback to actual hours if hourly_rate is 0
+
+          // DEBUG LOGGING - Combined Calculation
+          console.log(`[PDF-Export] TYPE: COMBINED`)
+          console.log(`[PDF-Export]   monthly_salary: ${monthlySalary}€`)
+          console.log(`[PDF-Export]   hourly_rate: ${hourlyRate}€`)
+          console.log(`[PDF-Export]   Berechnung: ${monthlySalary}€ + (${totalHours}h × ${hourlyRate}€) + ${bonusAmount}€ = ${interimSalary}€`)
+          console.log(`[PDF-Export]   Export-Stunden: ${interimSalary}€ / ${hourlyRate}€ = ${calculatedHours}h`)
+          if (hourlyRate === 0) {
+            console.log(`[PDF-Export]   WARNING: hourly_rate ist 0 für combined type! Fallback zu totalHours`)
+          }
         } else {
           // Salary compensation (legacy): salary = monthly salary + bonus
           // NOTE: In legacy 'salary' type, hourly_rate should be NULL per constraint
@@ -487,12 +514,32 @@ export async function generateReportData(
           calculatedHours = hourlyRate > 0
             ? Math.round((interimSalary / hourlyRate) * 100) / 100
             : 0
+
+          // DEBUG LOGGING - Salary/Legacy Calculation
+          console.log(`[PDF-Export] TYPE: SALARY (LEGACY)`)
+          console.log(`[PDF-Export]   monthly_salary: ${monthlySalary}€`)
+          console.log(`[PDF-Export]   hourly_rate: ${compensationData.hourly_rate || 'NULL'} (defaulted to ${hourlyRate}€)`)
+          console.log(`[PDF-Export]   Berechnung: ${monthlySalary}€ + ${bonusAmount}€ = ${interimSalary}€`)
+          console.log(`[PDF-Export]   Export-Stunden: ${interimSalary}€ / ${hourlyRate}€ = ${calculatedHours}h`)
+          if (!compensationData.hourly_rate) {
+            console.log(`[PDF-Export]   WARNING: hourly_rate ist NULL für salary type, verwende Default 20€`)
+          }
         }
       }
 
-      const evaluationCount = report?.evaluation_count || 0
       const provision = evaluationCount * 50 // 50€ per evaluation
       const totalSalary = interimSalary + provision
+
+      // DEBUG LOGGING - Final Results
+      console.log(`[PDF-Export] Final Results for ${employeeName}:`)
+      console.log(`[PDF-Export]   provision: ${evaluationCount} evaluations × 50€ = ${provision}€`)
+      console.log(`[PDF-Export]   interim_salary: ${interimSalary}€`)
+      console.log(`[PDF-Export]   total_salary: ${interimSalary}€ + ${provision}€ = ${totalSalary}€`)
+      console.log(`[PDF-Export]   --- EMPLOYEE DATA SAVED ---`)
+      console.log(`[PDF-Export]   work_days: ${workDays}`)
+      console.log(`[PDF-Export]   total_hours (calculated): ${calculatedHours}h`)
+      console.log(`[PDF-Export]   hourly_rate: ${hourlyRate}€`)
+      console.log('') // Empty line for readability
 
       employeeReportData.push({
         employee_id: employee.id,
@@ -516,6 +563,18 @@ export async function generateReportData(
       totals.total_provision += provision
       totals.total_salary += totalSalary
     }
+
+    // DEBUG LOGGING - Report Totals
+    console.log(`[PDF-Export] ========================================`)
+    console.log(`[PDF-Export] REPORT TOTALS for ${MONTH_NAMES[month - 1]} ${year}:`)
+    console.log(`[PDF-Export]   total_days: ${totals.total_days}`)
+    console.log(`[PDF-Export]   total_hours: ${totals.total_hours}h`)
+    console.log(`[PDF-Export]   total_interim: ${totals.total_interim}€`)
+    console.log(`[PDF-Export]   total_evaluations: ${totals.total_evaluations}`)
+    console.log(`[PDF-Export]   total_provision: ${totals.total_provision}€`)
+    console.log(`[PDF-Export]   total_salary: ${totals.total_salary}€`)
+    console.log(`[PDF-Export]   Employees processed: ${employeeReportData.length}`)
+    console.log(`[PDF-Export] ========================================`)
 
     return {
       success: true,
