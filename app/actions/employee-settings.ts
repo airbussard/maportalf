@@ -159,45 +159,9 @@ export async function saveEmployeeSettings(data: {
       return { success: false, error: error.message }
     }
 
-    // Also save to compensation history for tracking
-    const today = new Date().toISOString().split('T')[0]
-
-    // First, close all existing open entries for this employee
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-
-    const { error: closeError } = await adminSupabase
-      .from('employee_compensation_history')
-      .update({ valid_to: yesterdayStr })
-      .eq('employee_id', data.employee_id)
-      .is('valid_to', null)
-
-    if (closeError) {
-      console.error('Error closing old compensation history entries:', closeError)
-      // Continue anyway - we'll insert the new entry
-    }
-
-    // Now insert the new history entry with valid_from = today
-    const historyData = {
-      employee_id: data.employee_id,
-      compensation_type: data.compensation_type,
-      hourly_rate: data.compensation_type === 'hourly' || data.compensation_type === 'combined' ? data.hourly_rate : null,
-      monthly_salary: data.compensation_type === 'salary' || data.compensation_type === 'combined' ? data.monthly_salary : null,
-      currency: 'EUR',
-      valid_from: today,
-      created_by: user.id,
-      reason: 'Configuration update via admin panel'
-    }
-
-    const { error: historyError } = await adminSupabase
-      .from('employee_compensation_history')
-      .insert(historyData)
-
-    if (historyError) {
-      console.error('Error saving compensation history:', historyError)
-      // Don't fail the whole operation if history insert fails
-    }
+    // Note: We no longer use employee_compensation_history table
+    // Compensation data is now stored as snapshots in time_reports when months are closed
+    // The current settings in employee_settings are used for open months
 
     return { success: true, data: result as EmployeeSettings }
   } catch (error: any) {

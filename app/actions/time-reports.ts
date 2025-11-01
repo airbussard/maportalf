@@ -95,6 +95,23 @@ export async function closeMonth(
 
     // Use Admin Client to modify reports (bypasses RLS)
     const adminSupabase = createAdminClient()
+
+    // Get current compensation settings to create snapshot
+    const { data: compensationSettings } = await adminSupabase
+      .from('employee_settings')
+      .select('compensation_type, hourly_rate, monthly_salary, currency')
+      .eq('employee_id', employeeId)
+      .single()
+
+    // Prepare compensation snapshot data
+    const compensationSnapshot = compensationSettings ? {
+      compensation_type: compensationSettings.compensation_type,
+      hourly_rate: compensationSettings.hourly_rate,
+      monthly_salary: compensationSettings.monthly_salary,
+      currency: compensationSettings.currency,
+      snapshot_at: new Date().toISOString()
+    } : null
+
     let data, error
 
     if (existingReport.data) {
@@ -107,7 +124,12 @@ export async function closeMonth(
           closed_by: user.id,
           closed_at: new Date().toISOString(),
           bonus_amount: bonusAmount || 0,
-          notes: notes || null
+          notes: notes || null,
+          // Add compensation snapshot
+          compensation_type: compensationSettings?.compensation_type || null,
+          hourly_rate: compensationSettings?.hourly_rate || null,
+          monthly_salary: compensationSettings?.monthly_salary || null,
+          compensation_snapshot: compensationSnapshot
         })
         .eq('employee_id', employeeId)
         .eq('year', year)
@@ -130,7 +152,12 @@ export async function closeMonth(
           closed_by: user.id,
           closed_at: new Date().toISOString(),
           bonus_amount: bonusAmount || 0,
-          notes: notes || null
+          notes: notes || null,
+          // Add compensation snapshot
+          compensation_type: compensationSettings?.compensation_type || null,
+          hourly_rate: compensationSettings?.hourly_rate || null,
+          monthly_salary: compensationSettings?.monthly_salary || null,
+          compensation_snapshot: compensationSnapshot
         })
         .select()
         .single()
@@ -449,36 +476,36 @@ export async function generateReportData(
       const totalMinutes = employeeEntries.reduce((sum: number, e: any) => sum + e.duration_minutes, 0)
       const totalHours = Math.round((totalMinutes / 60) * 100) / 100
 
-      // Get compensation via RPC
-      const { data: compensation } = await adminSupabase
-        .rpc('get_employee_compensation', {
-          p_employee_id: employee.id,
-          p_date: startDate
-        })
-
-      let compensationData = compensation?.[0]
-
-      // DEBUG LOGGING - RPC Response
+      // Get compensation data
+      // For CLOSED months: use snapshot from time_reports
+      // For OPEN months: use current data from employee_settings
+      let compensationData = null
       const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email
-      console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
-      console.log(`[PDF-Export] RPC Input: p_employee_id=${employee.id}, p_date=${startDate}`)
-      console.log(`[PDF-Export] RPC Response:`, JSON.stringify(compensationData, null, 2))
 
-      // Fallback: If RPC returns no data or invalid data, try employee_settings table
-      if (!compensationData || !compensationData.compensation_type) {
-        console.log(`[PDF-Export] FALLBACK: RPC returned no/invalid data, trying employee_settings table`)
-
-        const { data: fallbackSettings, error: fallbackError } = await adminSupabase
+      if (report?.is_closed && report?.compensation_type) {
+        // Month is closed - use snapshot data from time_reports
+        compensationData = {
+          compensation_type: report.compensation_type,
+          hourly_rate: report.hourly_rate,
+          monthly_salary: report.monthly_salary
+        }
+        console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
+        console.log(`[PDF-Export] Using CLOSED month snapshot from time_reports:`, JSON.stringify(compensationData, null, 2))
+      } else {
+        // Month is open - use current settings from employee_settings
+        const { data: currentSettings, error: settingsError } = await adminSupabase
           .from('employee_settings')
-          .select('*')
+          .select('compensation_type, hourly_rate, monthly_salary')
           .eq('employee_id', employee.id)
           .single()
 
-        if (fallbackSettings && !fallbackError) {
-          compensationData = fallbackSettings
-          console.log(`[PDF-Export] FALLBACK SUCCESS: Using data from employee_settings:`, JSON.stringify(compensationData, null, 2))
+        if (currentSettings && !settingsError) {
+          compensationData = currentSettings
+          console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
+          console.log(`[PDF-Export] Using CURRENT settings from employee_settings:`, JSON.stringify(compensationData, null, 2))
         } else {
-          console.log(`[PDF-Export] FALLBACK FAILED: No data in employee_settings either`, fallbackError?.message)
+          console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
+          console.log(`[PDF-Export] WARNING: No compensation data found in employee_settings`, settingsError?.message)
         }
       }
 
