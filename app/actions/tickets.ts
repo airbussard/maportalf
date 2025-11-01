@@ -432,12 +432,13 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
             .from('email_queue')
             .insert({
               type: 'ticket_reply',
+              recipient: ticket.created_from_email,
               ticket_id: ticketId,
               recipient_email: ticket.created_from_email,
               subject: `[TICKET-${ticketNumber}] ${ticket.subject}`,
-              content,
-              status: 'pending',
-              attempts: 0
+              body: content,
+              content: content,
+              status: 'pending'
             })
 
           console.log('[Ticket Reply] Email queued for:', ticket.created_from_email)
