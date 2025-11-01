@@ -60,8 +60,14 @@ export function DocumentsView({ userRole, employees }: DocumentsViewProps) {
   const handleDownload = async (document: Document) => {
     const result = await getDocumentDownloadUrl(document.id)
     if (result.success && result.data) {
-      // Open download URL in new window
-      window.open(result.data, '_blank')
+      // Create temporary anchor element to force download
+      const link = window.document.createElement('a')
+      link.href = result.data
+      link.download = document.original_filename
+      link.style.display = 'none'
+      window.document.body.appendChild(link)
+      link.click()
+      window.document.body.removeChild(link)
       toast.success('Download gestartet')
     } else {
       toast.error(result.error || 'Download fehlgeschlagen')
