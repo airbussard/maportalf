@@ -51,7 +51,11 @@ export function BookingVolumeChart({ data, groupBy }: BookingVolumeChartProps) {
         data={data}
         onMouseMove={(state) => {
           if (state.isTooltipActive) {
-            setHoveredIndex(state.activeTooltipIndex ?? null)
+            setHoveredIndex(
+              typeof state.activeTooltipIndex === 'number'
+                ? state.activeTooltipIndex
+                : null
+            )
           } else {
             setHoveredIndex(null)
           }
