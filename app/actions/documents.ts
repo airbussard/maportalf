@@ -46,6 +46,7 @@ export async function getAllDocuments(): Promise<ActionResponse<Document[]>> {
     let query = supabase
       .from('documents')
       .select('*')
+      .gte('created_at', '2025-11-01T00:00:00Z') // Only show documents from new system (Supabase Storage)
       .order('created_at', { ascending: false })
 
     // If not admin, only show general documents and documents assigned to user
