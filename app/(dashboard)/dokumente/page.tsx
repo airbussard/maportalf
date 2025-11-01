@@ -22,7 +22,13 @@ export default async function DocumentsPage() {
   }
 
   // Get all employees for the upload form (admin only needs this)
-  let employees = []
+  let employees: Array<{
+    id: string
+    first_name: string | null
+    last_name: string | null
+    email: string
+  }> = []
+
   if (profile.role === 'admin') {
     const { data: employeeData } = await supabase
       .from('profiles')
