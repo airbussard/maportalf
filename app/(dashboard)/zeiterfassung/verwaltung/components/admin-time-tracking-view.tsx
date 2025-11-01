@@ -400,6 +400,7 @@ export function AdminTimeTrackingView({
         month={month}
         employeeId={employee}
         monthName={MONTH_NAMES[month - 1]}
+        employees={employees}
       />
 
       {/* Compensation Config Dialog */}

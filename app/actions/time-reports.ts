@@ -344,7 +344,7 @@ export async function saveRecipient(
 export async function generateReportData(
   year: number,
   month: number,
-  employeeId: string = 'all'
+  employeeId: string | string[] = 'all'
 ): Promise<ActionResponse<MonthlyReportData>> {
   try {
     const supabase = await createClient()
@@ -370,6 +370,10 @@ export async function generateReportData(
       'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
     ]
 
+    // Normalize employeeId to array for consistent handling
+    const employeeIds = Array.isArray(employeeId) ? employeeId : [employeeId]
+    const isAllEmployees = employeeIds.includes('all')
+
     // Fetch employees
     const adminSupabase = createAdminClient()
     let employeesQuery = adminSupabase
@@ -377,8 +381,8 @@ export async function generateReportData(
       .select('id, first_name, last_name, email')
       .eq('is_active', true)
 
-    if (employeeId !== 'all') {
-      employeesQuery = employeesQuery.eq('id', employeeId)
+    if (!isAllEmployees) {
+      employeesQuery = employeesQuery.in('id', employeeIds)
     }
 
     const { data: employees, error: employeesError } = await employeesQuery
@@ -397,8 +401,8 @@ export async function generateReportData(
       .gte('date', startDate)
       .lte('date', endDate)
 
-    if (employeeId !== 'all') {
-      entriesQuery = entriesQuery.eq('employee_id', employeeId)
+    if (!isAllEmployees) {
+      entriesQuery = entriesQuery.in('employee_id', employeeIds)
     }
 
     const { data: entries, error: entriesError } = await entriesQuery
@@ -414,8 +418,8 @@ export async function generateReportData(
       .eq('year', year)
       .eq('month', month)
 
-    if (employeeId !== 'all') {
-      reportsQuery = reportsQuery.eq('employee_id', employeeId)
+    if (!isAllEmployees) {
+      reportsQuery = reportsQuery.in('employee_id', employeeIds)
     }
 
     const { data: reports } = await reportsQuery

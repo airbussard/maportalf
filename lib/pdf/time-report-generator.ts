@@ -31,9 +31,9 @@ export async function generateTimeReportPdf(reportData: MonthlyReportData): Prom
     const logoBytes = fs.readFileSync(logoPath)
     const logoImage = await pdfDoc.embedPng(logoBytes)
 
-    // Calculate logo dimensions (keep aspect ratio)
+    // Calculate logo dimensions (keep aspect ratio, 40% smaller)
     const logoAspectRatio = logoImage.width / logoImage.height
-    const logoHeight = 40
+    const logoHeight = 24
     const logoWidth = logoHeight * logoAspectRatio
 
     // Draw logo (top left)

@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
     const month = parseInt(searchParams.get('month') || String(new Date().getMonth() + 1))
-    const employeeId = searchParams.get('employee') || 'all'
+
+    // Support both single employee and multiple employees
+    const employeeParam = searchParams.get('employee') || searchParams.get('employees') || 'all'
+    const employeeId = employeeParam.includes(',')
+      ? employeeParam.split(',').filter(id => id.trim())
+      : employeeParam
 
     // Generate report data
     const reportResult = await generateReportData(year, month, employeeId)

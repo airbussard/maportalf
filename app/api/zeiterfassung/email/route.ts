@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { year, month, employee, recipients, subject, body: emailBody, save_recipients } = body
+    const { year, month, employee, employees, recipients, subject, body: emailBody, save_recipients } = body
 
     // Validate inputs
     if (!year || !month || !recipients || !subject || !emailBody) {
@@ -43,8 +43,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid email addresses' }, { status: 400 })
     }
 
+    // Support both single employee and multiple employees
+    const employeeIds = employees || employee || 'all'
+
     // Generate report data
-    const reportResult = await generateReportData(year, month, employee || 'all')
+    const reportResult = await generateReportData(year, month, employeeIds)
 
     if (!reportResult.success || !reportResult.data) {
       return NextResponse.json(

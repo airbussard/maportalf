@@ -12,6 +12,13 @@ import { Download, Mail, Loader2, Plus, X } from 'lucide-react'
 import { getSavedRecipients } from '@/app/actions/time-reports'
 import type { TimeReportRecipient } from '@/lib/types/time-tracking'
 
+interface Employee {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  email: string
+}
+
 interface ReportExportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -19,6 +26,7 @@ interface ReportExportDialogProps {
   month: number
   employeeId: string
   monthName: string
+  employees: Employee[]
 }
 
 const MONTH_NAMES = [
@@ -43,6 +51,7 @@ export function ReportExportDialog({
   month,
   employeeId,
   monthName,
+  employees,
 }: ReportExportDialogProps) {
   const [activeTab, setActiveTab] = useState('download')
   const [loading, setLoading] = useState(false)
@@ -56,11 +65,22 @@ export function ReportExportDialog({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
+  // Employee selection state
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([])
+
   useEffect(() => {
     if (isOpen) {
       loadSavedRecipients()
+      // Initialize employee selection based on current filter
+      if (employeeId === 'all') {
+        // Select all employees
+        setSelectedEmployeeIds(employees.map(emp => emp.id))
+      } else {
+        // Select only the current employee
+        setSelectedEmployeeIds([employeeId])
+      }
     }
-  }, [isOpen])
+  }, [isOpen, employeeId, employees])
 
   const loadSavedRecipients = async () => {
     const result = await getSavedRecipients()
@@ -69,8 +89,39 @@ export function ReportExportDialog({
     }
   }
 
+  const handleToggleEmployee = (employeeId: string) => {
+    setSelectedEmployeeIds(prev => {
+      if (prev.includes(employeeId)) {
+        return prev.filter(id => id !== employeeId)
+      } else {
+        return [...prev, employeeId]
+      }
+    })
+  }
+
+  const handleSelectAll = () => {
+    setSelectedEmployeeIds(employees.map(emp => emp.id))
+  }
+
+  const handleSelectNone = () => {
+    setSelectedEmployeeIds([])
+  }
+
+  const getEmployeeName = (employee: Employee) => {
+    if (employee.first_name && employee.last_name) {
+      return `${employee.first_name} ${employee.last_name}`
+    }
+    return employee.email
+  }
+
   const handleDownload = () => {
-    const url = `/api/zeiterfassung/pdf?year=${year}&month=${month}&employee=${employeeId}`
+    if (selectedEmployeeIds.length === 0) {
+      setError('Bitte wählen Sie mindestens einen Mitarbeiter aus')
+      return
+    }
+
+    const employeeParam = selectedEmployeeIds.join(',')
+    const url = `/api/zeiterfassung/pdf?year=${year}&month=${month}&employees=${employeeParam}`
     window.open(url, '_blank')
   }
 
@@ -112,6 +163,12 @@ export function ReportExportDialog({
     setError(null)
     setSuccess(null)
 
+    // Validate employee selection
+    if (selectedEmployeeIds.length === 0) {
+      setError('Bitte wählen Sie mindestens einen Mitarbeiter aus')
+      return
+    }
+
     // Validate recipients
     const validRecipients = recipients.filter((r) => r.trim() !== '')
 
@@ -141,7 +198,7 @@ export function ReportExportDialog({
         body: JSON.stringify({
           year,
           month,
-          employee: employeeId,
+          employees: selectedEmployeeIds,
           recipients: validRecipients,
           subject,
           body,
@@ -189,11 +246,61 @@ export function ReportExportDialog({
           </TabsList>
 
           <TabsContent value="download" className="space-y-4">
-            <div className="border border-border rounded-lg p-4 bg-muted/50">
-              <p className="text-sm text-muted-foreground mb-4">
-                Laden Sie den Monatsbericht als PDF herunter.
+            {error && (
+              <div className="p-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Mitarbeiter auswählen</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    Alle
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectNone}
+                  >
+                    Keine
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-lg p-3 max-h-60 overflow-y-auto space-y-2">
+                {employees.map((employee) => (
+                  <label
+                    key={employee.id}
+                    className="flex items-center space-x-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployeeIds.includes(employee.id)}
+                      onChange={() => handleToggleEmployee(employee.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm flex-1">
+                      {getEmployeeName(employee)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {selectedEmployeeIds.length} von {employees.length} Mitarbeiter ausgewählt
               </p>
-              <Button onClick={handleDownload} className="w-full">
+            </div>
+
+            <div className="border border-border rounded-lg p-4 bg-muted/50">
+              <Button onClick={handleDownload} className="w-full" disabled={selectedEmployeeIds.length === 0}>
                 <Download className="w-4 h-4 mr-2" />
                 PDF herunterladen
               </Button>
@@ -212,6 +319,53 @@ export function ReportExportDialog({
                 {success}
               </div>
             )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Mitarbeiter auswählen</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    Alle
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectNone}
+                  >
+                    Keine
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                {employees.map((employee) => (
+                  <label
+                    key={employee.id}
+                    className="flex items-center space-x-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployeeIds.includes(employee.id)}
+                      onChange={() => handleToggleEmployee(employee.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm flex-1">
+                      {getEmployeeName(employee)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {selectedEmployeeIds.length} von {employees.length} Mitarbeiter ausgewählt
+              </p>
+            </div>
 
             <div className="space-y-3">
               <Label>Empfänger</Label>
