@@ -1,7 +1,8 @@
 'use client'
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { GroupBy } from '@/app/actions/calendar-stats'
+import { useState } from 'react'
 
 interface BookingVolumeChartProps {
   data: {
@@ -12,7 +13,16 @@ interface BookingVolumeChartProps {
   groupBy: GroupBy
 }
 
+// Flighthour Logo Colors
+const FLIGHTHOUR_YELLOW = '#FDB71A'  // Primary brand yellow
+const DARKER_YELLOW = '#E5A515'       // 15% darker for non-current months
+
 export function BookingVolumeChart({ data, groupBy }: BookingVolumeChartProps) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+
+  // Get current month in YYYY-MM format
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+
   if (data.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
@@ -21,9 +31,33 @@ export function BookingVolumeChart({ data, groupBy }: BookingVolumeChartProps) {
     )
   }
 
+  // Determine the fill color for each bar
+  const getBarFill = (entry: { period: string }, index: number) => {
+    // Hover takes precedence
+    if (hoveredIndex === index) {
+      return FLIGHTHOUR_YELLOW
+    }
+    // Current month is highlighted
+    if (entry.period === currentMonth) {
+      return FLIGHTHOUR_YELLOW
+    }
+    // All other months
+    return DARKER_YELLOW
+  }
+
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data}>
+      <BarChart
+        data={data}
+        onMouseMove={(state) => {
+          if (state.isTooltipActive) {
+            setHoveredIndex(state.activeTooltipIndex ?? null)
+          } else {
+            setHoveredIndex(null)
+          }
+        }}
+        onMouseLeave={() => setHoveredIndex(null)}
+      >
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="displayLabel"
@@ -49,10 +83,17 @@ export function BookingVolumeChart({ data, groupBy }: BookingVolumeChartProps) {
         />
         <Bar
           dataKey="count"
-          fill="hsl(var(--primary))"
           radius={[4, 4, 0, 0]}
           name="Buchungen"
-        />
+        >
+          {data.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={getBarFill(entry, index)}
+              style={{ transition: 'fill 0.2s ease' }}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   )
