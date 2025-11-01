@@ -159,6 +159,7 @@ export async function uploadDocument(formData: FormData): Promise<ActionResponse
         description: description || null,
         category,
         storage_path: storagePath,
+        file_url: null, // Deprecated field - using storage_path instead
         assigned_to: assignedTo || null,
         uploaded_by: user.id
       })
