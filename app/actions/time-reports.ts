@@ -456,13 +456,31 @@ export async function generateReportData(
           p_date: startDate
         })
 
-      const compensationData = compensation?.[0]
+      let compensationData = compensation?.[0]
 
       // DEBUG LOGGING - RPC Response
       const employeeName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || employee.email
       console.log(`[PDF-Export] Employee: ${employeeName} (${employee.id})`)
       console.log(`[PDF-Export] RPC Input: p_employee_id=${employee.id}, p_date=${startDate}`)
       console.log(`[PDF-Export] RPC Response:`, JSON.stringify(compensationData, null, 2))
+
+      // Fallback: If RPC returns no data or invalid data, try employee_settings table
+      if (!compensationData || !compensationData.compensation_type) {
+        console.log(`[PDF-Export] FALLBACK: RPC returned no/invalid data, trying employee_settings table`)
+
+        const { data: fallbackSettings, error: fallbackError } = await adminSupabase
+          .from('employee_settings')
+          .select('*')
+          .eq('employee_id', employee.id)
+          .single()
+
+        if (fallbackSettings && !fallbackError) {
+          compensationData = fallbackSettings
+          console.log(`[PDF-Export] FALLBACK SUCCESS: Using data from employee_settings:`, JSON.stringify(compensationData, null, 2))
+        } else {
+          console.log(`[PDF-Export] FALLBACK FAILED: No data in employee_settings either`, fallbackError?.message)
+        }
+      }
 
       let hourlyRate = 0
       let interimSalary = 0

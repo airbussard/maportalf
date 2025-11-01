@@ -161,6 +161,24 @@ export async function saveEmployeeSettings(data: {
 
     // Also save to compensation history for tracking
     const today = new Date().toISOString().split('T')[0]
+
+    // First, close all existing open entries for this employee
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    const { error: closeError } = await adminSupabase
+      .from('employee_compensation_history')
+      .update({ valid_to: yesterdayStr })
+      .eq('employee_id', data.employee_id)
+      .is('valid_to', null)
+
+    if (closeError) {
+      console.error('Error closing old compensation history entries:', closeError)
+      // Continue anyway - we'll insert the new entry
+    }
+
+    // Now insert the new history entry with valid_from = today
     const historyData = {
       employee_id: data.employee_id,
       compensation_type: data.compensation_type,
