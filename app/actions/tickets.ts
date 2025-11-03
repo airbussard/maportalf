@@ -135,8 +135,9 @@ export async function getTicket(id: string) {
       return { success: false, error: 'Ticket nicht gefunden' }
     }
 
-    // Get messages
-    const { data: messages } = await supabase
+    // Get messages - use admin client to bypass RLS for sender profiles
+    const adminSupabase = createAdminClient()
+    const { data: messages } = await adminSupabase
       .from('ticket_messages')
       .select(`
         *,
