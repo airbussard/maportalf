@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -12,11 +12,20 @@ import { LoginLoader } from './components/login-loader'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showLoader, setShowLoader] = useState(false)
+
+  // Check for error parameter on mount
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'account_deactivated') {
+      setError('Ihr Account wurde deaktiviert. Bitte kontaktieren Sie einen Administrator.')
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +54,28 @@ export default function LoginPage() {
       }
 
       if (data.session) {
+        // Check if user is active
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('id', data.user.id)
+          .single()
+
+        if (profileError || !profile) {
+          console.error('Profile fetch error:', profileError)
+          setError('Fehler beim Laden des Profils')
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+
+        if (profile.is_active === false) {
+          setError('Ihr Account wurde deaktiviert. Bitte kontaktieren Sie einen Administrator.')
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+
         // Show loading animation before redirect
         setLoading(false)
         setShowLoader(true)

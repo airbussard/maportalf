@@ -47,6 +47,24 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Check if user is active (for protected routes)
+  if (isProtectedPath && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_active')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && profile.is_active === false) {
+      // User is inactive, log them out and redirect to login
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'account_deactivated')
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Redirect to dashboard if accessing auth pages while logged in
   if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') && user) {
     const url = request.nextUrl.clone()

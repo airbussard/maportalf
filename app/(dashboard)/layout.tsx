@@ -30,12 +30,19 @@ export default function DashboardLayout({
         return
       }
 
-      // Get user role
+      // Get user role and check if active
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, is_active')
         .eq('id', user.id)
         .single()
+
+      // Check if user is inactive
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut()
+        router.push('/login?error=account_deactivated')
+        return
+      }
 
       setUser(user)
       setUserRole(profile?.role || 'employee')
