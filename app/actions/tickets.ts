@@ -467,13 +467,13 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
       return { success: false, error: 'Fehler beim Senden der Nachricht' }
     }
 
-    // Send email notification for non-internal messages
+    // Send email notification and in-app notifications for non-internal messages
     if (!isInternal) {
       try {
-        // Get ticket details
+        // Get ticket details with assignment and creator info
         const { data: ticket } = await supabase
           .from('tickets')
-          .select('subject, ticket_number, created_from_email')
+          .select('subject, ticket_number, created_from_email, assigned_to, created_by')
           .eq('id', ticketId)
           .single()
 
@@ -484,35 +484,73 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
           .eq('id', user.id)
           .single()
 
-        // Only send email if ticket was created from email
-        if (ticket && ticket.created_from_email && sender) {
+        if (ticket) {
           const ticketNumber = ticket.ticket_number
             ? ticket.ticket_number.toString().padStart(6, '0')
             : ticketId.substring(0, 8)
 
-          const senderName = `${sender.first_name} ${sender.last_name}`.trim() || sender.email
+          const senderName = `${sender?.first_name || ''} ${sender?.last_name || ''}`.trim() || sender?.email || 'Unbekannt'
 
-          // Queue email for background processing
-          await supabase
-            .from('email_queue')
-            .insert({
+          // Queue email if ticket was created from email
+          if (ticket.created_from_email && sender) {
+            await supabase
+              .from('email_queue')
+              .insert({
+                type: 'ticket_reply',
+                recipient: ticket.created_from_email,
+                ticket_id: ticketId,
+                message_id: message.id, // Link to message for attachments
+                recipient_email: ticket.created_from_email,
+                subject: `[TICKET-${ticketNumber}] ${ticket.subject}`,
+                body: content,
+                content: content,
+                status: 'pending'
+              })
+
+            console.log('[Ticket Reply] Email queued for:', ticket.created_from_email)
+          }
+
+          // Create in-app notifications
+          if (ticket.assigned_to) {
+            // Assigned ticket - only notify assignee (if not the sender)
+            if (ticket.assigned_to !== user.id) {
+              await createNotification({
+                userId: ticket.assigned_to,
+                type: 'ticket_reply',
+                title: 'Neue Antwort auf zugewiesenes Ticket',
+                message: `${senderName} hat auf Ticket #${ticketNumber} geantwortet: ${ticket.subject}`,
+                link: `/tickets/${ticketId}`,
+                ticketId: ticketId
+              })
+              console.log('[Ticket Reply] Notification sent to assigned employee:', ticket.assigned_to)
+            }
+          } else {
+            // Not assigned - notify all managers/admins (except sender)
+            await createNotificationForManagers(
+              'ticket_reply',
+              'Neue Ticket-Antwort',
+              `${senderName} hat auf Ticket #${ticketNumber} geantwortet: ${ticket.subject}`,
+              `/tickets/${ticketId}`,
+              ticketId
+            )
+            console.log('[Ticket Reply] Notifications sent to all managers/admins')
+          }
+
+          // Always notify ticket creator (if not the sender)
+          if (ticket.created_by && ticket.created_by !== user.id) {
+            await createNotification({
+              userId: ticket.created_by,
               type: 'ticket_reply',
-              recipient: ticket.created_from_email,
-              ticket_id: ticketId,
-              message_id: message.id, // Link to message for attachments
-              recipient_email: ticket.created_from_email,
-              subject: `[TICKET-${ticketNumber}] ${ticket.subject}`,
-              body: content,
-              content: content,
-              status: 'pending'
+              title: 'Neue Antwort auf Ihr Ticket',
+              message: `${senderName} hat auf Ihr Ticket #${ticketNumber} geantwortet: ${ticket.subject}`,
+              link: `/tickets/${ticketId}`,
+              ticketId: ticketId
             })
-
-          console.log('[Ticket Reply] Email queued for:', ticket.created_from_email)
-        } else {
-          console.log('[Ticket Reply] No email sent - ticket was not created from email')
+            console.log('[Ticket Reply] Notification sent to ticket creator:', ticket.created_by)
+          }
         }
       } catch (emailError) {
-        console.error('[Ticket Reply] Failed to queue email:', emailError)
+        console.error('[Ticket Reply] Failed to queue email/notifications:', emailError)
         // Don't fail the message creation if email queueing fails
       }
     }

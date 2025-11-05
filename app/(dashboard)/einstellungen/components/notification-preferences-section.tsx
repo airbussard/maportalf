@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { updateNotificationPreferences } from '@/app/actions/notifications'
-import { Bell, Ticket, Calendar, UserPlus } from 'lucide-react'
+import { Bell, Ticket, Calendar, UserPlus, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface NotificationPreferencesSectionProps {
@@ -50,6 +50,12 @@ export function NotificationPreferencesSection({
       label: 'Ticket-Zuweisungen',
       description: 'Benachrichtigung wenn Ihnen ein Ticket zugewiesen wird',
       icon: <UserPlus className="w-5 h-5 text-primary" />
+    },
+    {
+      key: 'ticket_reply',
+      label: 'Ticket-Antworten',
+      description: 'Benachrichtigung bei neuen Antworten auf Tickets',
+      icon: <MessageSquare className="w-5 h-5 text-primary" />
     }
   ]
 

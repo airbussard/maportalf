@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 interface CreateNotificationParams {
   userId: string
-  type: 'new_ticket' | 'work_request' | 'ticket_assignment'
+  type: 'new_ticket' | 'work_request' | 'ticket_assignment' | 'ticket_reply'
   title: string
   message: string
   link?: string
@@ -37,13 +37,15 @@ export async function createNotification(params: CreateNotificationParams): Prom
     const settings = profile.notification_settings || {
       new_ticket: true,
       work_request: true,
-      ticket_assignment: true
+      ticket_assignment: true,
+      ticket_reply: true
     }
 
     // Map notification type to setting key
     const settingKey = params.type === 'new_ticket' ? 'new_ticket'
       : params.type === 'work_request' ? 'work_request'
-      : 'ticket_assignment'
+      : params.type === 'ticket_assignment' ? 'ticket_assignment'
+      : 'ticket_reply'
 
     if (!settings[settingKey]) {
       console.log(`User ${params.userId} has disabled ${params.type} notifications`)
@@ -91,7 +93,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
  * @returns Number of notifications created
  */
 export async function createNotificationForManagers(
-  type: 'new_ticket' | 'work_request',
+  type: 'new_ticket' | 'work_request' | 'ticket_reply',
   title: string,
   message: string,
   link?: string,

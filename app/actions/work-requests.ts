@@ -948,7 +948,7 @@ async function queueWorkRequestNotification(requestId: string): Promise<void> {
       .from('work_requests')
       .select(`
         *,
-        profiles:user_id(first_name, last_name, email)
+        profiles:employee_id(first_name, last_name, email)
       `)
       .eq('id', requestId)
       .single()

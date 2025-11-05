@@ -86,6 +86,8 @@ export function NotificationBell({ role }: NotificationBellProps) {
         return '📅'
       case 'ticket_assignment':
         return '👤'
+      case 'ticket_reply':
+        return '💬'
       default:
         return '🔔'
     }

@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 export interface Notification {
   id: string
   user_id: string
-  type: 'new_ticket' | 'work_request' | 'ticket_assignment'
+  type: 'new_ticket' | 'work_request' | 'ticket_assignment' | 'ticket_reply'
   title: string
   message: string
   link: string | null
