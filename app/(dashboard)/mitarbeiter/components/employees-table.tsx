@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Search, UserCircle, UserPlus } from 'lucide-react'
 import { EmployeeDetailModal } from './employee-detail-modal'
 import { AddEmployeeDialog } from './add-employee-dialog'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
 
 interface EmployeesTableProps {
   employees: Employee[]
@@ -28,6 +30,12 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
   // Create a map for quick lookup
   const settingsMap = new Map(employeeSettings.map(s => [s.employee_id, s]))
 
+  // Check if employee is inactive (either is_active false OR exit_date in past/today)
+  const isEmployeeInactive = (employee: Employee) => {
+    return employee.is_active === false ||
+           (employee.exit_date && new Date(employee.exit_date) <= new Date())
+  }
+
   // Filter employees
   const filteredEmployees = employees.filter(employee => {
     const searchLower = search.toLowerCase()
@@ -38,10 +46,11 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
       employee.email.toLowerCase().includes(searchLower)
 
     const matchesRole = roleFilter === 'all' || employee.role === roleFilter
+    const isInactive = isEmployeeInactive(employee)
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'active' && employee.is_active) ||
-      (statusFilter === 'inactive' && !employee.is_active)
+      (statusFilter === 'active' && !isInactive) ||
+      (statusFilter === 'inactive' && isInactive)
 
     return matchesSearch && matchesRole && matchesStatus
   })
@@ -152,12 +161,13 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
                   filteredEmployees.map((employee) => {
                     const roleBadge = getRoleBadge(employee.role)
                     const name = getEmployeeName(employee)
+                    const isInactive = isEmployeeInactive(employee)
 
                     return (
                       <tr
                         key={employee.id}
                         onClick={() => setSelectedEmployee(employee)}
-                        className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
+                        className={`border-b border-border hover:bg-muted/50 cursor-pointer transition-colors ${isInactive ? 'opacity-50' : ''}`}
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -179,15 +189,25 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
                           </td>
                         )}
                         <td className="py-3 px-4">
-                          {employee.is_active ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-green-600">
-                              <span className="w-2 h-2 rounded-full bg-green-600"></span>
-                              Aktiv
-                            </span>
-                          ) : (
+                          {!employee.is_active ? (
                             <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
                               <span className="w-2 h-2 rounded-full bg-gray-400"></span>
                               Inaktiv
+                            </span>
+                          ) : employee.exit_date && new Date(employee.exit_date) <= new Date() ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-orange-600">
+                              <span className="w-2 h-2 rounded-full bg-orange-600"></span>
+                              Ausgetreten
+                            </span>
+                          ) : employee.exit_date ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-yellow-600">
+                              <span className="w-2 h-2 rounded-full bg-yellow-600"></span>
+                              Austritt {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-green-600">
+                              <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                              Aktiv
                             </span>
                           )}
                         </td>

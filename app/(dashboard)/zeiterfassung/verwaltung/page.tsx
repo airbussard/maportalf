@@ -40,12 +40,28 @@ export default async function ZeiterfassungVerwaltungPage({
   const selectedEmployee = params.employee || 'all'
 
   // Fetch all employees using Admin Client (bypasses RLS)
+  // Include employees that are:
+  // 1. is_active = true AND no exit_date
+  // 2. OR exit_date >= first day of selected month (still active in that month)
   const adminSupabase = createAdminClient()
-  const { data: employees } = await adminSupabase
+  const firstDayOfMonth = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+
+  const { data: allEmployees } = await adminSupabase
     .from('profiles')
-    .select('id, first_name, last_name, email')
-    .eq('is_active', true)
+    .select('id, first_name, last_name, email, is_active, exit_date')
     .order('first_name', { ascending: true })
+
+  // Filter employees: show if active in the selected month
+  const employees = (allEmployees || []).filter(emp => {
+    // Always exclude if is_active is false
+    if (emp.is_active === false) return false
+
+    // If no exit_date, employee is active
+    if (!emp.exit_date) return true
+
+    // Include if exit_date is >= first day of selected month
+    return new Date(emp.exit_date) >= new Date(firstDayOfMonth)
+  })
 
   // Load employee settings in parallel
   const settingsResult = await getAllEmployeeSettings()
@@ -55,7 +71,7 @@ export default async function ZeiterfassungVerwaltungPage({
       initialYear={selectedYear}
       initialMonth={selectedMonth}
       selectedEmployee={selectedEmployee}
-      employees={employees || []}
+      employees={employees}
       employeeSettings={settingsResult.data || []}
     />
   )

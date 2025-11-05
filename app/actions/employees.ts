@@ -18,6 +18,7 @@ export interface Employee {
   last_name?: string | null
   role: 'employee' | 'manager' | 'admin'
   is_active: boolean
+  exit_date?: string | null
   created_at: string
   updated_at: string
 }
@@ -460,6 +461,96 @@ export async function resendInvitationEmail(employeeId: string): Promise<ActionR
     return { success: true }
   } catch (error: any) {
     console.error('Error in resendInvitationEmail:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
+  }
+}
+
+// Set employee exit date
+export async function setEmployeeExitDate(employeeId: string, exitDate: string): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung. Nur Administratoren können Austrittsdaten setzen.' }
+    }
+
+    // Update exit date
+    const adminSupabase = createAdminClient()
+    const { error } = await adminSupabase
+      .from('profiles')
+      .update({
+        exit_date: exitDate,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', employeeId)
+
+    if (error) {
+      console.error('Error setting exit date:', error)
+      return { success: false, error: 'Fehler beim Setzen des Austrittsdatums' }
+    }
+
+    revalidatePath('/mitarbeiter')
+    revalidatePath('/zeiterfassung/verwaltung')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in setEmployeeExitDate:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
+  }
+}
+
+// Clear employee exit date
+export async function clearExitDate(employeeId: string): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung. Nur Administratoren können Austrittsdaten löschen.' }
+    }
+
+    // Clear exit date
+    const adminSupabase = createAdminClient()
+    const { error } = await adminSupabase
+      .from('profiles')
+      .update({
+        exit_date: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', employeeId)
+
+    if (error) {
+      console.error('Error clearing exit date:', error)
+      return { success: false, error: 'Fehler beim Löschen des Austrittsdatums' }
+    }
+
+    revalidatePath('/mitarbeiter')
+    revalidatePath('/zeiterfassung/verwaltung')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in clearExitDate:', error)
     return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
   }
 }

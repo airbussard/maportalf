@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Employee } from '@/app/actions/employees'
 import type { EmployeeSettings } from '@/lib/types/time-tracking'
-import { updateEmployeeRole, toggleEmployeeStatus, deleteEmployee, resendInvitationEmail } from '@/app/actions/employees'
+import { updateEmployeeRole, toggleEmployeeStatus, deleteEmployee, resendInvitationEmail, setEmployeeExitDate, clearExitDate } from '@/app/actions/employees'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro, Trash2, Send } from 'lucide-react'
+import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro, Trash2, Send, CalendarX } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { CompensationConfigDialog } from '@/app/(dashboard)/zeiterfassung/verwaltung/components/compensation-config-dialog'
@@ -34,6 +34,7 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
   const [error, setError] = useState<string | null>(null)
   const [selectedRole, setSelectedRole] = useState<'employee' | 'manager' | 'admin'>(employee.role)
   const [compensationDialogOpen, setCompensationDialogOpen] = useState(false)
+  const [exitDate, setExitDate] = useState(employee.exit_date || '')
 
   const getEmployeeName = () => {
     if (employee.first_name || employee.last_name) {
@@ -82,6 +83,50 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
       onClose()
     } else {
       setError(result.error || 'Fehler beim Ändern des Status')
+    }
+
+    setLoading(false)
+  }
+
+  const handleSetExitDate = async () => {
+    if (!exitDate) {
+      setError('Bitte Austrittsdatum eingeben')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await setEmployeeExitDate(employee.id, exitDate)
+
+    if (result.success) {
+      toast.success('Austrittsdatum gesetzt')
+      router.refresh()
+      onClose()
+    } else {
+      setError(result.error || 'Fehler beim Setzen des Austrittsdatums')
+    }
+
+    setLoading(false)
+  }
+
+  const handleClearExitDate = async () => {
+    if (!confirm('Austrittsdatum wirklich entfernen?')) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await clearExitDate(employee.id)
+
+    if (result.success) {
+      toast.success('Austrittsdatum entfernt')
+      setExitDate('')
+      router.refresh()
+      onClose()
+    } else {
+      setError(result.error || 'Fehler beim Entfernen des Austrittsdatums')
     }
 
     setLoading(false)
@@ -187,15 +232,25 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
               <div>
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <div className="mt-1">
-                  {employee.is_active ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-green-600"></span>
-                      Aktiv
-                    </span>
-                  ) : (
+                  {!employee.is_active ? (
                     <span className="inline-flex items-center gap-1.5 text-sm text-gray-500 font-medium">
                       <span className="w-2 h-2 rounded-full bg-gray-400"></span>
                       Inaktiv
+                    </span>
+                  ) : employee.exit_date && new Date(employee.exit_date) <= new Date() ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-orange-600 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-orange-600"></span>
+                      Ausgetreten am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
+                    </span>
+                  ) : employee.exit_date ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-yellow-600 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-yellow-600"></span>
+                      Austritt am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                      Aktiv
                     </span>
                   )}
                 </div>
@@ -253,9 +308,52 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
                 )}
               </div>
 
-              {/* Status Toggle */}
+              {/* Exit Date */}
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label htmlFor="exit_date">Austrittsdatum</Label>
+                {employee.exit_date ? (
+                  <div className="space-y-2">
+                    <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-md text-sm border border-orange-200 dark:border-orange-800">
+                      Austritt: {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
+                    </div>
+                    <Button
+                      onClick={handleClearExitDate}
+                      disabled={loading}
+                      variant="outline"
+                      className="w-full justify-start"
+                    >
+                      <CalendarX className="w-4 h-4 mr-2" />
+                      Austrittsdatum entfernen
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="date"
+                      id="exit_date"
+                      value={exitDate}
+                      onChange={(e) => setExitDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                      disabled={loading}
+                    />
+                    {exitDate && (
+                      <Button
+                        onClick={handleSetExitDate}
+                        disabled={loading}
+                        variant="default"
+                        className="w-full"
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {loading ? 'Wird gesetzt...' : 'Austrittsdatum setzen'}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Toggle (Legacy) */}
+              <div className="space-y-2">
+                <Label>Status (Sofort deaktivieren)</Label>
                 <Button
                   onClick={handleStatusToggle}
                   disabled={loading}
