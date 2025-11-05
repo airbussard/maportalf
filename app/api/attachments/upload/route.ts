@@ -1,8 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
 const ALLOWED_MIME_TYPES = [
@@ -82,21 +79,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique filename
-    const extension = path.extname(file.name)
-    const safeFilename = `${Date.now()}_${Math.random().toString(36).substring(7)}${extension}`
-    const storagePath = `tickets/${ticketId}/${safeFilename}`
+    const extension = file.name.split('.').pop() || ''
+    const safeFilename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${extension}`
+    const storagePath = `${ticketId}/${safeFilename}`
 
-    // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'uploads', 'tickets', ticketId)
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true })
-    }
-
-    // Save file to disk
-    const localPath = path.join(uploadDir, safeFilename)
+    // Upload to Supabase Storage
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(localPath, buffer)
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('ticket-attachments')
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        upsert: false
+      })
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError)
+      return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
+    }
 
     // Create database entry
     const { data: attachment, error: dbError } = await supabase
