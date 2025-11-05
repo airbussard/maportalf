@@ -30,18 +30,23 @@ export default function DashboardLayout({
         return
       }
 
-      // Get user role and check if active
+      // Get user role and check if active (both is_active and exit_date)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, is_active')
+        .select('role, is_active, exit_date')
         .eq('id', user.id)
         .single()
 
-      // Check if user is inactive
-      if (profile && profile.is_active === false) {
-        await supabase.auth.signOut()
-        router.push('/login?error=account_deactivated')
-        return
+      // Check if user is inactive (is_active = false OR exit_date in past/today)
+      if (profile) {
+        const isInactive = profile.is_active === false ||
+                          (profile.exit_date && new Date(profile.exit_date) <= new Date())
+
+        if (isInactive) {
+          await supabase.auth.signOut()
+          router.push('/login?error=account_deactivated')
+          return
+        }
       }
 
       setUser(user)

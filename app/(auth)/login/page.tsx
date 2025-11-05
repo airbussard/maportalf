@@ -54,10 +54,10 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // Check if user is active
+        // Check if user is active (both is_active and exit_date)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('is_active')
+          .select('is_active, exit_date')
           .eq('id', data.user.id)
           .single()
 
@@ -69,7 +69,11 @@ export default function LoginPage() {
           return
         }
 
-        if (profile.is_active === false) {
+        // Check if user is inactive (is_active = false OR exit_date in past/today)
+        const isInactive = profile.is_active === false ||
+                          (profile.exit_date && new Date(profile.exit_date) <= new Date())
+
+        if (isInactive) {
           setError('Ihr Account wurde deaktiviert. Bitte kontaktieren Sie einen Administrator.')
           await supabase.auth.signOut()
           setLoading(false)
