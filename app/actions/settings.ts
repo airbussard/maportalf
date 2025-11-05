@@ -99,3 +99,44 @@ export async function updatePassword(newPassword: string) {
     return { success: false, error: 'Ein Fehler ist aufgetreten' }
   }
 }
+
+export async function updateNotificationSettings(data: {
+  receive_request_emails?: boolean
+}) {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check if user is Manager or Admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'manager' && profile?.role !== 'admin') {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(data)
+      .eq('id', user.id)
+
+    if (error) {
+      console.error('Notification settings update error:', error)
+      return { success: false, error: 'Fehler beim Speichern der Einstellungen' }
+    }
+
+    revalidatePath('/einstellungen')
+    return { success: true }
+  } catch (error) {
+    console.error('Update notification settings error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}

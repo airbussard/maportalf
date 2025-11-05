@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendTicketEmail, sendTicketCreationEmail, sendTicketAssignmentEmail } from '@/lib/email/ticket-mailer'
+import { sendWorkRequestEmail } from '@/lib/email/work-request-mailer'
 
 export const maxDuration = 300 // 5 minutes
 export const dynamic = 'force-dynamic'
@@ -220,6 +221,29 @@ export async function GET(request: NextRequest) {
             ticketSubject: email.subject.replace(/^Neues Ticket zugewiesen: \[TICKET-\d+\] /, ''),
             ticketUrl
           })
+        } else if (email.type === 'work_request') {
+          // Work request notification with approve/reject buttons
+          console.log('[Email Queue] Sending work request notification')
+
+          try {
+            const emailData = JSON.parse(email.content)
+
+            emailSent = await sendWorkRequestEmail({
+              requestId: emailData.requestId,
+              employeeName: emailData.employeeName,
+              requestType: emailData.requestType,
+              startDate: emailData.startDate,
+              endDate: emailData.endDate,
+              reason: emailData.reason,
+              approveToken: emailData.approveToken,
+              rejectToken: emailData.rejectToken,
+              recipientEmail: email.recipient_email,
+              recipientName: emailData.recipientName
+            })
+          } catch (parseError) {
+            console.error('[Email Queue] Error parsing work request data:', parseError)
+            throw new Error('Invalid work request email data')
+          }
         } else {
           // Ticket reply or other types
           console.log('[Email Queue] Sending ticket reply/update')

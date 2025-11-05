@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './components/sidebar'
 import Image from 'next/image'
+import { NotificationBell } from '@/components/notification-bell'
 
 export default function DashboardLayout({
   children,
@@ -95,7 +96,10 @@ export default function DashboardLayout({
             </div>
 
             {/* User Info */}
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-2">
+              {/* Notification Bell (Manager/Admin only) */}
+              <NotificationBell role={userRole} />
+
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user?.email}
               </span>

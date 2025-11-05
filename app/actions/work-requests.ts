@@ -17,6 +17,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { generateActionToken } from '@/lib/utils/generate-action-token'
 import {
   WorkRequest,
   WorkRequestStatus,
@@ -171,8 +172,8 @@ export async function createWorkRequest(
       throw new Error('Fehler beim Erstellen des Requests')
     }
 
-    // TODO: Queue email notification to managers
-    // await queueWorkRequestNotification(newRequest.id)
+    // Queue email notification to managers/admins who opted in
+    await queueWorkRequestNotification(newRequest.id)
 
     revalidatePath('/requests')
     return newRequest as WorkRequest
@@ -927,5 +928,91 @@ export async function getPendingRequestsCount() {
   } catch (error) {
     console.error('Failed to get pending requests count:', error)
     return 0
+  }
+}
+
+// ============================================================================
+// Email Notifications
+// ============================================================================
+
+/**
+ * Queue work request email notifications to Manager/Admin users who opted in
+ * @param requestId The work request ID
+ */
+async function queueWorkRequestNotification(requestId: string): Promise<void> {
+  try {
+    const adminSupabase = createAdminClient()
+
+    // Get work request with employee details
+    const { data: workRequest, error: requestError } = await adminSupabase
+      .from('work_requests')
+      .select(`
+        *,
+        profiles:user_id(first_name, last_name, email)
+      `)
+      .eq('id', requestId)
+      .single()
+
+    if (requestError || !workRequest) {
+      console.error('Error fetching work request for email:', requestError)
+      return
+    }
+
+    // Get all Manager/Admin users with email notification enabled
+    const { data: recipients, error: recipientsError } = await adminSupabase
+      .from('profiles')
+      .select('id, email, first_name, last_name')
+      .in('role', ['manager', 'admin'])
+      .eq('receive_request_emails', true)
+
+    if (recipientsError || !recipients || recipients.length === 0) {
+      console.log('No recipients found for work request emails')
+      return
+    }
+
+    // Generate approve and reject tokens (7 days validity)
+    const approveToken = await generateActionToken(requestId, 'approve', 7)
+    const rejectToken = await generateActionToken(requestId, 'reject', 7)
+
+    // Determine request type
+    const requestType = workRequest.type || 'sonstiges'
+
+    // Employee name
+    const employeeName = `${workRequest.profiles?.first_name || ''} ${workRequest.profiles?.last_name || ''}`.trim()
+      || workRequest.profiles?.email
+      || 'Mitarbeiter'
+
+    // Format dates
+    const startDate = workRequest.start_date || workRequest.request_date
+    const endDate = workRequest.end_date || workRequest.request_date
+
+    // Queue email for each recipient
+    for (const recipient of recipients) {
+      const recipientName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim()
+        || recipient.email
+
+      // Insert into email queue
+      await adminSupabase.from('email_queue').insert({
+        type: 'work_request',
+        recipient_email: recipient.email,
+        content: JSON.stringify({
+          requestId: requestId,
+          employeeName: employeeName,
+          requestType: requestType,
+          startDate: startDate,
+          endDate: endDate,
+          reason: workRequest.reason,
+          approveToken: approveToken.token,
+          rejectToken: rejectToken.token,
+          recipientName: recipientName
+        }),
+        status: 'pending'
+      })
+    }
+
+    console.log(`Queued ${recipients.length} work request notification emails`)
+  } catch (error) {
+    console.error('Error queueing work request notification:', error)
+    // Don't throw - work request was created successfully
   }
 }

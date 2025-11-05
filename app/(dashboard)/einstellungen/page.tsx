@@ -4,6 +4,8 @@ import { ProfileSection } from './components/profile-section'
 import { ThemeSection } from './components/theme-section'
 import { SignatureSection } from './components/signature-section'
 import { PasswordSection } from './components/password-section'
+import { NotificationSection } from './components/notification-section'
+import { NotificationPreferencesSection } from './components/notification-preferences-section'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -37,6 +39,18 @@ export default async function SettingsPage() {
       <div className="space-y-6">
         <ProfileSection profile={profile} />
         <ThemeSection currentTheme={profile.theme_preference || 'system'} />
+        <NotificationSection
+          role={profile.role}
+          receiveRequestEmails={profile.receive_request_emails || false}
+        />
+        <NotificationPreferencesSection
+          role={profile.role}
+          notificationSettings={profile.notification_settings || {
+            new_ticket: true,
+            work_request: true,
+            ticket_assignment: true
+          }}
+        />
         <SignatureSection
           emailSignature={profile.email_signature || ''}
           useCustomSignature={profile.use_custom_signature || false}

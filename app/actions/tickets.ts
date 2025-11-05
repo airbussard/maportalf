@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type { Ticket, TicketMessage, TicketFilters, Tag } from '@/lib/types/ticket'
 import { sendTicketEmail } from '@/lib/email/ticket-mailer'
+import { createNotificationForManagers, createNotification } from '@/lib/utils/create-notification'
 
 export async function getTickets(filters: TicketFilters = {}) {
   try {
@@ -308,6 +309,21 @@ export async function createTicket(formData: FormData) {
       // Don't fail ticket creation if queue insertion fails
     }
 
+    // Create notifications for Manager/Admin users
+    try {
+      const ticketNumber = ticket.ticket_number || parseInt(ticket.id.split('-')[0], 16) % 1000000
+      await createNotificationForManagers(
+        'new_ticket',
+        'Neues Ticket',
+        `Ticket #${ticketNumber}: ${subject}`,
+        `/tickets/${ticket.id}`,
+        ticket.id
+      )
+    } catch (notifError) {
+      console.error('[Ticket] Failed to create notifications:', notifError)
+      // Don't fail ticket creation if notification fails
+    }
+
     revalidatePath('/tickets')
     return { success: true, data: ticket }
   } catch (error) {
@@ -365,6 +381,16 @@ export async function updateTicket(id: string, data: {
           })
 
           console.log('[Ticket Assignment] Email queued for:', assignedUser.email)
+
+          // Create notification for assigned user
+          await createNotification({
+            userId: data.assigned_to,
+            type: 'ticket_assignment',
+            title: 'Ticket zugewiesen',
+            message: `Ihnen wurde Ticket #${currentTicket?.ticket_number} zugewiesen: ${currentTicket?.subject}`,
+            link: `/tickets/${id}`,
+            ticketId: id
+          })
         }
       } catch (emailError) {
         console.error('[Ticket Assignment] Failed to queue email:', emailError)
