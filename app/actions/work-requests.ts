@@ -554,6 +554,21 @@ export async function approveWorkRequest(requestId: string): Promise<WorkRequest
         .eq('id', requestId)
     }
 
+    // Send in-app notification to employee
+    try {
+      await createNotification({
+        userId: employee.id,
+        type: 'work_request',
+        title: 'Antrag genehmigt',
+        message: `Ihr Antrag für ${new Date(requestDate).toLocaleDateString('de-DE')} wurde genehmigt`,
+        link: '/requests',
+        workRequestId: requestId
+      })
+      console.log('[Work Request] Approval notification sent to employee:', employee.id)
+    } catch (notifError) {
+      console.error('[Work Request] Failed to send approval notification:', notifError)
+    }
+
     // TODO: Send approval email to employee
     // await sendApprovalEmail(approvedRequest, employee)
 
@@ -595,10 +610,13 @@ export async function rejectWorkRequest(
 
     const adminSupabase = createAdminClient()
 
-    // Check if request exists and is pending
+    // Check if request exists and is pending, get employee info
     const { data: existingRequest } = await adminSupabase
       .from('work_requests')
-      .select('status')
+      .select(`
+        *,
+        employee:profiles!employee_id(id, first_name, last_name)
+      `)
       .eq('id', requestId)
       .single()
 
@@ -608,6 +626,11 @@ export async function rejectWorkRequest(
 
     if (existingRequest.status !== 'pending') {
       throw new Error('Nur ausstehende Requests können abgelehnt werden')
+    }
+
+    const employee = existingRequest.employee
+    if (!employee) {
+      throw new Error('Mitarbeiter nicht gefunden')
     }
 
     // Update request
@@ -626,6 +649,24 @@ export async function rejectWorkRequest(
     if (error) {
       console.error('Error rejecting work request:', error)
       throw new Error('Fehler beim Ablehnen des Requests')
+    }
+
+    // Send in-app notification to employee
+    try {
+      const requestDate = existingRequest.request_date
+      await createNotification({
+        userId: employee.id,
+        type: 'work_request',
+        title: 'Antrag abgelehnt',
+        message: rejectionReason
+          ? `Ihr Antrag für ${new Date(requestDate).toLocaleDateString('de-DE')} wurde abgelehnt: ${rejectionReason}`
+          : `Ihr Antrag für ${new Date(requestDate).toLocaleDateString('de-DE')} wurde abgelehnt`,
+        link: '/requests',
+        workRequestId: requestId
+      })
+      console.log('[Work Request] Rejection notification sent to employee:', employee.id)
+    } catch (notifError) {
+      console.error('[Work Request] Failed to send rejection notification:', notifError)
     }
 
     // TODO: Send rejection email to employee
@@ -770,6 +811,14 @@ export async function createWorkRequestDirect(
       .from('work_requests')
       .update({ calendar_event_id: calendarEventId })
       .eq('id', newRequest.id)
+
+    // Queue notification for managers/admins
+    try {
+      await queueWorkRequestNotification(newRequest.id)
+      console.log('[Work Request] Notification queued for managers/admins')
+    } catch (notifError) {
+      console.error('[Work Request] Failed to queue notification:', notifError)
+    }
 
     revalidatePath('/requests')
     revalidatePath('/requests/manage')
