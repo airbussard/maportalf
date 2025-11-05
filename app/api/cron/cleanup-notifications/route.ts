@@ -22,12 +22,11 @@ export async function GET(request: NextRequest) {
     console.log('[Notification Cleanup] Deleting read notifications older than:', cutoffDate)
 
     // Delete read notifications older than 30 days
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from('notifications')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('read', true)
       .lt('created_at', cutoffDate)
-      .select('id', { count: 'exact' })
 
     if (error) {
       console.error('[Notification Cleanup] Error:', error)
