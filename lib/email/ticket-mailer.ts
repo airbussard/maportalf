@@ -619,3 +619,260 @@ E-Mail: <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decorati
 Web: <a href="https://flighthour.de" style="color: #fbb928; text-decoration: none;">flighthour.de</a>
 </p>`
 }
+
+interface TicketAssignmentEmailOptions {
+  to: string
+  assigneeName: string
+  ticketNumber: number
+  ticketSubject: string
+  ticketUrl: string
+}
+
+/**
+ * Send ticket assignment notification email
+ */
+export async function sendTicketAssignmentEmail(options: TicketAssignmentEmailOptions): Promise<boolean> {
+  let emailSent = false
+
+  try {
+    console.log('[Ticket Assignment Email] Starting send process for ticket', options.ticketNumber)
+    console.log('[Ticket Assignment Email] Recipient:', options.to)
+
+    // Get SMTP settings from Supabase
+    const supabase = createAdminClient()
+    const { data: emailSettings, error: settingsError } = await supabase
+      .from('email_settings')
+      .select('*')
+      .eq('is_active', true)
+      .single()
+
+    if (settingsError || !emailSettings) {
+      console.error('[Ticket Assignment Email] Failed to load email settings:', settingsError)
+      throw new Error('Email settings not configured')
+    }
+
+    console.log('[Ticket Assignment Email] Using SMTP:', emailSettings.smtp_host, ':', emailSettings.smtp_port)
+
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: emailSettings.smtp_host,
+      port: emailSettings.smtp_port,
+      secure: emailSettings.smtp_port === 465,
+      auth: {
+        user: emailSettings.smtp_username,
+        pass: emailSettings.smtp_password
+      },
+      connectionTimeout: 300000,
+      greetingTimeout: 300000,
+      socketTimeout: 300000
+    })
+
+    // Format ticket number with leading zeros
+    const formattedTicketNumber = String(options.ticketNumber).padStart(6, '0')
+    const emailSubject = `Neues Ticket zugewiesen: [TICKET-${formattedTicketNumber}] ${options.ticketSubject}`
+
+    // Create text content
+    const textContent = `Hallo ${options.assigneeName},
+
+Ihnen wurde ein neues Ticket zugewiesen:
+
+Ticket-Nummer: ${formattedTicketNumber}
+Betreff: ${options.ticketSubject}
+
+Bitte öffnen Sie das Ticket über folgenden Link:
+${options.ticketUrl}
+
+---
+Mit freundlichen Grüßen
+Ihr FLIGHTHOUR Team
+
+FLIGHTHOUR Flugsimulator
+Ticket-Nummer: ${formattedTicketNumber}
+
+Kontakt:
+E-Mail: info@flighthour.de
+Web: https://flighthour.de`
+
+    // Create HTML content
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', Arial, sans-serif;
+      line-height: 1.6;
+      color: #121212;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .email-container {
+      background: #ffffff;
+      margin: 20px auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: #ffffff;
+      padding: 30px 20px;
+      text-align: center;
+      border-bottom: 3px solid #fbb928;
+    }
+    .header img {
+      max-width: 200px;
+      height: auto;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .content p {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    .assignment-box {
+      background: #fffbf0;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+      border: 2px solid #fbb928;
+    }
+    .assignment-box h2 {
+      margin: 0 0 15px 0;
+      color: #121212;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .assignment-box p {
+      margin: 8px 0;
+      color: #666;
+      font-size: 14px;
+    }
+    .assignment-box strong {
+      color: #121212;
+      font-weight: 500;
+    }
+    .button-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .button {
+      display: inline-block;
+      background-color: #fbb928;
+      color: #121212;
+      padding: 14px 40px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #e5a520;
+    }
+    .signature {
+      margin-top: 30px;
+      padding-top: 25px;
+      border-top: 2px solid #f0f0f0;
+      color: #666;
+      font-size: 14px;
+    }
+    .signature strong {
+      color: #121212;
+      font-weight: 600;
+    }
+    .footer {
+      background: #f9f9f9;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #121212;
+      border-top: 1px solid #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+    </div>
+
+    <div class="content">
+      <p>Hallo ${options.assigneeName},</p>
+
+      <p style="font-size: 15px; color: #555;">
+        Ihnen wurde ein neues Ticket zugewiesen:
+      </p>
+
+      <div class="assignment-box">
+        <h2>Ticket-Details</h2>
+        <p><strong>Ticket-Nummer:</strong> ${formattedTicketNumber}</p>
+        <p><strong>Betreff:</strong> ${options.ticketSubject}</p>
+      </div>
+
+      <div class="button-container">
+        <a href="${options.ticketUrl}" class="button">Ticket öffnen</a>
+      </div>
+
+      <p style="color: #666; font-size: 14px;">
+        Bitte loggen Sie sich ein, um das Ticket anzusehen und zu bearbeiten.
+      </p>
+
+      <div class="signature">
+        ${generateCreationHtmlSignature()}
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>FLIGHTHOUR Flugsimulator</strong> • Ticket-System
+    </div>
+  </div>
+</body>
+</html>`
+
+    console.log('[Ticket Assignment Email] Content generated, sending via SMTP...')
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: 'FLIGHTHOUR Support <info@flighthour.de>',
+      to: options.to,
+      replyTo: 'info@flighthour.de',
+      subject: emailSubject,
+      text: textContent,
+      html: htmlContent,
+      headers: {
+        'X-Ticket-Number': String(options.ticketNumber)
+      }
+    })
+
+    console.log('[Ticket Assignment Email] Nodemailer response accepted:', info.accepted)
+    console.log('[Ticket Assignment Email] Nodemailer response rejected:', info.rejected)
+
+    emailSent = true
+    console.log('[Ticket Assignment Email] ✅ Sent successfully:', info.messageId)
+    console.log('[Ticket Assignment Email] Response:', info.response)
+
+    return true
+
+  } catch (error) {
+    console.error('[Ticket Assignment Email] ❌ Failed to send:', error)
+    console.error('[Ticket Assignment Email] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      emailSent
+    })
+
+    if (emailSent) {
+      console.warn('[Ticket Assignment Email] ⚠️ Email was sent but post-send operation failed')
+      return true
+    }
+
+    return false
+  }
+}

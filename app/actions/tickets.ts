@@ -351,38 +351,15 @@ export async function updateTicket(id: string, data: {
           .single()
 
         if (assignedUser) {
-          const ticketUrl = `https://flighthour.getemergence.com/tickets/${id}`
           const userName = `${assignedUser.first_name || ''} ${assignedUser.last_name || ''}`.trim() || assignedUser.email
 
+          // Queue email - HTML template is generated in email-mailer.ts
           await supabase.from('email_queue').insert({
             type: 'ticket_assignment',
             recipient: assignedUser.email,
             recipient_email: assignedUser.email,
             subject: `Neues Ticket zugewiesen: [TICKET-${currentTicket?.ticket_number}] ${currentTicket?.subject}`,
-            body: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background-color: #fbb928; padding: 20px; text-align: center;">
-                  <h1 style="color: white; margin: 0;">FLIGHTHOUR</h1>
-                </div>
-                <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #ddd;">
-                  <h2 style="color: #333; margin-top: 0;">Hallo ${userName},</h2>
-                  <p style="color: #555; font-size: 16px; line-height: 1.6;">
-                    Ihnen wurde ein neues Ticket zugewiesen:
-                  </p>
-                  <div style="background-color: white; padding: 20px; border-left: 4px solid #fbb928; margin: 20px 0;">
-                    <p style="margin: 5px 0;"><strong>Ticket-Nr:</strong> ${currentTicket?.ticket_number}</p>
-                    <p style="margin: 5px 0;"><strong>Betreff:</strong> ${currentTicket?.subject}</p>
-                  </div>
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${ticketUrl}" style="background-color: #fbb928; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Ticket öffnen</a>
-                  </div>
-                  <p style="color: #777; font-size: 14px; margin-top: 30px;">
-                    Bitte loggen Sie sich ein, um das Ticket anzusehen.
-                  </p>
-                </div>
-              </div>
-            `,
-            content: `Ihnen wurde Ticket [TICKET-${currentTicket?.ticket_number}] zugewiesen: ${currentTicket?.subject}`,
+            content: `Hallo ${userName}, Ihnen wurde Ticket [TICKET-${currentTicket?.ticket_number}] zugewiesen: ${currentTicket?.subject}`,
             ticket_id: id,
             status: 'pending'
           })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, DragEvent } from 'react'
+import { useState, useRef, DragEvent, forwardRef, useImperativeHandle } from 'react'
 import { Upload, X, FileIcon, ImageIcon, FileTextIcon, TableIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,12 +18,26 @@ interface SelectedFile {
   uploadedAttachmentId?: string
 }
 
+export interface AttachmentUploadRef {
+  uploadFiles: (messageId?: string) => Promise<string[]>
+  hasFiles: () => boolean
+  clear: () => void
+}
+
 const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
 
-export function AttachmentUpload({ ticketId, onUploadComplete, className }: AttachmentUploadProps) {
+export const AttachmentUpload = forwardRef<AttachmentUploadRef, AttachmentUploadProps>(
+  function AttachmentUpload({ ticketId, onUploadComplete, className }, ref) {
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    uploadFiles,
+    hasFiles: () => selectedFiles.length > 0,
+    clear: () => setSelectedFiles([])
+  }))
 
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
@@ -88,7 +102,7 @@ export function AttachmentUpload({ ticketId, onUploadComplete, className }: Atta
     setSelectedFiles(prev => prev.filter(f => f.id !== id))
   }
 
-  const uploadFiles = async (): Promise<string[]> => {
+  const uploadFiles = async (messageId?: string): Promise<string[]> => {
     const attachmentIds: string[] = []
 
     for (const selectedFile of selectedFiles) {
@@ -107,6 +121,11 @@ export function AttachmentUpload({ ticketId, onUploadComplete, className }: Atta
         const formData = new FormData()
         formData.append('attachment', selectedFile.file)
         formData.append('ticket_id', ticketId)
+
+        // If messageId is provided, include it in the upload
+        if (messageId) {
+          formData.append('message_id', messageId)
+        }
 
         const response = await fetch('/api/attachments/upload', {
           method: 'POST',
@@ -252,7 +271,7 @@ export function AttachmentUpload({ ticketId, onUploadComplete, className }: Atta
       )}
     </div>
   )
-}
+})
 
 // Hook to access upload function from parent
 export function useAttachmentUpload() {

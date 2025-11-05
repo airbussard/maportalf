@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendTicketEmail, sendTicketCreationEmail } from '@/lib/email/ticket-mailer'
+import { sendTicketEmail, sendTicketCreationEmail, sendTicketAssignmentEmail } from '@/lib/email/ticket-mailer'
 
 export const maxDuration = 300 // 5 minutes
 export const dynamic = 'force-dynamic'
@@ -193,6 +193,32 @@ export async function GET(request: NextRequest) {
             senderName: 'FLIGHTHOUR Team',
             senderEmail: 'info@flighthour.de',
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined
+          })
+        } else if (email.type === 'ticket_assignment') {
+          // Ticket assignment notification
+          console.log('[Email Queue] Sending ticket assignment notification')
+
+          // Parse body to extract assignee name and ticket URL
+          // body format: JSON or plain text with name and URL
+          let assigneeName = 'Team-Mitglied'
+          let ticketUrl = `https://flighthour.getemergence.com/tickets/${email.ticket_id}`
+
+          try {
+            // Try to extract name from content field
+            const match = email.content?.match(/Hallo (.+?),/)
+            if (match) {
+              assigneeName = match[1]
+            }
+          } catch (e) {
+            console.log('[Email Queue] Could not parse assignee name, using default')
+          }
+
+          emailSent = await sendTicketAssignmentEmail({
+            to: email.recipient_email,
+            assigneeName,
+            ticketNumber,
+            ticketSubject: email.subject.replace(/^Neues Ticket zugewiesen: \[TICKET-\d+\] /, ''),
+            ticketUrl
           })
         } else {
           // Ticket reply or other types
