@@ -496,6 +496,7 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
               type: 'ticket_reply',
               recipient: ticket.created_from_email,
               ticket_id: ticketId,
+              message_id: message.id, // Link to message for attachments
               recipient_email: ticket.created_from_email,
               subject: `[TICKET-${ticketNumber}] ${ticket.subject}`,
               body: content,

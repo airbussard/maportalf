@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendTicketEmail } from '@/lib/email/ticket-mailer'
+import { sendTicketEmail, sendTicketCreationEmail } from '@/lib/email/ticket-mailer'
 
 export const maxDuration = 300 // 5 minutes
 export const dynamic = 'force-dynamic'
@@ -81,13 +81,24 @@ export async function GET(request: NextRequest) {
           parseInt(email.ticket_id.split('-')[0], 16) % 1000000
 
         // Get attachments from ticket_attachments table
-        console.log('[Email Queue] Looking for attachments for ticket_id:', email.ticket_id)
+        console.log('[Email Queue] Looking for attachments for ticket_id:', email.ticket_id, 'message_id:', email.message_id || 'null')
 
-        const { data: attachments, error: attachmentsError } = await supabase
+        // If message_id is set, get attachments for that specific message (ticket reply)
+        // Otherwise get initial ticket attachments (message_id = null)
+        let attachmentsQuery = supabase
           .from('ticket_attachments')
           .select('*')
           .eq('ticket_id', email.ticket_id)
-          .is('message_id', null) // Only initial ticket attachments
+
+        if (email.message_id) {
+          // Ticket reply - get attachments for this specific message
+          attachmentsQuery = attachmentsQuery.eq('message_id', email.message_id)
+        } else {
+          // Initial ticket - get attachments without message_id
+          attachmentsQuery = attachmentsQuery.is('message_id', null)
+        }
+
+        const { data: attachments, error: attachmentsError } = await attachmentsQuery
 
         if (attachmentsError) {
           console.error('[Email Queue] Error fetching attachments:', attachmentsError)
@@ -168,16 +179,34 @@ export async function GET(request: NextRequest) {
 
         console.log('[Email Queue] Total attachments ready for email:', emailAttachments.length)
 
-        // Send email
-        const emailSent = await sendTicketEmail({
-          to: email.recipient_email,
-          subject: email.subject,
-          content: email.content,
-          ticketNumber,
-          senderName,
-          senderEmail: profile?.email || 'info@flighthour.de',
-          attachments: emailAttachments.length > 0 ? emailAttachments : undefined
-        })
+        // Send email using appropriate template based on type
+        let emailSent = false
+
+        if (email.type === 'ticket') {
+          // Ticket creation confirmation
+          console.log('[Email Queue] Sending ticket creation confirmation')
+          emailSent = await sendTicketCreationEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            content: email.content,
+            ticketNumber,
+            senderName: 'FLIGHTHOUR Team',
+            senderEmail: 'info@flighthour.de',
+            attachments: emailAttachments.length > 0 ? emailAttachments : undefined
+          })
+        } else {
+          // Ticket reply or other types
+          console.log('[Email Queue] Sending ticket reply/update')
+          emailSent = await sendTicketEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            content: email.content,
+            ticketNumber,
+            senderName,
+            senderEmail: profile?.email || 'info@flighthour.de',
+            attachments: emailAttachments.length > 0 ? emailAttachments : undefined
+          })
+        }
 
         if (emailSent) {
           // Mark as sent
