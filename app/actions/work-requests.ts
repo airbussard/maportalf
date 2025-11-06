@@ -1040,10 +1040,17 @@ async function queueWorkRequestNotification(requestId: string): Promise<void> {
       const recipientName = `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim()
         || recipient.email
 
+      // Prepare email subject and body
+      const subject = `Neuer Arbeitsantrag: ${employeeName} - ${requestType}`
+      const body = `Arbeitsantrag von ${employeeName} für ${startDate} wurde erstellt und wartet auf Genehmigung.\n\nDetails:\n- Typ: ${requestType}\n- Datum: ${startDate}${endDate !== startDate ? ' bis ' + endDate : ''}\n- Grund: ${workRequest.reason || 'Nicht angegeben'}`
+
       // Insert into email queue
-      await adminSupabase.from('email_queue').insert({
+      const { error } = await adminSupabase.from('email_queue').insert({
         type: 'work_request',
+        recipient: recipient.email,
         recipient_email: recipient.email,
+        subject: subject,
+        body: body,
         content: JSON.stringify({
           requestId: requestId,
           employeeName: employeeName,
@@ -1057,9 +1064,16 @@ async function queueWorkRequestNotification(requestId: string): Promise<void> {
         }),
         status: 'pending'
       })
+
+      if (error) {
+        console.error(`[Work Request] Failed to queue email for ${recipient.email}:`, error)
+        continue // Skip this recipient but continue with others
+      }
+
+      console.log(`[Work Request] Email queued successfully for ${recipient.email}`)
     }
 
-    console.log(`Queued ${recipients.length} work request notification emails`)
+    console.log(`[Work Request] Queued ${recipients.length} work request notification emails`)
   } catch (error) {
     console.error('Error queueing work request notification:', error)
     // Don't throw - work request was created successfully
