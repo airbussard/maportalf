@@ -66,6 +66,22 @@ export async function getTickets(filters: TicketFilters = {}) {
       query = query.or(`subject.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,created_from_email.ilike.%${searchTerm}%,ticket_number.eq.${parseInt(searchTerm) || 0}`)
     }
 
+    // Apply tag filter - show tickets that have ANY of the selected tags
+    if (filters.tags && filters.tags.length > 0) {
+      const { data: ticketsWithTags } = await supabase
+        .from('ticket_tags')
+        .select('ticket_id')
+        .in('tag_id', filters.tags)
+
+      if (ticketsWithTags && ticketsWithTags.length > 0) {
+        const ticketIds = [...new Set(ticketsWithTags.map(t => t.ticket_id))]
+        query = query.in('id', ticketIds)
+      } else {
+        // No tickets match - return empty result
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+      }
+    }
+
     const { data, error, count } = await query
 
     if (error) {

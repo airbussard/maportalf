@@ -82,4 +82,5 @@ export interface TicketFilters {
   status?: TicketStatus
   page?: number
   search?: string
+  tags?: string[] // Array of tag IDs for filtering
 }

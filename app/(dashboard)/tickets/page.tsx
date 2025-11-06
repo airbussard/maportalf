@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 export default async function TicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; status?: string; page?: string; search?: string }>
+  searchParams: Promise<{ filter?: string; status?: string; page?: string; search?: string; tags?: string }>
 }) {
   const resolvedSearchParams = await searchParams
 
@@ -33,7 +33,8 @@ export default async function TicketsPage({
     filter: (resolvedSearchParams.filter as any) || 'all',
     status: resolvedSearchParams.status as any,
     page: parseInt(resolvedSearchParams.page || '1'),
-    search: resolvedSearchParams.search
+    search: resolvedSearchParams.search,
+    tags: resolvedSearchParams.tags ? resolvedSearchParams.tags.split(',') : undefined
   })
 
   return (
