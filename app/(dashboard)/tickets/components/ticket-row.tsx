@@ -4,7 +4,7 @@ import type { Ticket } from '@/lib/types/ticket'
 import { StatusBadge } from '@/components/tickets/status-badge'
 import { PriorityBadge } from '@/components/tickets/priority-badge'
 import { TagPill } from '@/components/tickets/tag-pill'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import Link from 'next/link'
 import { Eye } from 'lucide-react'
@@ -29,6 +29,16 @@ export function TicketRow({
   const assignedName = ticket.assigned_user
     ? `${ticket.assigned_user.first_name || ''} ${ticket.assigned_user.last_name || ''}`.trim() || ticket.assigned_user.email
     : 'Nicht zugewiesen'
+
+  // Format exact date and time
+  const formattedDate = format(new Date(ticket.created_at), 'dd.MM.yyyy, HH:mm', { locale: de })
+
+  // Get message preview (first 100 characters)
+  const messagePreview = ticket.description
+    ? ticket.description.length > 100
+      ? ticket.description.slice(0, 100) + '...'
+      : ticket.description
+    : 'Keine Beschreibung'
 
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
@@ -57,15 +67,15 @@ export function TicketRow({
             {ticket.subject}
           </Link>
 
+          {/* Message preview */}
+          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+            {messagePreview}
+          </p>
+
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>Zugewiesen: {assignedName}</span>
             <span>•</span>
-            <span>
-              Erstellt {formatDistanceToNow(new Date(ticket.created_at), {
-                addSuffix: true,
-                locale: de
-              })}
-            </span>
+            <span>{formattedDate}</span>
           </div>
 
           {ticket.tags && ticket.tags.length > 0 && (
