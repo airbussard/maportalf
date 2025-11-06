@@ -47,3 +47,34 @@ export function formatPlainText(text: string): string {
   // Convert newlines to <br>
   return escaped.replace(/\n/g, '<br>')
 }
+
+/**
+ * Strips all HTML tags from a string
+ * Returns only the text content
+ */
+export function stripHtmlTags(html: string): string {
+  if (!html) return ''
+
+  // Remove all HTML tags
+  const withoutTags = html.replace(/<[^>]*>/g, '')
+
+  // Decode HTML entities
+  const textarea = typeof document !== 'undefined'
+    ? document.createElement('textarea')
+    : null
+
+  if (textarea) {
+    textarea.innerHTML = withoutTags
+    return textarea.value
+  }
+
+  // Fallback: Basic entity decoding for server-side
+  return withoutTags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .trim()
+}
