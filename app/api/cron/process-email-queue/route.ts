@@ -66,124 +66,154 @@ export async function GET(request: NextRequest) {
           })
           .eq('id', email.id)
 
-        // Get user profile for sender info
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, email')
-          .eq('id', email.ticket.created_by)
-          .single()
-
-        const senderName = profile
-          ? `${profile.first_name} ${profile.last_name}`.trim() || profile.email
-          : 'FLIGHTHOUR Team'
-
-        // Get ticket number
-        const ticketNumber = email.ticket.ticket_number ||
-          parseInt(email.ticket_id.split('-')[0], 16) % 1000000
-
-        // Get attachments from ticket_attachments table
-        console.log('[Email Queue] Looking for attachments for ticket_id:', email.ticket_id, 'message_id:', email.message_id || 'null')
-
-        // If message_id is set, get attachments for that specific message (ticket reply)
-        // Otherwise get initial ticket attachments (message_id = null)
-        let attachmentsQuery = supabase
-          .from('ticket_attachments')
-          .select('*')
-          .eq('ticket_id', email.ticket_id)
-
-        if (email.message_id) {
-          // Ticket reply - get attachments for this specific message
-          attachmentsQuery = attachmentsQuery.eq('message_id', email.message_id)
-        } else {
-          // Initial ticket - get attachments without message_id
-          attachmentsQuery = attachmentsQuery.is('message_id', null)
-        }
-
-        const { data: attachments, error: attachmentsError } = await attachmentsQuery
-
-        if (attachmentsError) {
-          console.error('[Email Queue] Error fetching attachments:', attachmentsError)
-        }
-
-        console.log('[Email Queue] Found attachments:', attachments?.length || 0)
-        if (attachments && attachments.length > 0) {
-          console.log('[Email Queue] Attachment details:', attachments.map(a => ({
-            filename: a.original_filename,
-            storage_path: a.storage_path,
-            size: a.size_bytes
-          })))
-        }
-
-        // Download attachment files from Supabase Storage for email
-        const emailAttachments = []
-
-        // Handle ticket attachments (ticket_attachments table)
-        if (attachments && attachments.length > 0) {
-          for (const att of attachments) {
-            try {
-              console.log('[Email Queue] Downloading ticket attachment from storage:', att.storage_path)
-
-              const { data: fileData, error: downloadError } = await supabase.storage
-                .from('ticket-attachments')
-                .download(att.storage_path)
-
-              if (downloadError) {
-                console.error('[Email Queue] Storage download error:', downloadError)
-                continue
-              }
-
-              if (fileData) {
-                const buffer = Buffer.from(await fileData.arrayBuffer())
-                console.log('[Email Queue] Downloaded successfully:', att.original_filename, buffer.length, 'bytes')
-
-                emailAttachments.push({
-                  filename: att.original_filename,
-                  content: buffer,
-                  contentType: att.mime_type
-                })
-              } else {
-                console.error('[Email Queue] No file data returned for:', att.storage_path)
-              }
-            } catch (downloadError) {
-              console.error('[Email Queue] Attachment download failed:', att.filename, downloadError)
-              // Continue without this attachment
-            }
-          }
-        }
-
-        // Handle time report attachments (email_queue.attachment_storage_path)
-        if (email.attachment_storage_path) {
-          try {
-            console.log('[Email Queue] Downloading time report from storage:', email.attachment_storage_path)
-
-            const { data: fileData, error: downloadError } = await supabase.storage
-              .from('time-reports')
-              .download(email.attachment_storage_path)
-
-            if (downloadError) {
-              console.error('[Email Queue] Storage download error:', downloadError)
-            } else if (fileData) {
-              const buffer = Buffer.from(await fileData.arrayBuffer())
-              console.log('[Email Queue] Downloaded time report:', buffer.length, 'bytes')
-
-              emailAttachments.push({
-                filename: email.attachment_filename || 'zeiterfassung.pdf',
-                content: buffer,
-                contentType: 'application/pdf'
-              })
-            }
-          } catch (downloadError) {
-            console.error('[Email Queue] Time report download failed:', downloadError)
-            // Continue without this attachment
-          }
-        }
-
-        console.log('[Email Queue] Total attachments ready for email:', emailAttachments.length)
-
         // Send email using appropriate template based on type
         let emailSent = false
 
-        if (email.type === 'ticket') {
+        if (email.type === 'work_request') {
+          // Work request notification - handle separately (no ticket required)
+          console.log('[Email Queue] Sending work request notification')
+
+          try {
+            const emailData = JSON.parse(email.content)
+
+            emailSent = await sendWorkRequestEmail({
+              requestId: emailData.requestId,
+              employeeName: emailData.employeeName,
+              requestType: emailData.requestType,
+              startDate: emailData.startDate,
+              endDate: emailData.endDate,
+              reason: emailData.reason,
+              approveToken: emailData.approveToken,
+              rejectToken: emailData.rejectToken,
+              recipientEmail: email.recipient_email,
+              recipientName: emailData.recipientName
+            })
+          } catch (parseError) {
+            console.error('[Email Queue] Error parsing work request data:', parseError)
+            throw new Error('Invalid work request email data')
+          }
+        } else {
+          // Ticket-related emails - need ticket data
+          if (!email.ticket) {
+            console.error('[Email Queue] No ticket data for ticket-related email:', email.id)
+            throw new Error('Missing ticket data for ticket email')
+          }
+
+          // Get user profile for sender info
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', email.ticket.created_by)
+            .single()
+
+          const senderName = profile
+            ? `${profile.first_name} ${profile.last_name}`.trim() || profile.email
+            : 'FLIGHTHOUR Team'
+
+          // Get ticket number
+          const ticketNumber = email.ticket.ticket_number ||
+            parseInt(email.ticket_id.split('-')[0], 16) % 1000000
+
+          // Get attachments from ticket_attachments table
+          console.log('[Email Queue] Looking for attachments for ticket_id:', email.ticket_id, 'message_id:', email.message_id || 'null')
+
+          // If message_id is set, get attachments for that specific message (ticket reply)
+          // Otherwise get initial ticket attachments (message_id = null)
+          let attachmentsQuery = supabase
+            .from('ticket_attachments')
+            .select('*')
+            .eq('ticket_id', email.ticket_id)
+
+          if (email.message_id) {
+            // Ticket reply - get attachments for this specific message
+            attachmentsQuery = attachmentsQuery.eq('message_id', email.message_id)
+          } else {
+            // Initial ticket - get attachments without message_id
+            attachmentsQuery = attachmentsQuery.is('message_id', null)
+          }
+
+          const { data: attachments, error: attachmentsError } = await attachmentsQuery
+
+          if (attachmentsError) {
+            console.error('[Email Queue] Error fetching attachments:', attachmentsError)
+          }
+
+          console.log('[Email Queue] Found attachments:', attachments?.length || 0)
+          if (attachments && attachments.length > 0) {
+            console.log('[Email Queue] Attachment details:', attachments.map(a => ({
+              filename: a.original_filename,
+              storage_path: a.storage_path,
+              size: a.size_bytes
+            })))
+          }
+
+          // Download attachment files from Supabase Storage for email
+          const emailAttachments = []
+
+          // Handle ticket attachments (ticket_attachments table)
+          if (attachments && attachments.length > 0) {
+            for (const att of attachments) {
+              try {
+                console.log('[Email Queue] Downloading ticket attachment from storage:', att.storage_path)
+
+                const { data: fileData, error: downloadError } = await supabase.storage
+                  .from('ticket-attachments')
+                  .download(att.storage_path)
+
+                if (downloadError) {
+                  console.error('[Email Queue] Storage download error:', downloadError)
+                  continue
+                }
+
+                if (fileData) {
+                  const buffer = Buffer.from(await fileData.arrayBuffer())
+                  console.log('[Email Queue] Downloaded successfully:', att.original_filename, buffer.length, 'bytes')
+
+                  emailAttachments.push({
+                    filename: att.original_filename,
+                    content: buffer,
+                    contentType: att.mime_type
+                  })
+                } else {
+                  console.error('[Email Queue] No file data returned for:', att.storage_path)
+                }
+              } catch (downloadError) {
+                console.error('[Email Queue] Attachment download failed:', att.filename, downloadError)
+                // Continue without this attachment
+              }
+            }
+          }
+
+          // Handle time report attachments (email_queue.attachment_storage_path)
+          if (email.attachment_storage_path) {
+            try {
+              console.log('[Email Queue] Downloading time report from storage:', email.attachment_storage_path)
+
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('time-reports')
+                .download(email.attachment_storage_path)
+
+              if (downloadError) {
+                console.error('[Email Queue] Storage download error:', downloadError)
+              } else if (fileData) {
+                const buffer = Buffer.from(await fileData.arrayBuffer())
+                console.log('[Email Queue] Downloaded time report:', buffer.length, 'bytes')
+
+                emailAttachments.push({
+                  filename: email.attachment_filename || 'zeiterfassung.pdf',
+                  content: buffer,
+                  contentType: 'application/pdf'
+                })
+              }
+            } catch (downloadError) {
+              console.error('[Email Queue] Time report download failed:', downloadError)
+              // Continue without this attachment
+            }
+          }
+
+          console.log('[Email Queue] Total attachments ready for email:', emailAttachments.length)
+
+          if (email.type === 'ticket') {
           // Ticket creation confirmation
           console.log('[Email Queue] Sending ticket creation confirmation')
           emailSent = await sendTicketCreationEmail({
@@ -221,41 +251,19 @@ export async function GET(request: NextRequest) {
             ticketSubject: email.subject.replace(/^Neues Ticket zugewiesen: \[TICKET-\d+\] /, ''),
             ticketUrl
           })
-        } else if (email.type === 'work_request') {
-          // Work request notification with approve/reject buttons
-          console.log('[Email Queue] Sending work request notification')
-
-          try {
-            const emailData = JSON.parse(email.content)
-
-            emailSent = await sendWorkRequestEmail({
-              requestId: emailData.requestId,
-              employeeName: emailData.employeeName,
-              requestType: emailData.requestType,
-              startDate: emailData.startDate,
-              endDate: emailData.endDate,
-              reason: emailData.reason,
-              approveToken: emailData.approveToken,
-              rejectToken: emailData.rejectToken,
-              recipientEmail: email.recipient_email,
-              recipientName: emailData.recipientName
+          } else {
+            // Ticket reply or other types
+            console.log('[Email Queue] Sending ticket reply/update')
+            emailSent = await sendTicketEmail({
+              to: email.recipient_email,
+              subject: email.subject,
+              content: email.content,
+              ticketNumber,
+              senderName,
+              senderEmail: profile?.email || 'info@flighthour.de',
+              attachments: emailAttachments.length > 0 ? emailAttachments : undefined
             })
-          } catch (parseError) {
-            console.error('[Email Queue] Error parsing work request data:', parseError)
-            throw new Error('Invalid work request email data')
           }
-        } else {
-          // Ticket reply or other types
-          console.log('[Email Queue] Sending ticket reply/update')
-          emailSent = await sendTicketEmail({
-            to: email.recipient_email,
-            subject: email.subject,
-            content: email.content,
-            ticketNumber,
-            senderName,
-            senderEmail: profile?.email || 'info@flighthour.de',
-            attachments: emailAttachments.length > 0 ? emailAttachments : undefined
-          })
         }
 
         if (emailSent) {
