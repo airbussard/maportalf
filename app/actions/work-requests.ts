@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { generateActionToken } from '@/lib/utils/generate-action-token'
+import { createNotification } from '@/lib/utils/create-notification'
 import {
   WorkRequest,
   WorkRequestStatus,
