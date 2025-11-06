@@ -76,8 +76,10 @@ export function TicketFilters({
 
   // Fetch available tags on mount
   useEffect(() => {
-    getTags().then(tags => {
-      if (tags) setAvailableTags(tags)
+    getTags().then(response => {
+      if (response.success && response.data) {
+        setAvailableTags(response.data)
+      }
     })
   }, [])
 
