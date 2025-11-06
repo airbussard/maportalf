@@ -55,8 +55,13 @@ export function formatPlainText(text: string): string {
 export function stripHtmlTags(html: string): string {
   if (!html) return ''
 
-  // Remove all HTML tags
-  const withoutTags = html.replace(/<[^>]*>/g, '')
+  // First: Remove entire <style> and <script> blocks with their contents
+  let cleaned = html
+    .replace(/<style[^>]*>.*?<\/style>/gis, '')
+    .replace(/<script[^>]*>.*?<\/script>/gis, '')
+
+  // Then: Remove all remaining HTML tags
+  const withoutTags = cleaned.replace(/<[^>]*>/g, '')
 
   // Decode HTML entities
   const textarea = typeof document !== 'undefined'
