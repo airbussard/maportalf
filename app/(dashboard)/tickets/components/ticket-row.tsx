@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { stripHtmlTags } from '@/lib/utils/html'
 
 export function TicketRow({
   ticket,
@@ -33,11 +34,12 @@ export function TicketRow({
   // Format exact date and time
   const formattedDate = format(new Date(ticket.created_at), 'dd.MM.yyyy, HH:mm', { locale: de })
 
-  // Get message preview (first 100 characters)
-  const messagePreview = ticket.description
-    ? ticket.description.length > 100
-      ? ticket.description.slice(0, 100) + '...'
-      : ticket.description
+  // Get message preview (first 100 characters, strip HTML tags)
+  const strippedText = ticket.description ? stripHtmlTags(ticket.description) : ''
+  const messagePreview = strippedText
+    ? strippedText.length > 100
+      ? strippedText.slice(0, 100) + '...'
+      : strippedText
     : 'Keine Beschreibung'
 
   return (
