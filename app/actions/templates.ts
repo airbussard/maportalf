@@ -39,7 +39,7 @@ async function checkManagerOrAdmin() {
 /**
  * Get all templates (without attachments)
  */
-export async function getTemplates() {
+export async function getTemplates(): Promise<{ success: boolean; data: ResponseTemplate[]; error?: string }> {
   try {
     const auth = await checkManagerOrAdmin()
     if (!auth.authorized) {
@@ -68,7 +68,7 @@ export async function getTemplates() {
 /**
  * Get all templates with their attachments
  */
-export async function getTemplatesWithAttachments() {
+export async function getTemplatesWithAttachments(): Promise<{ success: boolean; data: TemplateWithAttachments[]; error?: string }> {
   try {
     const auth = await checkManagerOrAdmin()
     if (!auth.authorized) {
@@ -121,7 +121,7 @@ export async function getTemplatesWithAttachments() {
 /**
  * Get templates grouped by category
  */
-export async function getTemplatesByCategory() {
+export async function getTemplatesByCategory(): Promise<{ success: boolean; data: TemplatesByCategory[]; error?: string }> {
   try {
     const result = await getTemplatesWithAttachments()
     if (!result.success) {
@@ -163,7 +163,7 @@ export async function getTemplatesByCategory() {
 /**
  * Get single template with attachments
  */
-export async function getTemplate(id: string) {
+export async function getTemplate(id: string): Promise<{ success: boolean; data: TemplateWithAttachments | null; error?: string }> {
   try {
     const auth = await checkManagerOrAdmin()
     if (!auth.authorized) {
