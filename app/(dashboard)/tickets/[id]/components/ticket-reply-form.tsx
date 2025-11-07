@@ -9,6 +9,9 @@ import { addMessage } from '@/app/actions/tickets'
 import { useRouter } from 'next/navigation'
 import { Send } from 'lucide-react'
 import { AttachmentUpload, type AttachmentUploadRef } from '@/components/tickets/attachment-upload'
+import { TemplateSelector } from '@/components/tickets/template-selector'
+import type { TemplateWithAttachments } from '@/lib/types/template'
+import { toast } from 'sonner'
 
 export function TicketReplyForm({
   ticketId,
@@ -23,6 +26,53 @@ export function TicketReplyForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const attachmentUploadRef = useRef<AttachmentUploadRef>(null)
+
+  const handleTemplateSelect = async (template: TemplateWithAttachments) => {
+    // Insert template content into textarea
+    if (content) {
+      setContent(content + '\n\n' + template.content)
+    } else {
+      setContent(template.content)
+    }
+
+    // If template has attachments, copy them to the ticket
+    if (template.attachments && template.attachments.length > 0) {
+      toast.info(`Template enthält ${template.attachments.length} Anhang/Anhänge. Diese werden beim Senden hinzugefügt.`)
+
+      // Download and re-upload each attachment
+      for (const attachment of template.attachments) {
+        try {
+          // Download from template-attachments
+          const response = await fetch(`/api/template-attachments/${attachment.id}`)
+          if (!response.ok) {
+            throw new Error('Download failed')
+          }
+
+          const blob = await response.blob()
+          const file = new File([blob], attachment.original_filename, { type: attachment.mime_type })
+
+          // Add to attachment upload component
+          if (attachmentUploadRef.current) {
+            // Create a DataTransfer object to simulate file selection
+            const dataTransfer = new DataTransfer()
+            dataTransfer.items.add(file)
+
+            // Trigger the file input with the files
+            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+            if (fileInput) {
+              fileInput.files = dataTransfer.files
+              fileInput.dispatchEvent(new Event('change', { bubbles: true }))
+            }
+          }
+        } catch (error) {
+          console.error('Error copying attachment:', error)
+          toast.error(`Fehler beim Kopieren von ${attachment.original_filename}`)
+        }
+      }
+    }
+
+    toast.success('Vorlage eingefügt')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,6 +124,15 @@ export function TicketReplyForm({
           {error && (
             <div className="p-3 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md">
               {error}
+            </div>
+          )}
+
+          {isManagerOrAdmin && (
+            <div className="flex justify-end">
+              <TemplateSelector
+                onSelectTemplate={handleTemplateSelect}
+                disabled={loading}
+              />
             </div>
           )}
 

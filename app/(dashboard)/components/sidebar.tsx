@@ -17,7 +17,8 @@ import {
   Calendar,
   BarChart3,
   LogOut,
-  FileText
+  FileText,
+  ScrollText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -117,6 +118,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/tickets/stats',
           label: 'Statistiken',
           icon: <BarChart3 className="w-5 h-5" />,
+        },
+        {
+          href: '/templates',
+          label: 'Vorlagen',
+          icon: <ScrollText className="w-5 h-5" />,
         },
       ],
     },
@@ -237,7 +243,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.065
+            Version 2.066
           </p>
         </div>
       </aside>
