@@ -154,7 +154,7 @@ export async function getTicket(id: string) {
 
     // Get messages - use admin client to bypass RLS for sender profiles
     const adminSupabase = createAdminClient()
-    const { data: messages } = await adminSupabase
+    const { data: rawMessages } = await adminSupabase
       .from('ticket_messages')
       .select(`
         *,
@@ -162,6 +162,24 @@ export async function getTicket(id: string) {
       `)
       .eq('ticket_id', id)
       .order('created_at', { ascending: true })
+
+    // Get email status for each message (latest attempt only)
+    const messages = rawMessages ? await Promise.all(
+      rawMessages.map(async (message) => {
+        const { data: emailQueue } = await adminSupabase
+          .from('email_queue')
+          .select('status, sent_at, error_message, attempts, max_attempts')
+          .eq('message_id', message.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        return {
+          ...message,
+          email_status: emailQueue || undefined
+        }
+      })
+    ) : []
 
     // Get tags
     const { data: ticketTags } = await supabase

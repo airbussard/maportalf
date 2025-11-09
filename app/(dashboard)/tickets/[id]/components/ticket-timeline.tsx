@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { FormattedContent } from '@/components/shared/formatted-content'
 import { AttachmentList } from '@/components/tickets/attachment-list'
+import { EmailStatusBadge } from '@/components/tickets/email-status-badge'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -77,7 +78,7 @@ export function TicketTimeline({
               </Avatar>
 
               <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{senderName}</span>
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(message.created_at), {
@@ -89,6 +90,15 @@ export function TicketTimeline({
                     <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded dark:bg-yellow-900 dark:text-yellow-200">
                       Intern
                     </span>
+                  )}
+                  {!message.is_internal && message.email_status && (
+                    <EmailStatusBadge
+                      status={message.email_status.status}
+                      sentAt={message.email_status.sent_at}
+                      errorMessage={message.email_status.error_message}
+                      attempts={message.email_status.attempts}
+                      maxAttempts={message.email_status.max_attempts}
+                    />
                   )}
                 </div>
                 <FormattedContent content={message.content} className="text-sm" />

@@ -46,6 +46,13 @@ export interface TicketMessage {
     email: string
     is_active?: boolean
   }
+  email_status?: {
+    status: 'pending' | 'sending' | 'sent' | 'failed'
+    sent_at?: string
+    error_message?: string
+    attempts?: number
+    max_attempts?: number
+  }
 }
 
 export interface TicketAttachment {
