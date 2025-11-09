@@ -237,7 +237,11 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           if (!formData.start_time || !formData.end_time) {
             throw new Error('Bitte geben Sie Start- und Endzeit an')
           }
-          // Times already set in formData - keep as is (already in ISO format from datetime-local input)
+          // Parse datetime-local values (YYYY-MM-DDTHH:MM) and convert with proper timezone
+          const [startDate, startTime] = formData.start_time.split('T')
+          const [endDate, endTime] = formData.end_time.split('T')
+          submitData.start_time = convertToISOWithTimezone(startDate, startTime)
+          submitData.end_time = convertToISOWithTimezone(endDate, endTime)
         }
 
         // Store title in title field for blocker
@@ -300,6 +304,12 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           }
         }
       }
+
+      // Remove UI-only fields that don't exist in database schema
+      delete (submitData as any).blocker_title
+      delete (submitData as any).booking_date
+      delete (submitData as any).start_time_only
+      delete (submitData as any).end_time_only
 
       if (event) {
         // Update existing event
