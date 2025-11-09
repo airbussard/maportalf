@@ -11,8 +11,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverActions: {
-    bodySizeLimit: '30mb', // Allow 30 MB to accommodate 25 MB files + FormData overhead
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '30mb', // Allow 30 MB to accommodate 25 MB files + FormData overhead
+    },
   },
 };
 
