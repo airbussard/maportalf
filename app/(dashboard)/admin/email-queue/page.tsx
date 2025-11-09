@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { EmailQueueTable } from './components/email-queue-table'
 
 export default async function EmailQueuePage() {
+  // Use regular client for auth check
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -21,8 +23,10 @@ export default async function EmailQueuePage() {
     redirect('/dashboard')
   }
 
-  // Fetch email queue
-  const { data: emailQueue } = await supabase
+  // Fetch email queue using admin client to bypass RLS on tickets table
+  // This allows admins to see ALL emails, not just emails from tickets they created/are assigned to
+  const adminSupabase = createAdminClient()
+  const { data: emailQueue } = await adminSupabase
     .from('email_queue')
     .select(`
       *,
