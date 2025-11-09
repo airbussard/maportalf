@@ -125,7 +125,7 @@ export async function getTemplatesByCategory(): Promise<{ success: boolean; data
   try {
     const result = await getTemplatesWithAttachments()
     if (!result.success) {
-      return result
+      return { success: false, error: result.error || 'Ein Fehler ist aufgetreten', data: [] }
     }
 
     const categoryLabels: Record<TemplateCategory, string> = {
