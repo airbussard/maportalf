@@ -256,6 +256,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         const adminSupabase = createAdminClient()
         const { error: queueError } = await adminSupabase.from('email_queue').insert({
           type: 'booking_confirmation',
+          recipient: eventData.customer_email,
           recipient_email: eventData.customer_email,
           subject: template.subject,
           content: (eventData as any).confirmation_email_content || template.htmlContent,
