@@ -54,6 +54,9 @@ export interface CalendarEventData {
   // Booking-specific fields
   has_video_recording?: boolean // Indicates if video recording was booked
   on_site_payment_amount?: number | null // Amount to be paid on-site in EUR
+  // Email confirmation fields
+  send_confirmation_email?: boolean // Send booking confirmation email
+  confirmation_email_content?: string // Custom email content (optional)
 }
 
 export interface SyncResult {

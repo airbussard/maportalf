@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro } from 'lucide-react'
+import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro, ChevronDown } from 'lucide-react'
 import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat, extractLocalTimeFromISO, trimSecondsFromTime } from '@/lib/utils/timezone'
 import {
   Dialog,
@@ -20,9 +20,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees } from '@/app/actions/calendar-events'
+import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface EventDialogProps {
   open: boolean
@@ -50,6 +53,11 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [employees, setEmployees] = useState<any[]>([])
+
+  // Email confirmation state
+  const [sendConfirmation, setSendConfirmation] = useState(true)
+  const [emailEditorOpen, setEmailEditorOpen] = useState(false)
+  const [emailContent, setEmailContent] = useState('')
 
   // Form state
   const [formData, setFormData] = useState({
@@ -173,6 +181,40 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
       getEmployees().then(data => setEmployees(data)).catch(console.error)
     }
   }, [open])
+
+  // Generate email template when formData changes
+  useEffect(() => {
+    if (sendConfirmation && formData.event_type === 'booking' && formData.customer_email) {
+      try {
+        // Construct start/end time strings
+        const startTime = formData.booking_date && formData.start_time_only
+          ? `${formData.booking_date}T${formData.start_time_only}:00`
+          : formData.start_time
+        const endTime = formData.booking_date && formData.end_time_only
+          ? `${formData.booking_date}T${formData.end_time_only}:00`
+          : formData.end_time
+
+        if (startTime && endTime) {
+          const template = generateBookingConfirmationEmail({
+            customer_first_name: formData.customer_first_name,
+            customer_last_name: formData.customer_last_name,
+            customer_email: formData.customer_email,
+            start_time: startTime,
+            end_time: endTime,
+            duration: formData.duration,
+            attendee_count: formData.attendee_count,
+            location: formData.location,
+            remarks: formData.remarks,
+            has_video_recording: formData.has_video_recording,
+            on_site_payment_amount: formData.on_site_payment_amount
+          })
+          setEmailContent(template.plainText)
+        }
+      } catch (error) {
+        console.error('Failed to generate email template:', error)
+      }
+    }
+  }, [sendConfirmation, formData])
 
   // No automatic duration calculation needed anymore - handled in submit
 
@@ -340,7 +382,11 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         onOpenChange(false)
       } else {
         // Create new event
-        await createCalendarEvent(submitData)
+        await createCalendarEvent({
+          ...submitData,
+          send_confirmation_email: sendConfirmation && formData.event_type === 'booking' && !!formData.customer_email,
+          confirmation_email_content: emailContent
+        })
         toast.success('Event erfolgreich erstellt')
         onRefresh?.() // Trigger immediate refresh in parent
         router.refresh()
@@ -679,6 +725,54 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
               placeholder="Zusätzliche Informationen..."
             />
           </div>
+
+          {/* Email Confirmation Section - Only for bookings with email */}
+          {formData.customer_email && !event && (
+            <div className="space-y-3 border-t pt-4">
+              {/* Checkbox */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="send_confirmation"
+                  checked={sendConfirmation}
+                  onCheckedChange={(checked) => setSendConfirmation(checked as boolean)}
+                  disabled={isReadOnly}
+                />
+                <Label htmlFor="send_confirmation" className="text-sm font-medium cursor-pointer">
+                  Buchungsbestätigung per E-Mail versenden (inkl. Pocket Guide PDF)
+                </Label>
+              </div>
+
+              {/* Collapsible Editor */}
+              {sendConfirmation && (
+                <Collapsible open={emailEditorOpen} onOpenChange={setEmailEditorOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between" type="button">
+                      <span>E-Mail-Text bearbeiten</span>
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        emailEditorOpen && "rotate-180"
+                      )} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <Label htmlFor="email_content" className="text-xs text-muted-foreground">
+                      E-Mail-Vorschau (kann angepasst werden)
+                    </Label>
+                    <Textarea
+                      id="email_content"
+                      value={emailContent}
+                      onChange={(e) => setEmailContent(e.target.value)}
+                      rows={12}
+                      className="font-mono text-xs mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      ℹ️ Der Pocket Guide wird automatisch als PDF angehängt
+                    </p>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </div>
+          )}
           </>
           ) : formData.event_type === 'fi_assignment' ? (
           <>

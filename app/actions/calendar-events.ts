@@ -17,6 +17,7 @@ import {
 } from '@/lib/google-calendar/service'
 import { fullSync } from '@/lib/google-calendar/sync'
 import type { CalendarEventData, SyncResult } from '@/lib/google-calendar/types'
+import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
 
 /**
  * Helper: Convert empty strings to null for UUID fields
@@ -229,6 +230,47 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
         console.error('Failed to rollback Google Calendar event:', rollbackError)
       }
       throw new Error(`Failed to create calendar event: ${error.message}`)
+    }
+
+    // Send booking confirmation email if requested
+    if ((eventData as any).send_confirmation_email &&
+        eventData.customer_email &&
+        eventData.event_type === 'booking') {
+
+      try {
+        const template = generateBookingConfirmationEmail({
+          customer_first_name: eventData.customer_first_name || '',
+          customer_last_name: eventData.customer_last_name || '',
+          customer_email: eventData.customer_email,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          duration: eventData.duration || 0,
+          attendee_count: eventData.attendee_count || 1,
+          location: eventData.location || 'FLIGHTHOUR Flugsimulator',
+          remarks: eventData.remarks,
+          has_video_recording: eventData.has_video_recording,
+          on_site_payment_amount: eventData.on_site_payment_amount
+        })
+
+        // Queue email with PDF attachment
+        const adminSupabase = createAdminClient()
+        await adminSupabase.from('email_queue').insert({
+          type: 'booking_confirmation',
+          recipient: eventData.customer_email,
+          recipient_email: eventData.customer_email,
+          subject: template.subject,
+          body: (eventData as any).confirmation_email_content || template.plainText,
+          content: template.htmlContent,
+          status: 'pending',
+          event_id: data.id,
+          // Signal that Pocket Guide should be attached
+          attachment_storage_path: 'public/attachments/Pocket Guide.pdf',
+          attachment_filename: 'FLIGHTHOUR_Pocket_Guide.pdf'
+        })
+      } catch (emailError) {
+        console.error('Failed to queue booking confirmation email:', emailError)
+        // Don't fail the whole operation if email queueing fails
+      }
     }
 
     revalidatePath('/kalender')
