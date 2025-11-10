@@ -185,17 +185,18 @@ export async function GET(request: NextRequest) {
           }
 
           // Handle booking confirmation attachments (Pocket Guide PDF)
-          if (email.type === 'booking_confirmation' && email.attachment_storage_path) {
+          if (email.type === 'booking_confirmation') {
             try {
-              console.log('[Email Queue] Attaching Pocket Guide PDF')
+              console.log('[Email Queue] Attaching Pocket Guide PDF for booking confirmation')
               const fs = await import('fs')
               const path = await import('path')
 
-              const pocketGuidePath = path.join(process.cwd(), email.attachment_storage_path)
+              // Pocket Guide is always in public/attachments/
+              const pocketGuidePath = path.join(process.cwd(), 'public', 'attachments', 'Pocket Guide.pdf')
               const pdfBuffer = fs.readFileSync(pocketGuidePath)
 
               emailAttachments.push({
-                filename: email.attachment_filename || 'FLIGHTHOUR_Pocket_Guide.pdf',
+                filename: 'FLIGHTHOUR_Pocket_Guide.pdf',
                 content: pdfBuffer,
                 contentType: 'application/pdf'
               })

@@ -252,7 +252,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
           on_site_payment_amount: eventData.on_site_payment_amount
         })
 
-        // Queue email with PDF attachment
+        // Queue email (Pocket Guide PDF will be attached by email processor)
         const adminSupabase = createAdminClient()
         const { error: queueError } = await adminSupabase.from('email_queue').insert({
           type: 'booking_confirmation',
@@ -260,10 +260,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
           subject: template.subject,
           content: (eventData as any).confirmation_email_content || template.htmlContent,
           status: 'pending',
-          event_id: data.id,
-          // Signal that Pocket Guide should be attached
-          attachment_storage_path: 'public/attachments/Pocket Guide.pdf',
-          attachment_filename: 'FLIGHTHOUR_Pocket_Guide.pdf'
+          event_id: data.id
         })
 
         if (queueError) {
