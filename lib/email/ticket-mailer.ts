@@ -911,11 +911,14 @@ export async function sendBookingConfirmationEmail(options: BookingConfirmationE
 
     console.log('[Booking Confirmation Email] Using SMTP:', emailSettings.smtp_host, ':', emailSettings.smtp_port)
 
+    // Determine if SSL should be used (port 465 = SSL, 587 = TLS)
+    const useSSL = emailSettings.smtp_port === 465
+
     // Create transporter
     const transporter = nodemailer.createTransport({
       host: emailSettings.smtp_host,
       port: emailSettings.smtp_port,
-      secure: emailSettings.smtp_use_ssl,
+      secure: useSSL, // true for port 465, false for port 587
       auth: {
         user: emailSettings.smtp_username,
         pass: emailSettings.smtp_password
@@ -925,9 +928,9 @@ export async function sendBookingConfirmationEmail(options: BookingConfirmationE
       }
     })
 
-    // Send email
+    // Send email (hardcoded from address for now)
     const info = await transporter.sendMail({
-      from: `"FLIGHTHOUR" <${emailSettings.from_email}>`,
+      from: '"FLIGHTHOUR" <info@flighthour.de>',
       to: options.to,
       subject: options.subject,
       text: options.plainTextContent,
