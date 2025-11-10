@@ -254,19 +254,23 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
 
         // Queue email with PDF attachment
         const adminSupabase = createAdminClient()
-        await adminSupabase.from('email_queue').insert({
+        const { error: queueError } = await adminSupabase.from('email_queue').insert({
           type: 'booking_confirmation',
-          recipient: eventData.customer_email,
           recipient_email: eventData.customer_email,
           subject: template.subject,
-          body: (eventData as any).confirmation_email_content || template.plainText,
-          content: template.htmlContent,
+          content: (eventData as any).confirmation_email_content || template.htmlContent,
           status: 'pending',
           event_id: data.id,
           // Signal that Pocket Guide should be attached
           attachment_storage_path: 'public/attachments/Pocket Guide.pdf',
           attachment_filename: 'FLIGHTHOUR_Pocket_Guide.pdf'
         })
+
+        if (queueError) {
+          console.error('Email queue insert failed:', queueError.message, queueError.details, queueError.hint)
+        } else {
+          console.log('Booking confirmation email queued successfully for:', eventData.customer_email)
+        }
       } catch (emailError) {
         console.error('Failed to queue booking confirmation email:', emailError)
         // Don't fail the whole operation if email queueing fails
