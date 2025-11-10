@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { de } from 'date-fns/locale'
 import { join } from 'path'
 
@@ -17,12 +17,14 @@ export interface BookingConfirmationData {
 }
 
 export function generateBookingConfirmationEmail(booking: BookingConfirmationData) {
+  // Convert UTC times to German timezone (Europe/Berlin)
+  const germanTimezone = 'Europe/Berlin'
   const startDate = new Date(booking.start_time)
   const endDate = new Date(booking.end_time)
 
-  const dateStr = format(startDate, 'EEEE, dd.MM.yyyy', { locale: de })
-  const startTimeStr = format(startDate, 'HH:mm', { locale: de })
-  const endTimeStr = format(endDate, 'HH:mm', { locale: de })
+  const dateStr = formatInTimeZone(startDate, germanTimezone, 'EEEE, dd.MM.yyyy', { locale: de })
+  const startTimeStr = formatInTimeZone(startDate, germanTimezone, 'HH:mm', { locale: de })
+  const endTimeStr = formatInTimeZone(endDate, germanTimezone, 'HH:mm', { locale: de })
 
   const customerName = `${booking.customer_first_name} ${booking.customer_last_name}`.trim()
 
