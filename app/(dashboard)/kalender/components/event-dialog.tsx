@@ -310,6 +310,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
       delete (submitData as any).booking_date
       delete (submitData as any).start_time_only
       delete (submitData as any).end_time_only
+      delete (submitData as any).duration_mode
+      delete (submitData as any).duration_preset
 
       if (event) {
         // Update existing event
