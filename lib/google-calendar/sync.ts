@@ -152,7 +152,7 @@ export async function syncGoogleCalendarToDatabase(
       // Process NEW events (with id field)
       if (newEvents.length > 0) {
         const insertData = newEvents
-          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap, false))
+          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap))
           .filter(data => data !== null)
 
         try {
@@ -172,14 +172,14 @@ export async function syncGoogleCalendarToDatabase(
         }
       }
 
-      // Process EXISTING events (without id field) - BATCH UPDATE for performance
+      // Process EXISTING events (with id field) - BATCH UPDATE for performance
       if (existingEventsToUpdate.length > 0) {
         const updateData = existingEventsToUpdate
-          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap, true))
+          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap))
           .filter(data => data !== null)
 
         try {
-          // Batch UPDATE using UPSERT (without id field to avoid FK violations)
+          // Batch UPDATE using UPSERT (with id field from existingEventMap)
           // This is 45x faster than individual UPDATE queries
           const { error: updateError } = await supabase
             .from('calendar_events')
@@ -280,13 +280,11 @@ async function handleDeletedEvent(
  * @param googleEvent - The Google Calendar event
  * @param userId - The user ID to assign the event to
  * @param existingEventMap - Map of google_event_id to database id
- * @param isUpdate - If true, excludes 'id' field (for UPDATE queries)
  */
 function prepareEventData(
   googleEvent: GoogleCalendarEvent,
   userId: string,
-  existingEventMap: Map<string, string>,
-  isUpdate: boolean = false
+  existingEventMap: Map<string, string>
 ): any | null {
   // Skip cancelled events (handled separately by handleDeletedEvent)
   if (googleEvent.status === 'cancelled') {
@@ -357,8 +355,13 @@ function prepareEventData(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
-  // Prepare base event data (without id)
-  const baseEventData = {
+  // Get existing ID from map or generate new UUID
+  const existingId = existingEventMap.get(googleEvent.id)
+  const eventId = existingId || crypto.randomUUID()
+
+  // Prepare event data (always includes id field)
+  return {
+    id: eventId, // Use existing ID or generate new UUID
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
     event_type: eventType, // 'fi_assignment', 'booking', or 'blocker'
@@ -386,20 +389,6 @@ function prepareEventData(
     last_modified_at: googleEvent.updated,
     updated_at: new Date().toISOString()
   }
-
-  // For INSERT operations, add the id field
-  if (!isUpdate) {
-    const existingId = existingEventMap.get(googleEvent.id)
-    const eventId = existingId || crypto.randomUUID()
-
-    return {
-      id: eventId, // Use existing ID or generate new UUID
-      ...baseEventData
-    }
-  }
-
-  // For UPDATE operations, do NOT include id (prevents FK violations)
-  return baseEventData
 }
 
 /**
