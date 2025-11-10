@@ -54,8 +54,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
     assigned_instructor_number: '',
     assigned_instructor_name: '',
     is_all_day: false,
-    actual_work_start_time: null as string | null,
-    actual_work_end_time: null as string | null,
+    actual_work_start_time: '',
+    actual_work_end_time: '',
     blocker_title: 'Block',
     // New fields for booking events
     booking_date: '',
@@ -247,9 +247,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         // Store title in title field for blocker
         submitData.customer_first_name = formData.blocker_title
         submitData.customer_last_name = ''
-        // Blockers don't have actual work times
-        submitData.actual_work_start_time = null
-        submitData.actual_work_end_time = null
+        // Blockers don't have actual work times (empty string will be converted to null by sanitizeTimeFields)
+        submitData.actual_work_start_time = ''
+        submitData.actual_work_end_time = ''
       }
       // FI Assignment Events - special handling
       else if (formData.event_type === 'fi_assignment') {
@@ -267,8 +267,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           submitData.start_time = convertToISOWithTimezone(selectedDate, '08:00')
           submitData.end_time = convertToISOWithTimezone(selectedDate, '09:00')
           submitData.duration = 60
-          submitData.actual_work_start_time = null
-          submitData.actual_work_end_time = null
+          // All-day events don't have actual work times (empty string will be converted to null by sanitizeTimeFields)
+          submitData.actual_work_start_time = ''
+          submitData.actual_work_end_time = ''
         }
         // Mit Arbeitszeiten
         else {
@@ -781,7 +782,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
                   <Input
                     id="actual_work_start_time"
                     type="time"
-                    value={formData.actual_work_start_time}
+                    value={formData.actual_work_start_time || ''}
                     onChange={(e) => setFormData({ ...formData, actual_work_start_time: e.target.value })}
                     required
                     disabled={isReadOnly}
@@ -792,7 +793,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
                   <Input
                     id="actual_work_end_time"
                     type="time"
-                    value={formData.actual_work_end_time}
+                    value={formData.actual_work_end_time || ''}
                     onChange={(e) => setFormData({ ...formData, actual_work_end_time: e.target.value })}
                     required
                     disabled={isReadOnly}
