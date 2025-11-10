@@ -331,7 +331,7 @@ export async function hasPending2FACode(email: string): Promise<ActionResponse<{
 
     return {
       success: true,
-      data: { hasPending: codes && codes.length > 0 }
+      data: { hasPending: !!(codes && codes.length > 0) }
     }
   } catch (error: any) {
     console.error('Error in hasPending2FACode:', error)
