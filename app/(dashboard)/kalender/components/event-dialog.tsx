@@ -247,6 +247,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         // Store title in title field for blocker
         submitData.customer_first_name = formData.blocker_title
         submitData.customer_last_name = ''
+        // Blockers don't have actual work times
+        submitData.actual_work_start_time = null
+        submitData.actual_work_end_time = null
       }
       // FI Assignment Events - special handling
       else if (formData.event_type === 'fi_assignment') {
@@ -264,8 +267,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           submitData.start_time = convertToISOWithTimezone(selectedDate, '08:00')
           submitData.end_time = convertToISOWithTimezone(selectedDate, '09:00')
           submitData.duration = 60
-          submitData.actual_work_start_time = ''
-          submitData.actual_work_end_time = ''
+          submitData.actual_work_start_time = null
+          submitData.actual_work_end_time = null
         }
         // Mit Arbeitszeiten
         else {

@@ -31,6 +31,18 @@ function sanitizeUuidFields(data: Partial<CalendarEventData>) {
 }
 
 /**
+ * Helper: Convert empty strings to null for TIME fields
+ * PostgreSQL TIME fields cannot accept empty strings
+ */
+function sanitizeTimeFields(data: any) {
+  return {
+    ...data,
+    actual_work_start_time: data.actual_work_start_time || null,
+    actual_work_end_time: data.actual_work_end_time || null
+  }
+}
+
+/**
  * Get calendar events for a date range
  * If no dates provided, gets all events
  */
@@ -321,7 +333,7 @@ export async function updateCalendarEvent(
       const { data, error } = await supabase
         .from('calendar_events')
         .update({
-          ...sanitizeUuidFields(eventData),
+          ...sanitizeTimeFields(sanitizeUuidFields(eventData)),
           title: eventTitle,
           start_time: gcStartTime,
           end_time: gcEndTime,
@@ -352,7 +364,7 @@ export async function updateCalendarEvent(
       const { data, error } = await supabase
         .from('calendar_events')
         .update({
-          ...sanitizeUuidFields(eventData),
+          ...sanitizeTimeFields(sanitizeUuidFields(eventData)),
           title: eventTitle,
           start_time: gcStartTime,
           end_time: gcEndTime,
