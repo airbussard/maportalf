@@ -54,8 +54,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
     assigned_instructor_number: '',
     assigned_instructor_name: '',
     is_all_day: false,
-    actual_work_start_time: '',
-    actual_work_end_time: '',
+    actual_work_start_time: null as string | null,
+    actual_work_end_time: null as string | null,
     blocker_title: 'Block',
     // New fields for booking events
     booking_date: '',

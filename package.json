@@ -1,6 +1,6 @@
 {
   "name": "flighthour-nextjs",
-  "version": "2.072",
+  "version": "2.073",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
