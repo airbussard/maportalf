@@ -57,9 +57,16 @@ export async function generate2FACode(
     const adminSupabase = createAdminClient()
 
     // Get user by email
-    const { data: { user }, error: authError } = await supabase.auth.admin.getUserByEmail(email)
+    const { data: { users }, error: authError } = await adminSupabase.auth.admin.listUsers()
 
-    if (authError || !user) {
+    if (authError) {
+      console.error('Error listing users:', authError)
+      return { success: false, error: 'Authentifizierungsfehler' }
+    }
+
+    const user = users.find(u => u.email === email)
+
+    if (!user) {
       // Don't reveal if user exists or not for security
       return { success: true, data: { codeId: 'placeholder' } }
     }
