@@ -81,6 +81,19 @@ export function LoginForm() {
           return
         }
 
+        // ========================================
+        // TEMPORARY: 2FA DISABLED
+        // TODO: Re-enable when email worker is stable and 2FA tables are verified
+        // ========================================
+
+        // Direct login without 2FA (TEMPORARY)
+        console.log('✅ Login successful - redirecting to dashboard (2FA disabled)')
+        setLoading(false)
+        router.push('/dashboard')
+        router.refresh()
+
+        /* DISABLED 2FA CODE - Re-enable later:
+
         // Generate 2FA code
         const twoFactorResult = await generate2FACode(email, undefined)
 
@@ -106,6 +119,8 @@ export function LoginForm() {
 
         // Redirect to 2FA verification page
         router.push(`/verify-2fa?email=${encodeURIComponent(email)}`)
+
+        */
       }
     } catch (err) {
       console.error('Login Exception:', err)

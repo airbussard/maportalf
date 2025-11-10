@@ -76,23 +76,42 @@ export async function syncGoogleCalendarToDatabase(
 
     console.log(`[Sync] Using user ID: ${cachedUserId}`)
 
-    // 2. Bulk check which events already exist (load their IDs too)
+    // 2. Bulk check which events already exist - BATCH QUERIES to avoid URI length limit
     const googleEventIds = events.map(e => e.id)
-    console.log(`[Sync] Querying database for ${googleEventIds.length} google_event_ids...`)
+    console.log(`[Sync] Querying database for ${googleEventIds.length} google_event_ids in batches...`)
     console.log(`[Sync] Sample Google IDs to search:`, googleEventIds.slice(0, 3))
 
-    const { data: existingEvents, error: fetchError } = await supabase
-      .from('calendar_events')
-      .select('id, google_event_id')
-      .in('google_event_id', googleEventIds)
+    // Split into batches to avoid "URI too long" error with .in() operator
+    // PostgreSQL/Supabase has URL length limits (~8KB), 500 IDs is safe
+    const QUERY_BATCH_SIZE = 500
+    const existingEventsArray: any[] = []
 
-    if (fetchError) {
-      console.error(`[Sync] Error fetching existing events:`, fetchError)
-      console.error(`[Sync] Error details:`, JSON.stringify(fetchError, null, 2))
+    for (let i = 0; i < googleEventIds.length; i += QUERY_BATCH_SIZE) {
+      const batch = googleEventIds.slice(i, i + QUERY_BATCH_SIZE)
+      const batchNum = Math.floor(i / QUERY_BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(googleEventIds.length / QUERY_BATCH_SIZE)
+
+      console.log(`[Sync] Query batch ${batchNum}/${totalBatches}: ${batch.length} IDs`)
+
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('id, google_event_id')
+        .in('google_event_id', batch)
+
+      if (error) {
+        console.error(`[Sync] Error in batch ${batchNum}:`, error)
+        console.error(`[Sync] Batch ${batchNum} error details:`, JSON.stringify(error, null, 2))
+        // Continue with other batches even if one fails
+      } else if (data) {
+        existingEventsArray.push(...data)
+        console.log(`[Sync] Batch ${batchNum} returned ${data.length} events`)
+      }
     }
 
-    console.log(`[Sync] Query returned ${existingEvents?.length || 0} events`)
-    if (existingEvents && existingEvents.length > 0) {
+    const existingEvents = existingEventsArray
+    console.log(`[Sync] Query returned ${existingEvents.length} total existing events from ${Math.ceil(googleEventIds.length / QUERY_BATCH_SIZE)} batches`)
+
+    if (existingEvents.length > 0) {
       console.log(`[Sync] Sample existing events:`, existingEvents.slice(0, 3).map((e: any) => ({
         id: e.id,
         google_event_id: e.google_event_id
@@ -101,7 +120,7 @@ export async function syncGoogleCalendarToDatabase(
 
     // Create map: google_event_id -> database id
     const existingEventMap = new Map<string, string>(
-      (existingEvents || []).map((e: any) => [e.google_event_id, e.id])
+      existingEvents.map((e: any) => [e.google_event_id, e.id])
     )
     console.log(`[Sync] Created map with ${existingEventMap.size} existing events`)
 
