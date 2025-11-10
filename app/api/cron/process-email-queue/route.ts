@@ -92,6 +92,18 @@ export async function GET(request: NextRequest) {
             console.error('[Email Queue] Error parsing work request data:', parseError)
             throw new Error('Invalid work request email data')
           }
+        } else if (email.type === 'two_factor_code') {
+          // 2FA code email - no ticket required, no attachments
+          console.log('[Email Queue] Sending 2FA code email')
+
+          const { sendEmailWithRetry } = await import('@/lib/email/ticket-mailer')
+          emailSent = await sendEmailWithRetry({
+            to: email.recipient_email,
+            subject: email.subject,
+            htmlContent: email.content,
+            plainTextContent: email.body || email.content,
+            attachments: [] // No attachments for 2FA
+          })
         } else if (email.type === 'booking_confirmation') {
           // Booking confirmation email - no ticket required
           console.log('[Email Queue] Sending booking confirmation email')

@@ -20,14 +20,14 @@ export async function getAllEmployeeSettings(): Promise<ActionResponse<EmployeeS
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
-    // Check if user is admin or manager
+    // Check if user is admin
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['admin', 'manager'].includes(profile.role)) {
+    if (profile?.role !== 'admin') {
       return { success: false, error: 'Keine Berechtigung' }
     }
 

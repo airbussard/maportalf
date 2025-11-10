@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { generate2FACode } from '@/app/actions/two-factor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -80,10 +81,22 @@ export function LoginForm() {
           return
         }
 
-        // Show loading animation before redirect
+        // Generate 2FA code
+        const twoFactorResult = await generate2FACode(email)
+
+        if (!twoFactorResult.success) {
+          setError('Fehler beim Senden des Sicherheitscodes. Bitte versuchen Sie es erneut.')
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
+
+        // Sign out user until 2FA is verified
+        await supabase.auth.signOut()
         setLoading(false)
-        setShowLoader(true)
-        // Redirect will happen after loader completes (5 seconds)
+
+        // Redirect to 2FA verification page
+        router.push(`/verify-2fa?email=${encodeURIComponent(email)}`)
       }
     } catch (err) {
       console.error('Login Exception:', err)

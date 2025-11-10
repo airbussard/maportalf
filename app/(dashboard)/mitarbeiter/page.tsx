@@ -27,10 +27,10 @@ export default async function MitarbeiterPage() {
     redirect('/dashboard')
   }
 
-  // Load employees and settings in parallel
+  // Load employees and settings in parallel (only admins get settings)
   const [employeesResult, settingsResult] = await Promise.all([
     getEmployees(),
-    getAllEmployeeSettings()
+    isAdmin ? getAllEmployeeSettings() : Promise.resolve({ success: true, data: [] })
   ])
 
   if (!employeesResult.success) {

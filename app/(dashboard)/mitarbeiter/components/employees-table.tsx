@@ -144,7 +144,7 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
                   <th className="text-left py-3 px-4 font-medium text-sm">Name</th>
                   <th className="text-left py-3 px-4 font-medium text-sm">E-Mail</th>
                   <th className="text-left py-3 px-4 font-medium text-sm">Rolle</th>
-                  {(isAdmin || isManager) && (
+                  {isAdmin && (
                     <th className="text-left py-3 px-4 font-medium text-sm">Vergütung</th>
                   )}
                   <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
@@ -153,7 +153,7 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
               <tbody>
                 {filteredEmployees.length === 0 ? (
                   <tr>
-                    <td colSpan={(isAdmin || isManager) ? 5 : 4} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">
                       Keine Mitarbeiter gefunden
                     </td>
                   </tr>
@@ -183,7 +183,7 @@ export function EmployeesTable({ employees, employeeSettings, isAdmin, isManager
                             {roleBadge.label}
                           </Badge>
                         </td>
-                        {(isAdmin || isManager) && (
+                        {isAdmin && (
                           <td className="py-3 px-4 text-sm text-muted-foreground">
                             {getCompensationDisplay(employee.id)}
                           </td>
