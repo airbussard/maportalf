@@ -21,7 +21,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees } from '@/app/actions/calendar-events'
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees, resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -58,6 +58,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
   const [sendConfirmation, setSendConfirmation] = useState(true)
   const [emailEditorOpen, setEmailEditorOpen] = useState(false)
   const [emailContent, setEmailContent] = useState('')
+  const [isResendingEmail, setIsResendingEmail] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -416,6 +417,24 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
       toast.error(error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleResendEmail = async () => {
+    if (!event) return
+
+    setIsResendingEmail(true)
+    try {
+      const result = await resendBookingConfirmationEmail(event.id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error('Fehler beim Senden der E-Mail')
+    } finally {
+      setIsResendingEmail(false)
     }
   }
 
@@ -1055,6 +1074,26 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
                 </>
               ) : (
                 'Löschen'
+              )}
+            </Button>
+          )}
+          {event && formData.event_type === 'booking' && formData.customer_email && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResendEmail}
+              disabled={isResendingEmail || isLoading}
+            >
+              {isResendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird gesendet...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  E-Mail erneut senden
+                </>
               )}
             </Button>
           )}

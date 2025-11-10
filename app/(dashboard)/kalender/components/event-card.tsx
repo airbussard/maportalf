@@ -1,8 +1,12 @@
 'use client'
 
-import { Calendar, Clock, MapPin, User, Video, Euro } from 'lucide-react'
+import { useState } from 'react'
+import { Calendar, Clock, MapPin, User, Video, Euro, Mail, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
+import { toast } from 'sonner'
 
 interface EventCardProps {
   event: {
@@ -10,6 +14,7 @@ interface EventCardProps {
     title: string
     customer_first_name: string
     customer_last_name: string
+    customer_email?: string | null
     start_time: string
     end_time: string
     location: string
@@ -28,10 +33,29 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onClick }: EventCardProps) {
+  const [isResendingEmail, setIsResendingEmail] = useState(false)
   const startDate = new Date(event.start_time)
   const endDate = new Date(event.end_time)
   const isFIEvent = event.event_type === 'fi_assignment'
   const isBlocker = event.event_type === 'blocker'
+  const isBookingWithEmail = event.event_type === 'booking' && event.customer_email
+
+  const handleResendEmail = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent opening the dialog
+    setIsResendingEmail(true)
+    try {
+      const result = await resendBookingConfirmationEmail(event.id)
+      if (result.success) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error('Fehler beim Senden der E-Mail')
+    } finally {
+      setIsResendingEmail(false)
+    }
+  }
 
   const statusColors = {
     confirmed: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -143,6 +167,23 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'pending' && '⏳'}
             {event.sync_status === 'error' && '⚠'}
           </Badge>
+          {/* Resend Email Button (only for bookings with email) */}
+          {isBookingWithEmail && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={handleResendEmail}
+              disabled={isResendingEmail}
+              title="Buchungsbestätigung erneut senden"
+            >
+              {isResendingEmail ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Mail className="h-3 w-3" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -245,6 +286,23 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'pending' && '⏳'}
             {event.sync_status === 'error' && '⚠'}
           </Badge>
+          {/* Resend Email Button (only for bookings with email) */}
+          {isBookingWithEmail && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={handleResendEmail}
+              disabled={isResendingEmail}
+              title="Buchungsbestätigung erneut senden"
+            >
+              {isResendingEmail ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </Card>

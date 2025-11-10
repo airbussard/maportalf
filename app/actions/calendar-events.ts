@@ -259,6 +259,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
           recipient: eventData.customer_email,
           recipient_email: eventData.customer_email,
           subject: template.subject,
+          body: template.plainText,
           content: (eventData as any).confirmation_email_content || template.htmlContent,
           status: 'pending',
           event_id: data.id
@@ -634,4 +635,75 @@ export async function getEmployees() {
   }
 
   return data || []
+}
+
+/**
+ * Resend booking confirmation email for an existing event
+ * Queues a new email in the email_queue table
+ */
+export async function resendBookingConfirmationEmail(eventId: string) {
+  try {
+    const adminSupabase = createAdminClient()
+
+    // Get event from database
+    const { data: event, error: fetchError } = await adminSupabase
+      .from('calendar_events')
+      .select('*')
+      .eq('id', eventId)
+      .single()
+
+    if (fetchError || !event) {
+      throw new Error('Event nicht gefunden')
+    }
+
+    // Validate it's a booking with customer email
+    if (event.event_type !== 'booking') {
+      throw new Error('Nur für Buchungen verfügbar')
+    }
+
+    if (!event.customer_email) {
+      throw new Error('Keine Kunden-E-Mail-Adresse hinterlegt')
+    }
+
+    // Generate email template
+    const template = generateBookingConfirmationEmail({
+      customer_first_name: event.customer_first_name || '',
+      customer_last_name: event.customer_last_name || '',
+      customer_email: event.customer_email,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      duration: event.duration || 0,
+      attendee_count: event.attendee_count || 1,
+      location: event.location || 'FLIGHTHOUR Flugsimulator',
+      remarks: event.remarks,
+      has_video_recording: event.has_video_recording,
+      on_site_payment_amount: event.on_site_payment_amount
+    })
+
+    // Queue email
+    const { error: queueError } = await adminSupabase.from('email_queue').insert({
+      type: 'booking_confirmation',
+      recipient: event.customer_email,
+      recipient_email: event.customer_email,
+      subject: template.subject,
+      body: template.plainText,
+      content: template.htmlContent,
+      status: 'pending',
+      event_id: eventId
+    })
+
+    if (queueError) {
+      console.error('Email queue insert failed:', queueError)
+      throw new Error('E-Mail konnte nicht in Warteschlange hinzugefügt werden')
+    }
+
+    revalidatePath('/kalender')
+    revalidatePath('/admin/email-queue')
+
+    return { success: true, message: 'Bestätigungs-E-Mail wurde zur Warteschlange hinzugefügt' }
+  } catch (error) {
+    console.error('Error resending booking confirmation:', error)
+    const message = error instanceof Error ? error.message : 'Fehler beim Senden der E-Mail'
+    return { success: false, message }
+  }
 }
