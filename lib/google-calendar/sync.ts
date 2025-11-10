@@ -290,7 +290,7 @@ function prepareEventData(
 
   // Return prepared event data matching existing schema
   return {
-    id: googleEvent.id, // Use Google event ID as primary key (schema uses TEXT)
+    // id is auto-generated (UUID) - don't set it manually to avoid FK conflicts with email_queue
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
     event_type: eventType, // 'fi_assignment', 'booking', or 'blocker'

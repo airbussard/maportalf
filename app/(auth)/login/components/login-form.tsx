@@ -82,7 +82,16 @@ export function LoginForm() {
         }
 
         // Generate 2FA code
-        const twoFactorResult = await generate2FACode(email)
+        const twoFactorResult = await generate2FACode(email, undefined)
+
+        // Defensive check for undefined result
+        if (!twoFactorResult || typeof twoFactorResult !== 'object') {
+          console.error('Invalid 2FA result:', twoFactorResult)
+          setError('Fehler beim Senden des Sicherheitscodes. Bitte versuchen Sie es erneut.')
+          await supabase.auth.signOut()
+          setLoading(false)
+          return
+        }
 
         if (!twoFactorResult.success) {
           setError('Fehler beim Senden des Sicherheitscodes. Bitte versuchen Sie es erneut.')
