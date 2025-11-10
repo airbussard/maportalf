@@ -92,6 +92,41 @@ export async function GET(request: NextRequest) {
             console.error('[Email Queue] Error parsing work request data:', parseError)
             throw new Error('Invalid work request email data')
           }
+        } else if (email.type === 'booking_confirmation') {
+          // Booking confirmation email - no ticket required
+          console.log('[Email Queue] Sending booking confirmation email')
+
+          const emailAttachments: any[] = []
+
+          // Attach Pocket Guide PDF
+          try {
+            console.log('[Email Queue] Attaching Pocket Guide PDF for booking confirmation')
+            const fs = await import('fs')
+            const path = await import('path')
+
+            const pocketGuidePath = path.join(process.cwd(), 'public', 'attachments', 'Pocket Guide.pdf')
+            const pdfBuffer = fs.readFileSync(pocketGuidePath)
+
+            emailAttachments.push({
+              filename: 'FLIGHTHOUR_Pocket_Guide.pdf',
+              content: pdfBuffer,
+              contentType: 'application/pdf'
+            })
+            console.log('[Email Queue] Pocket Guide attached:', pdfBuffer.length, 'bytes')
+          } catch (pocketError) {
+            console.error('[Email Queue] Failed to attach Pocket Guide:', pocketError)
+            // Continue without attachment
+          }
+
+          // Send booking confirmation email
+          const { sendBookingConfirmationEmail } = await import('@/lib/email/ticket-mailer')
+          emailSent = await sendBookingConfirmationEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            htmlContent: email.content,
+            plainTextContent: email.body || email.content,
+            attachments: emailAttachments.length > 0 ? emailAttachments : undefined
+          })
         } else {
           // Ticket-related emails - need ticket data
           if (!email.ticket) {
@@ -181,29 +216,6 @@ export async function GET(request: NextRequest) {
                 console.error('[Email Queue] Attachment download failed:', att.filename, downloadError)
                 // Continue without this attachment
               }
-            }
-          }
-
-          // Handle booking confirmation attachments (Pocket Guide PDF)
-          if (email.type === 'booking_confirmation') {
-            try {
-              console.log('[Email Queue] Attaching Pocket Guide PDF for booking confirmation')
-              const fs = await import('fs')
-              const path = await import('path')
-
-              // Pocket Guide is always in public/attachments/
-              const pocketGuidePath = path.join(process.cwd(), 'public', 'attachments', 'Pocket Guide.pdf')
-              const pdfBuffer = fs.readFileSync(pocketGuidePath)
-
-              emailAttachments.push({
-                filename: 'FLIGHTHOUR_Pocket_Guide.pdf',
-                content: pdfBuffer,
-                contentType: 'application/pdf'
-              })
-              console.log('[Email Queue] Pocket Guide attached:', pdfBuffer.length, 'bytes')
-            } catch (pocketError) {
-              console.error('[Email Queue] Failed to attach Pocket Guide:', pocketError)
-              // Continue without attachment
             }
           }
 

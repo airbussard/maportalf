@@ -876,3 +876,90 @@ Web: https://flighthour.de`
     return false
   }
 }
+
+interface BookingConfirmationEmailOptions {
+  to: string
+  subject: string
+  htmlContent: string
+  plainTextContent: string
+  attachments?: EmailAttachment[]
+}
+
+/**
+ * Send booking confirmation email
+ */
+export async function sendBookingConfirmationEmail(options: BookingConfirmationEmailOptions): Promise<boolean> {
+  let emailSent = false
+
+  try {
+    console.log('[Booking Confirmation Email] Starting send process')
+    console.log('[Booking Confirmation Email] Recipient:', options.to)
+    console.log('[Booking Confirmation Email] Attachments:', options.attachments?.length || 0)
+
+    // Get SMTP settings from Supabase
+    const supabase = createAdminClient()
+    const { data: emailSettings, error: settingsError } = await supabase
+      .from('email_settings')
+      .select('*')
+      .eq('is_active', true)
+      .single()
+
+    if (settingsError || !emailSettings) {
+      console.error('[Booking Confirmation Email] Failed to load email settings:', settingsError)
+      throw new Error('Email settings not configured')
+    }
+
+    console.log('[Booking Confirmation Email] Using SMTP:', emailSettings.smtp_host, ':', emailSettings.smtp_port)
+
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: emailSettings.smtp_host,
+      port: emailSettings.smtp_port,
+      secure: emailSettings.smtp_use_ssl,
+      auth: {
+        user: emailSettings.smtp_username,
+        pass: emailSettings.smtp_password
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    })
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: `"FLIGHTHOUR" <${emailSettings.from_email}>`,
+      to: options.to,
+      subject: options.subject,
+      text: options.plainTextContent,
+      html: options.htmlContent,
+      attachments: options.attachments,
+      headers: {
+        'X-Email-Type': 'booking-confirmation'
+      }
+    })
+
+    console.log('[Booking Confirmation Email] Nodemailer response accepted:', info.accepted)
+    console.log('[Booking Confirmation Email] Nodemailer response rejected:', info.rejected)
+
+    emailSent = true
+    console.log('[Booking Confirmation Email] ✅ Sent successfully:', info.messageId)
+    console.log('[Booking Confirmation Email] Response:', info.response)
+
+    return true
+
+  } catch (error) {
+    console.error('[Booking Confirmation Email] ❌ Failed to send:', error)
+    console.error('[Booking Confirmation Email] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      emailSent
+    })
+
+    if (emailSent) {
+      console.warn('[Booking Confirmation Email] ⚠️ Email was sent but post-send operation failed')
+      return true
+    }
+
+    return false
+  }
+}
