@@ -48,8 +48,8 @@ export interface CalendarEventData {
   // Actual work times (for FI events with time restrictions)
   // These store the real work hours (e.g., 09:00-17:00)
   // while start_time/end_time remain 08:00-09:00 for Google Calendar
-  actual_work_start_time?: string // Format: 'HH:MM:SS'
-  actual_work_end_time?: string // Format: 'HH:MM:SS'
+  actual_work_start_time?: string | null // Format: 'HH:MM:SS' or null for blockers/all-day
+  actual_work_end_time?: string | null // Format: 'HH:MM:SS' or null for blockers/all-day
   title?: string // Pre-generated title (for FI events with times, blocker title)
   // Booking-specific fields
   has_video_recording?: boolean // Indicates if video recording was booked
