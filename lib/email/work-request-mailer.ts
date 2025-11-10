@@ -25,6 +25,7 @@ export async function sendWorkRequestEmail(options: WorkRequestEmailOptions): Pr
     const { data: settings } = await supabase
       .from('email_settings')
       .select('*')
+      .eq('is_active', true)
       .single()
 
     if (!settings) {
