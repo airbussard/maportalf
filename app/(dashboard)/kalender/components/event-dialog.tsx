@@ -31,6 +31,20 @@ interface EventDialogProps {
   onRefresh?: () => void
 }
 
+/**
+ * Convert UTC ISO string to local datetime-local input format
+ * Handles timezone conversion: UTC → Local browser time
+ */
+function formatDateTimeForInput(isoString: string): string {
+  const date = new Date(isoString)
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
 export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -93,8 +107,8 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         customer_last_name: event.customer_last_name || '',
         customer_phone: event.customer_phone || '',
         customer_email: event.customer_email || '',
-        start_time: event.start_time ? new Date(event.start_time).toISOString().slice(0, 16) : '',
-        end_time: event.end_time ? new Date(event.end_time).toISOString().slice(0, 16) : '',
+        start_time: event.start_time ? formatDateTimeForInput(event.start_time) : '',
+        end_time: event.end_time ? formatDateTimeForInput(event.end_time) : '',
         duration: event.duration || 0,
         attendee_count: event.attendee_count || 1,
         remarks: event.remarks || '',
