@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -10,7 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createTicket } from '@/app/actions/tickets'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, FileText } from 'lucide-react'
+import { TemplateSelector } from '@/components/tickets/template-selector'
+import type { TemplateWithAttachments } from '@/lib/types/template'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function NewTicketPage() {
   const router = useRouter()
@@ -23,6 +27,58 @@ export default function NewTicketPage() {
     recipient_email: ''
   })
   const [attachments, setAttachments] = useState<File[]>([])
+  const [isManagerOrAdmin, setIsManagerOrAdmin] = useState(false)
+
+  // Check if user is Manager or Admin
+  useEffect(() => {
+    const checkRole = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        setIsManagerOrAdmin(profile?.role === 'manager' || profile?.role === 'admin')
+      }
+    }
+    checkRole()
+  }, [])
+
+  const handleTemplateSelect = async (template: TemplateWithAttachments) => {
+    // Insert template content into description field
+    if (formData.description) {
+      setFormData({ ...formData, description: formData.description + '\n\n' + template.content })
+    } else {
+      setFormData({ ...formData, description: template.content })
+    }
+
+    // If template has attachments, download and add them
+    if (template.attachments && template.attachments.length > 0) {
+      toast.info(`Template enthält ${template.attachments.length} Anhang/Anhänge. Diese werden beim Senden hinzugefügt.`)
+
+      const templateFiles: File[] = []
+      for (const attachment of template.attachments) {
+        try {
+          const response = await fetch(`/api/template-attachments/${attachment.id}`)
+          if (!response.ok) throw new Error('Download failed')
+
+          const blob = await response.blob()
+          const file = new File([blob], attachment.original_filename, { type: attachment.mime_type })
+          templateFiles.push(file)
+        } catch (error) {
+          console.error('Error downloading attachment:', error)
+          toast.error(`Fehler beim Laden von ${attachment.original_filename}`)
+        }
+      }
+
+      // Merge with existing attachments
+      setAttachments(prev => [...prev, ...templateFiles])
+    }
+
+    toast.success('Vorlage eingefügt')
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -34,7 +90,7 @@ export default function NewTicketPage() {
       }
       return true
     })
-    setAttachments(validFiles)
+    setAttachments(prev => [...prev, ...validFiles])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,6 +208,12 @@ export default function NewTicketPage() {
                 disabled={loading}
                 required
               />
+              {isManagerOrAdmin && (
+                <TemplateSelector
+                  onSelectTemplate={handleTemplateSelect}
+                  disabled={loading}
+                />
+              )}
             </div>
 
             <div className="space-y-2">
