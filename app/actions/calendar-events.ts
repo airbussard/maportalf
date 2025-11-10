@@ -337,8 +337,6 @@ export async function updateCalendarEvent(
           title: eventTitle,
           start_time: gcStartTime,
           end_time: gcEndTime,
-          actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
-          actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
           has_video_recording: eventData.has_video_recording ?? existingEvent.has_video_recording,
           on_site_payment_amount: eventData.on_site_payment_amount ?? existingEvent.on_site_payment_amount,
           etag: googleEvent.etag,
@@ -368,8 +366,6 @@ export async function updateCalendarEvent(
           title: eventTitle,
           start_time: gcStartTime,
           end_time: gcEndTime,
-          actual_work_start_time: eventData.actual_work_start_time ?? existingEvent.actual_work_start_time,
-          actual_work_end_time: eventData.actual_work_end_time ?? existingEvent.actual_work_end_time,
           sync_status: 'pending',
           last_modified_at: new Date().toISOString()
         })
