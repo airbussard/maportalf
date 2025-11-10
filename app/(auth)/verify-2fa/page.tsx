@@ -65,10 +65,18 @@ function Verify2FAContent() {
 
       if (result.success && result.data?.verified) {
         setSuccess(true)
-        // Redirect to dashboard after short delay
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1500)
+
+        // If we have a token, redirect to complete-2fa route
+        if (result.data?.token) {
+          setTimeout(() => {
+            router.push(`/login/complete-2fa?token=${result.data!.token}`)
+          }, 1500)
+        } else {
+          // Fallback: redirect to dashboard (will be blocked by middleware if no session)
+          setTimeout(() => {
+            router.push('/dashboard')
+          }, 1500)
+        }
       } else {
         setError(result.error || 'Ungültiger Code')
       }

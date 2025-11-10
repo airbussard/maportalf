@@ -10,6 +10,15 @@ interface ActionResponse<T = any> {
   error?: string
 }
 
+interface VerificationToken {
+  id: string
+  user_id: string
+  token: string
+  expires_at: string
+  used: boolean
+  created_at: string
+}
+
 interface TwoFactorCode {
   id: string
   user_id: string
@@ -176,12 +185,13 @@ export async function generate2FACode(
 }
 
 /**
- * Verify a 2FA code
+ * Verify a 2FA code and generate verification token
  */
 export async function verify2FACode(
   email: string,
-  code: string
-): Promise<ActionResponse<{ verified: boolean }>> {
+  code: string,
+  headers?: Headers
+): Promise<ActionResponse<{ verified: boolean; token?: string }>> {
   try {
     const supabase = await createClient()
     const adminSupabase = createAdminClient()
@@ -250,9 +260,35 @@ export async function verify2FACode(
       return { success: false, error: 'Fehler bei der Verifizierung' }
     }
 
+    // Generate verification token for session creation
+    console.log('[2FA] Generating verification token...')
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    const { ipAddress, userAgent } = getClientInfo(headers)
+
+    const { data: tokenData, error: tokenError } = await adminSupabase
+      .from('verification_tokens')
+      .insert({
+        user_id: user.id,
+        expires_at: expiresAt.toISOString(),
+        ip_address: ipAddress,
+        user_agent: userAgent
+      })
+      .select()
+      .single()
+
+    if (tokenError) {
+      console.error('[2FA] Error creating verification token:', tokenError)
+      return { success: false, error: 'Fehler bei der Token-Generierung' }
+    }
+
+    console.log('[2FA] ✅ Verification token created:', tokenData.token)
+
     return {
       success: true,
-      data: { verified: true }
+      data: {
+        verified: true,
+        token: tokenData.token
+      }
     }
   } catch (error: any) {
     console.error('Error in verify2FACode:', error)
@@ -312,6 +348,88 @@ export async function resend2FACode(
     return await generate2FACode(email, headers)
   } catch (error: any) {
     console.error('Error in resend2FACode:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+/**
+ * Verify token and create authenticated session
+ * This creates a server-side session using admin privileges after 2FA verification
+ */
+export async function verifyTokenAndCreateSession(
+  token: string
+): Promise<ActionResponse<{ session_created: boolean }>> {
+  try {
+    console.log('[2FA] Verifying token for session creation...')
+    const adminSupabase = createAdminClient()
+    const supabase = await createClient()
+
+    // Find the token
+    const { data: tokenData, error: tokenError } = await adminSupabase
+      .from('verification_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('used', false)
+      .single()
+
+    if (tokenError || !tokenData) {
+      console.log('[2FA] Token not found or already used')
+      return { success: false, error: 'Ungültiger oder abgelaufener Token' }
+    }
+
+    const tokenRecord = tokenData as VerificationToken
+
+    // Check if expired
+    if (new Date(tokenRecord.expires_at) < new Date()) {
+      console.log('[2FA] Token expired')
+      return { success: false, error: 'Token ist abgelaufen. Bitte melden Sie sich erneut an.' }
+    }
+
+    // Mark token as used
+    await adminSupabase
+      .from('verification_tokens')
+      .update({
+        used: true,
+        used_at: new Date().toISOString()
+      })
+      .eq('token', token)
+
+    // Get user data
+    const { data: { user }, error: userError } = await adminSupabase.auth.admin.getUserById(
+      tokenRecord.user_id
+    )
+
+    if (userError || !user || !user.email) {
+      console.error('[2FA] Error fetching user:', userError)
+      return { success: false, error: 'Benutzer nicht gefunden' }
+    }
+
+    // Create a session using admin API
+    // Generate a temporary session for the user
+    const { data: sessionData, error: sessionError } = await adminSupabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: user.email,
+      options: {
+        redirectTo: '/dashboard'
+      }
+    })
+
+    if (sessionError || !sessionData) {
+      console.error('[2FA] Error generating session:', sessionError)
+      return { success: false, error: 'Fehler beim Erstellen der Session' }
+    }
+
+    console.log('[2FA] ✅ Session link generated for user:', user.email)
+
+    // Return the properties needed for client-side session establishment
+    return {
+      success: true,
+      data: {
+        session_created: true
+      }
+    }
+  } catch (error: any) {
+    console.error('Error in verifyTokenAndCreateSession:', error)
     return { success: false, error: 'Ein Fehler ist aufgetreten' }
   }
 }

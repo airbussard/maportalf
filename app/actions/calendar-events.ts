@@ -262,7 +262,8 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
           body: template.plainText,
           content: (eventData as any).confirmation_email_content || template.htmlContent,
           status: 'pending',
-          event_id: data.id
+          event_id: data.id, // DEPRECATED: Use calendar_google_event_id instead
+          calendar_google_event_id: data.google_event_id // New FK field
         })
 
         if (queueError) {
@@ -689,7 +690,8 @@ export async function resendBookingConfirmationEmail(eventId: string) {
       body: template.plainText,
       content: template.htmlContent,
       status: 'pending',
-      event_id: eventId
+      event_id: eventId, // DEPRECATED: Use calendar_google_event_id instead
+      calendar_google_event_id: event.google_event_id // New FK field
     })
 
     if (queueError) {

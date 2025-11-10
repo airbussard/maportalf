@@ -78,16 +78,32 @@ export async function syncGoogleCalendarToDatabase(
 
     // 2. Bulk check which events already exist (load their IDs too)
     const googleEventIds = events.map(e => e.id)
-    const { data: existingEvents } = await supabase
+    console.log(`[Sync] Querying database for ${googleEventIds.length} google_event_ids...`)
+    console.log(`[Sync] Sample Google IDs to search:`, googleEventIds.slice(0, 3))
+
+    const { data: existingEvents, error: fetchError } = await supabase
       .from('calendar_events')
       .select('id, google_event_id')
       .in('google_event_id', googleEventIds)
+
+    if (fetchError) {
+      console.error(`[Sync] Error fetching existing events:`, fetchError)
+      console.error(`[Sync] Error details:`, JSON.stringify(fetchError, null, 2))
+    }
+
+    console.log(`[Sync] Query returned ${existingEvents?.length || 0} events`)
+    if (existingEvents && existingEvents.length > 0) {
+      console.log(`[Sync] Sample existing events:`, existingEvents.slice(0, 3).map((e: any) => ({
+        id: e.id,
+        google_event_id: e.google_event_id
+      })))
+    }
 
     // Create map: google_event_id -> database id
     const existingEventMap = new Map<string, string>(
       (existingEvents || []).map((e: any) => [e.google_event_id, e.id])
     )
-    console.log(`[Sync] Found ${existingEventMap.size} existing events in database`)
+    console.log(`[Sync] Created map with ${existingEventMap.size} existing events`)
 
     // 3. Handle cancelled events first (separate logic)
     const cancelledEvents = events.filter(e => e.status === 'cancelled')
@@ -100,7 +116,7 @@ export async function syncGoogleCalendarToDatabase(
       }
     }
 
-    // 4. Batch-process active events
+    // 4. Batch-process active events - Split into inserts and updates
     const activeEvents = events.filter(e => e.status !== 'cancelled')
     const BATCH_SIZE = 50
     let processed = 0
@@ -108,37 +124,59 @@ export async function syncGoogleCalendarToDatabase(
     for (let i = 0; i < activeEvents.length; i += BATCH_SIZE) {
       const batch = activeEvents.slice(i, i + BATCH_SIZE)
 
-      // Prepare event data for batch
-      const eventDataArray = batch
-        .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap))
-        .filter(data => data !== null) // Skip invalid events
+      // Separate into new events (inserts) and existing events (updates)
+      const newEvents = batch.filter(e => !existingEventMap.has(e.id))
+      const existingEventsToUpdate = batch.filter(e => existingEventMap.has(e.id))
 
-      if (eventDataArray.length > 0) {
+      console.log(`[Sync] Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${newEvents.length} new, ${existingEventsToUpdate.length} updates`)
+
+      // Process NEW events (with id field)
+      if (newEvents.length > 0) {
+        const insertData = newEvents
+          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap, false))
+          .filter(data => data !== null)
+
         try {
-          // Batch UPSERT
-          const { error } = await supabase
+          const { error: insertError } = await supabase
             .from('calendar_events')
-            .upsert(eventDataArray, {
-              onConflict: 'google_event_id',
-              ignoreDuplicates: false
-            })
+            .insert(insertData)
 
-          if (error) {
-            console.error(`[Sync] Batch UPSERT error:`, error)
-            result.errors.push(`Batch ${i}-${i + BATCH_SIZE}: ${error.message}`)
+          if (insertError) {
+            console.error(`[Sync] Batch INSERT error:`, insertError)
+            result.errors.push(`Batch ${i}-${i + BATCH_SIZE} (INSERT): ${insertError.message}`)
           } else {
-            // Count imports vs updates
-            eventDataArray.forEach((eventData: any) => {
-              if (!existingEventMap.has(eventData.google_event_id)) {
-                result.imported++
-              } else {
-                result.updated++
-              }
-            })
+            result.imported += insertData.length
           }
         } catch (error) {
-          console.error(`[Sync] Batch processing error:`, error)
-          result.errors.push(`Batch ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          console.error(`[Sync] Batch INSERT exception:`, error)
+          result.errors.push(`Batch ${i} (INSERT): ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+      }
+
+      // Process EXISTING events (without id field)
+      if (existingEventsToUpdate.length > 0) {
+        const updateData = existingEventsToUpdate
+          .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap, true))
+          .filter(data => data !== null)
+
+        try {
+          // Update each event individually to avoid id conflicts
+          for (const eventData of updateData) {
+            const { error: updateError } = await supabase
+              .from('calendar_events')
+              .update(eventData)
+              .eq('google_event_id', eventData.google_event_id)
+
+            if (updateError) {
+              console.error(`[Sync] UPDATE error for ${eventData.google_event_id}:`, updateError)
+              result.errors.push(`Update ${eventData.google_event_id}: ${updateError.message}`)
+            } else {
+              result.updated++
+            }
+          }
+        } catch (error) {
+          console.error(`[Sync] Batch UPDATE exception:`, error)
+          result.errors.push(`Batch ${i} (UPDATE): ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
       }
 
@@ -216,12 +254,18 @@ async function handleDeletedEvent(
 
 /**
  * Prepare event data from Google Calendar event
- * Returns null for invalid events, otherwise returns EventData object for UPSERT
+ * Returns null for invalid events, otherwise returns EventData object for INSERT or UPDATE
+ *
+ * @param googleEvent - The Google Calendar event
+ * @param userId - The user ID to assign the event to
+ * @param existingEventMap - Map of google_event_id to database id
+ * @param isUpdate - If true, excludes 'id' field (for UPDATE queries)
  */
 function prepareEventData(
   googleEvent: GoogleCalendarEvent,
   userId: string,
-  existingEventMap: Map<string, string>
+  existingEventMap: Map<string, string>,
+  isUpdate: boolean = false
 ): any | null {
   // Skip cancelled events (handled separately by handleDeletedEvent)
   if (googleEvent.status === 'cancelled') {
@@ -292,13 +336,8 @@ function prepareEventData(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
-  // Determine ID: use existing ID for updates, generate new for inserts
-  const existingId = existingEventMap.get(googleEvent.id)
-  const eventId = existingId || crypto.randomUUID()
-
-  // Return prepared event data matching existing schema
-  return {
-    id: eventId, // Use existing ID or generate new UUID
+  // Prepare base event data (without id)
+  const baseEventData = {
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
     event_type: eventType, // 'fi_assignment', 'booking', or 'blocker'
@@ -326,6 +365,20 @@ function prepareEventData(
     last_modified_at: googleEvent.updated,
     updated_at: new Date().toISOString()
   }
+
+  // For INSERT operations, add the id field
+  if (!isUpdate) {
+    const existingId = existingEventMap.get(googleEvent.id)
+    const eventId = existingId || crypto.randomUUID()
+
+    return {
+      id: eventId, // Use existing ID or generate new UUID
+      ...baseEventData
+    }
+  }
+
+  // For UPDATE operations, do NOT include id (prevents FK violations)
+  return baseEventData
 }
 
 /**
