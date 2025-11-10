@@ -260,7 +260,7 @@ export async function createCalendarEvent(eventData: CalendarEventData) {
           recipient_email: eventData.customer_email,
           subject: template.subject,
           body: template.plainText,
-          content: (eventData as any).confirmation_email_content || template.htmlContent,
+          content: template.htmlContent, // Always use HTML template (not UI editor content)
           status: 'pending',
           event_id: data.id, // DEPRECATED: Use calendar_google_event_id instead
           calendar_google_event_id: data.google_event_id // New FK field
