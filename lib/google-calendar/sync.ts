@@ -76,15 +76,18 @@ export async function syncGoogleCalendarToDatabase(
 
     console.log(`[Sync] Using user ID: ${cachedUserId}`)
 
-    // 2. Bulk check which events already exist
+    // 2. Bulk check which events already exist (load their IDs too)
     const googleEventIds = events.map(e => e.id)
     const { data: existingEvents } = await supabase
       .from('calendar_events')
-      .select('google_event_id')
+      .select('id, google_event_id')
       .in('google_event_id', googleEventIds)
 
-    const existingEventIds = new Set(existingEvents?.map((e: any) => e.google_event_id) || [])
-    console.log(`[Sync] Found ${existingEventIds.size} existing events in database`)
+    // Create map: google_event_id -> database id
+    const existingEventMap = new Map<string, string>(
+      (existingEvents || []).map((e: any) => [e.google_event_id, e.id])
+    )
+    console.log(`[Sync] Found ${existingEventMap.size} existing events in database`)
 
     // 3. Handle cancelled events first (separate logic)
     const cancelledEvents = events.filter(e => e.status === 'cancelled')
@@ -107,7 +110,7 @@ export async function syncGoogleCalendarToDatabase(
 
       // Prepare event data for batch
       const eventDataArray = batch
-        .map(googleEvent => prepareEventData(googleEvent, cachedUserId!))
+        .map(googleEvent => prepareEventData(googleEvent, cachedUserId!, existingEventMap))
         .filter(data => data !== null) // Skip invalid events
 
       if (eventDataArray.length > 0) {
@@ -126,7 +129,7 @@ export async function syncGoogleCalendarToDatabase(
           } else {
             // Count imports vs updates
             eventDataArray.forEach((eventData: any) => {
-              if (!existingEventIds.has(eventData.google_event_id)) {
+              if (!existingEventMap.has(eventData.google_event_id)) {
                 result.imported++
               } else {
                 result.updated++
@@ -217,7 +220,8 @@ async function handleDeletedEvent(
  */
 function prepareEventData(
   googleEvent: GoogleCalendarEvent,
-  userId: string
+  userId: string,
+  existingEventMap: Map<string, string>
 ): any | null {
   // Skip cancelled events (handled separately by handleDeletedEvent)
   if (googleEvent.status === 'cancelled') {
@@ -288,9 +292,13 @@ function prepareEventData(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
+  // Determine ID: use existing ID for updates, generate new for inserts
+  const existingId = existingEventMap.get(googleEvent.id)
+  const eventId = existingId || crypto.randomUUID()
+
   // Return prepared event data matching existing schema
   return {
-    // id is auto-generated (UUID) - don't set it manually to avoid FK conflicts with email_queue
+    id: eventId, // Use existing ID or generate new UUID
     user_id: userId, // Required by schema
     google_event_id: googleEvent.id,
     event_type: eventType, // 'fi_assignment', 'booking', or 'blocker'

@@ -53,25 +53,31 @@ export async function generate2FACode(
   headers?: Headers
 ): Promise<ActionResponse<{ codeId: string }>> {
   try {
+    console.log('[2FA] Starting code generation for:', email)
     const supabase = await createClient()
     const adminSupabase = createAdminClient()
 
     // Get user by email
+    console.log('[2FA] Fetching users from admin API...')
     const { data: { users }, error: authError } = await adminSupabase.auth.admin.listUsers()
 
     if (authError) {
-      console.error('Error listing users:', authError)
+      console.error('[2FA] Error listing users:', authError)
       return { success: false, error: 'Authentifizierungsfehler' }
     }
 
     const user = users.find(u => u.email === email)
 
     if (!user) {
+      console.log('[2FA] User not found - returning placeholder')
       // Don't reveal if user exists or not for security
       return { success: true, data: { codeId: 'placeholder' } }
     }
 
+    console.log('[2FA] User found:', user.id)
+
     // Check rate limiting: max 5 codes per hour
+    console.log('[2FA] Checking rate limiting...')
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { count: recentCodesCount } = await adminSupabase
       .from('two_factor_codes')
@@ -79,7 +85,10 @@ export async function generate2FACode(
       .eq('user_id', user.id)
       .gte('created_at', oneHourAgo)
 
+    console.log('[2FA] Recent codes count:', recentCodesCount)
+
     if (recentCodesCount && recentCodesCount >= 5) {
+      console.log('[2FA] Rate limit exceeded')
       return {
         success: false,
         error: 'Zu viele Anfragen. Bitte warten Sie eine Stunde.'
@@ -99,6 +108,7 @@ export async function generate2FACode(
     const { ipAddress, userAgent } = getClientInfo(headers)
 
     // Insert code into database
+    console.log('[2FA] Inserting code into database...')
     const { data: codeData, error: insertError } = await adminSupabase
       .from('two_factor_codes')
       .insert({
@@ -112,9 +122,11 @@ export async function generate2FACode(
       .single()
 
     if (insertError) {
-      console.error('Error inserting 2FA code:', insertError)
+      console.error('[2FA] Error inserting code:', insertError)
       return { success: false, error: 'Fehler beim Generieren des Codes' }
     }
+
+    console.log('[2FA] Code inserted successfully:', codeData.id)
 
     // Generate email content
     const htmlContent = generateTwoFactorEmailTemplate({
@@ -132,6 +144,7 @@ export async function generate2FACode(
     })
 
     // Insert into email queue
+    console.log('[2FA] Inserting email into queue...')
     const { error: queueError } = await adminSupabase
       .from('email_queue')
       .insert({
@@ -145,9 +158,12 @@ export async function generate2FACode(
       })
 
     if (queueError) {
-      console.error('Error queueing 2FA email:', queueError)
+      console.error('[2FA] Error queueing email:', queueError)
+      console.error('[2FA] Queue error details:', JSON.stringify(queueError, null, 2))
       return { success: false, error: 'Fehler beim Versenden der E-Mail' }
     }
+
+    console.log('[2FA] ✅ Email queued successfully')
 
     return {
       success: true,
