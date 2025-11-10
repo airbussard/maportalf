@@ -86,11 +86,10 @@ export function LoginForm() {
         // TODO: Re-enable when email worker is stable and 2FA tables are verified
         // ========================================
 
-        // Direct login without 2FA (TEMPORARY)
-        console.log('✅ Login successful - redirecting to dashboard (2FA disabled)')
-        setLoading(false)
-        router.push('/dashboard')
-        router.refresh()
+        // Direct login without 2FA (TEMPORARY) - Show loader animation
+        console.log('✅ Login successful - showing loader animation')
+        setShowLoader(true)
+        // handleLoaderComplete() will be called after animation finishes
 
         /* DISABLED 2FA CODE - Re-enable later:
 
