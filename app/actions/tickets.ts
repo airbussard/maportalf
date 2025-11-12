@@ -324,7 +324,9 @@ export async function createTicket(formData: FormData) {
         storagePath: `${ticket.id}/${Date.now()}_${att.filename}`
       }))
 
-      await supabase
+      // Use service role client to bypass RLS for email queue
+      const adminSupabase = createAdminClient()
+      await adminSupabase
         .from('email_queue')
         .insert({
           type: 'ticket',
@@ -404,7 +406,9 @@ export async function updateTicket(id: string, data: {
           const userName = `${assignedUser.first_name || ''} ${assignedUser.last_name || ''}`.trim() || assignedUser.email
 
           // Queue email - HTML template is generated in email-mailer.ts
-          await supabase.from('email_queue').insert({
+          // Use service role client to bypass RLS for email queue
+          const adminSupabase = createAdminClient()
+          await adminSupabase.from('email_queue').insert({
             type: 'ticket_assignment',
             recipient: assignedUser.email,
             recipient_email: assignedUser.email,
@@ -527,7 +531,9 @@ export async function addMessage(ticketId: string, content: string, isInternal: 
 
           // Queue email if ticket was created from email
           if (ticket.created_from_email && sender) {
-            await supabase
+            // Use service role client to bypass RLS for email queue
+            const adminSupabase = createAdminClient()
+            await adminSupabase
               .from('email_queue')
               .insert({
                 type: 'ticket_reply',
