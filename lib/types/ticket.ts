@@ -90,4 +90,7 @@ export interface TicketFilters {
   page?: number
   search?: string
   tags?: string[] // Array of tag IDs for filtering
+  date_preset?: 'today' | 'week' | 'month' | 'custom' // Quick date filter presets
+  created_from?: string // ISO date string for range start
+  created_to?: string // ISO date string for range end
 }

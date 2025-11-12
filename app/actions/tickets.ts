@@ -82,6 +82,17 @@ export async function getTickets(filters: TicketFilters = {}) {
       }
     }
 
+    // Apply date range filter
+    if (filters.created_from) {
+      query = query.gte('created_at', filters.created_from)
+    }
+    if (filters.created_to) {
+      // Add 1 day to include full end date (23:59:59)
+      const endDate = new Date(filters.created_to)
+      endDate.setDate(endDate.getDate() + 1)
+      query = query.lt('created_at', endDate.toISOString())
+    }
+
     const { data, error, count } = await query
 
     if (error) {
