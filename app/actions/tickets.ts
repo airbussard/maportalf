@@ -755,6 +755,80 @@ export async function bulkDeleteTickets(ticketIds: string[]) {
 }
 
 /**
+ * Mark a single ticket as spam and optionally block the sender email
+ */
+export async function markAsSpam(ticketId: string, blockEmail: boolean = false) {
+  try {
+    const supabase = await createClient()
+    const adminSupabase = createAdminClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check user role (Manager or Admin only)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || (profile.role !== 'manager' && profile.role !== 'admin')) {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    // Get ticket to extract email address
+    const { data: ticket } = await supabase
+      .from('tickets')
+      .select('created_from_email')
+      .eq('id', ticketId)
+      .single()
+
+    if (!ticket) {
+      return { success: false, error: 'Ticket nicht gefunden' }
+    }
+
+    // Mark ticket as spam and close it
+    const { error: updateError } = await supabase
+      .from('tickets')
+      .update({
+        is_spam: true,
+        status: 'closed'
+      })
+      .eq('id', ticketId)
+
+    if (updateError) {
+      console.error('Mark as spam error:', updateError)
+      return { success: false, error: 'Fehler beim Markieren als Spam' }
+    }
+
+    // Optionally block email address
+    if (blockEmail && ticket.created_from_email) {
+      const { error: blacklistError } = await adminSupabase
+        .from('email_blacklist')
+        .insert({
+          email_address: ticket.created_from_email,
+          blocked_by: user.id,
+          reason: 'Automatisch blockiert von Spam-Button',
+          created_from_ticket: ticketId
+        })
+
+      if (blacklistError) {
+        // Don't fail the whole operation if blacklist fails
+        console.error('Failed to add to blacklist:', blacklistError)
+      }
+    }
+
+    revalidatePath('/tickets')
+    return { success: true }
+  } catch (error) {
+    console.error('Mark as spam error:', error)
+    return { success: false, error: 'Ein Fehler ist aufgetreten' }
+  }
+}
+
+/**
  * Get count of open tickets (for dashboard widget)
  * Returns count of tickets with status 'open' or 'in_progress' that are not spam
  */

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Ticket } from '@/lib/types/ticket'
 import { StatusBadge } from '@/components/tickets/status-badge'
 import { PriorityBadge } from '@/components/tickets/priority-badge'
@@ -7,10 +8,13 @@ import { TagPill } from '@/components/tickets/tag-pill'
 import { formatDistanceToNow, format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import Link from 'next/link'
-import { Eye } from 'lucide-react'
+import { Eye, Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { stripHtmlTags } from '@/lib/utils/html'
+import { SpamDialog } from '@/components/tickets/spam-dialog'
+import { markAsSpam } from '@/app/actions/tickets'
+import { toast } from 'sonner'
 
 export function TicketRow({
   ticket,
@@ -23,6 +27,9 @@ export function TicketRow({
   isSelected?: boolean
   onSelect?: (ticketId: string, checked: boolean) => void
 }) {
+  const [showSpamDialog, setShowSpamDialog] = useState(false)
+  const [isMarkingSpam, setIsMarkingSpam] = useState(false)
+
   const ticketNumber = ticket.ticket_number
     ? `TICKET-${ticket.ticket_number.toString().padStart(6, '0')}`
     : `TICKET-${ticket.id.substring(0, 8)}`
@@ -41,6 +48,21 @@ export function TicketRow({
       ? strippedText.slice(0, 100) + '...'
       : strippedText
     : 'Keine Beschreibung'
+
+  const handleMarkAsSpam = async (blockEmail: boolean) => {
+    setIsMarkingSpam(true)
+    setShowSpamDialog(false)
+
+    const result = await markAsSpam(ticket.id, blockEmail)
+
+    if (result.success) {
+      toast.success('Ticket als Spam markiert')
+    } else {
+      toast.error(result.error || 'Fehler beim Markieren als Spam')
+    }
+
+    setIsMarkingSpam(false)
+  }
 
   return (
     <div className="p-4 hover:bg-muted/50 transition-colors">
@@ -96,8 +118,28 @@ export function TicketRow({
               Ansehen
             </Button>
           </Link>
+          {isManagerOrAdmin && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowSpamDialog(true)}
+              disabled={isMarkingSpam}
+            >
+              <Flag className="w-4 h-4 mr-2" />
+              Spam
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Spam Dialog */}
+      <SpamDialog
+        open={showSpamDialog}
+        onOpenChange={setShowSpamDialog}
+        onConfirm={handleMarkAsSpam}
+        ticketEmail={ticket.created_from_email}
+        ticketSubject={ticket.subject}
+      />
     </div>
   )
 }
