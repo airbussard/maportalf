@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 interface WorkRequestEmailOptions {
   requestId: string
@@ -19,7 +19,7 @@ interface WorkRequestEmailOptions {
  */
 export async function sendWorkRequestEmail(options: WorkRequestEmailOptions): Promise<boolean> {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Fetch SMTP settings from database
     const { data: settings } = await supabase
