@@ -15,20 +15,26 @@ import { stripHtmlTags } from '@/lib/utils/html'
 import { SpamDialog } from '@/components/tickets/spam-dialog'
 import { markAsSpam } from '@/app/actions/tickets'
 import { toast } from 'sonner'
+import { buildTicketDetailUrl } from '@/lib/utils/navigation'
 
 export function TicketRow({
   ticket,
   isManagerOrAdmin,
   isSelected,
-  onSelect
+  onSelect,
+  searchParams
 }: {
   ticket: Ticket
   isManagerOrAdmin: boolean
   isSelected?: boolean
   onSelect?: (ticketId: string, checked: boolean) => void
+  searchParams: URLSearchParams
 }) {
   const [showSpamDialog, setShowSpamDialog] = useState(false)
   const [isMarkingSpam, setIsMarkingSpam] = useState(false)
+
+  // Build ticket detail URL with return state
+  const ticketDetailUrl = buildTicketDetailUrl(ticket.id, searchParams)
 
   const ticketNumber = ticket.ticket_number
     ? `TICKET-${ticket.ticket_number.toString().padStart(6, '0')}`
@@ -85,7 +91,7 @@ export function TicketRow({
           </div>
 
           <Link
-            href={`/tickets/${ticket.id}`}
+            href={ticketDetailUrl}
             className="text-base font-medium hover:underline block mb-2"
           >
             {ticket.subject}
@@ -112,7 +118,7 @@ export function TicketRow({
         </div>
 
         <div className="flex md:flex-col gap-2">
-          <Link href={`/tickets/${ticket.id}`}>
+          <Link href={ticketDetailUrl}>
             <Button variant="outline" size="sm">
               <Eye className="w-4 h-4 mr-2" />
               Ansehen

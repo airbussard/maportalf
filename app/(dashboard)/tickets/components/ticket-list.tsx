@@ -172,6 +172,7 @@ export function TicketList({
                 isManagerOrAdmin={isManagerOrAdmin}
                 isSelected={selectedTickets.has(ticket.id)}
                 onSelect={handleSelectTicket}
+                searchParams={searchParams}
               />
             ))}
           </div>
