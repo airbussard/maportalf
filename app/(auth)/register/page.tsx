@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { CheckCircle } from 'lucide-react'
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -18,6 +17,7 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,18 +54,69 @@ export default function RegisterPage() {
         return
       }
 
-      if (data.session) {
-        router.push('/dashboard')
-        router.refresh()
+      if (data.user) {
+        // Set user as inactive - requires admin activation
+        // Wait a moment for the profile trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ is_active: false })
+          .eq('id', data.user.id)
+
+        if (updateError) {
+          console.error('Failed to set user inactive:', updateError)
+          // Continue anyway - admin can fix this
+        }
+
+        // Sign out user immediately - they need admin approval
+        await supabase.auth.signOut()
+
+        // Show success message
+        setSuccess(true)
+        setLoading(false)
       } else {
-        // Email confirmation required
-        setError('Bitte bestätigen Sie Ihre Email-Adresse')
+        // No user returned - something went wrong
+        setError('Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.')
         setLoading(false)
       }
     } catch (err) {
       setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
       setLoading(false)
     }
+  }
+
+  // Success state - show confirmation message
+  if (success) {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+          </div>
+          <CardTitle className="text-2xl">Registrierung erfolgreich</CardTitle>
+          <CardDescription>
+            Ihr Konto wurde erstellt
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-center">
+          <p className="text-muted-foreground">
+            Ihre Registrierung wurde empfangen.
+          </p>
+          <p className="text-muted-foreground">
+            Ein Administrator wird Ihren Zugang in Kürze freischalten.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Sie werden per E-Mail benachrichtigt, sobald Ihr Konto aktiviert wurde.
+          </p>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Link href="/login">
+            <Button variant="outline">Zurück zur Anmeldung</Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    )
   }
 
   return (
@@ -148,6 +199,10 @@ export default function RegisterPage() {
               disabled={loading}
             />
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            Nach der Registrierung muss Ihr Konto von einem Administrator freigeschaltet werden.
+          </p>
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4">

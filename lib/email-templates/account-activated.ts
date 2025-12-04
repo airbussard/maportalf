@@ -1,55 +1,13 @@
 /**
- * Send Employee Invitation Email
+ * Account Activated Email Template
  *
- * Sends a welcome email with login credentials to newly created employees
+ * Sent when an admin activates a self-registered user account
  */
 
-import { createClient } from '@/lib/supabase/server'
-
-export async function sendEmployeeInvitationEmail({
-  email,
-  name,
-  tempPassword,
-  loginUrl = 'https://flighthour.getemergence.com/login'
-}: {
-  email: string
-  name: string
-  tempPassword: string
-  loginUrl?: string
-}) {
-  const supabase = await createClient()
-
-  const subject = "Willkommen bei FLIGHTHOUR - Ihr Zugang zum Mitarbeiterportal"
-
-  const htmlBody = generateHtmlContent(name, email, tempPassword, loginUrl)
-  const textBody = generateTextContent(name, email, tempPassword, loginUrl)
-
-  // Insert into email_queue table with correct column names
-  const { error } = await supabase
-    .from('email_queue')
-    .insert({
-      type: 'welcome',                 // Email type (must be in CHECK constraint)
-      recipient: email,                // Legacy compatibility
-      recipient_email: email,          // Correct column name
-      subject: subject,
-      body: htmlBody,                  // Legacy compatibility
-      content: htmlBody,               // Correct column name
-      status: 'pending',
-      created_at: new Date().toISOString()
-    })
-
-  if (error) {
-    console.error('Failed to queue invitation email:', error)
-    throw new Error('E-Mail konnte nicht in die Warteschlange eingereiht werden')
-  }
-
-  return { success: true }
-}
-
-/**
- * Generate HTML email content matching ticket email design
- */
-function generateHtmlContent(name: string, email: string, tempPassword: string, loginUrl: string): string {
+export function generateAccountActivatedEmail(
+  name: string,
+  loginUrl: string = 'https://flighthour.getemergence.com/login'
+): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -92,41 +50,23 @@ function generateHtmlContent(name: string, email: string, tempPassword: string, 
       margin: 0 0 15px 0;
       color: #333;
     }
-    .credentials-box {
-      background: #f9f9f9;
+    .success-box {
+      background: #f0fdf4;
       padding: 20px;
       border-radius: 6px;
       margin: 25px 0;
-      border-left: 3px solid #fbb928;
+      border-left: 3px solid #22c55e;
+      text-align: center;
     }
-    .credentials-box h3 {
-      margin: 0 0 15px 0;
-      color: #121212;
+    .success-box h3 {
+      margin: 0 0 10px 0;
+      color: #166534;
       font-weight: 600;
-      font-size: 16px;
+      font-size: 18px;
     }
-    .credential-row {
-      margin: 10px 0;
-      font-size: 14px;
-      color: #333;
-    }
-    .credential-row strong {
-      color: #121212;
-      font-weight: 500;
-      display: inline-block;
-      min-width: 140px;
-    }
-    .password-code {
-      background-color: #fff;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-family: 'Courier New', monospace;
-      font-size: 15px;
-      color: #121212;
-      border: 1px solid #e0e0e0;
-      display: inline-block;
-      margin-top: 5px;
-      font-weight: 600;
+    .success-box p {
+      margin: 0;
+      color: #166534;
     }
     .cta-button {
       text-align: center;
@@ -176,25 +116,16 @@ function generateHtmlContent(name: string, email: string, tempPassword: string, 
     <div class="content">
       <p>Hallo ${name},</p>
 
-      <p>Sie wurden zum FLIGHTHOUR Mitarbeiterportal eingeladen. Willkommen im Team!</p>
-
-      <div class="credentials-box">
-        <h3>Ihre Zugangsdaten:</h3>
-        <div class="credential-row">
-          <strong>E-Mail-Adresse:</strong><br>
-          ${email}
-        </div>
-        <div class="credential-row">
-          <strong>Temporäres Passwort:</strong><br>
-          <span class="password-code">${tempPassword}</span>
-        </div>
+      <div class="success-box">
+        <h3>Ihr Konto wurde freigeschaltet!</h3>
+        <p>Sie können sich jetzt im FLIGHTHOUR Mitarbeiterportal anmelden.</p>
       </div>
 
       <div class="cta-button">
         <a href="${loginUrl}">Jetzt anmelden</a>
       </div>
 
-      <p>Nach der Anmeldung können Sie Ihre persönlichen Daten vervollständigen und bei Bedarf Ihr Passwort ändern.</p>
+      <p>Verwenden Sie Ihre bei der Registrierung angegebene E-Mail-Adresse und Ihr Passwort, um sich anzumelden.</p>
 
       <p>Bei Fragen wenden Sie sich bitte an Ihren Administrator.</p>
 
@@ -222,21 +153,19 @@ function generateHtmlContent(name: string, email: string, tempPassword: string, 
 </html>`
 }
 
-/**
- * Generate plain text email content
- */
-function generateTextContent(name: string, email: string, tempPassword: string, loginUrl: string): string {
+export function generateAccountActivatedPlainText(
+  name: string,
+  loginUrl: string = 'https://flighthour.getemergence.com/login'
+): string {
   return `Hallo ${name},
 
-Sie wurden zum FLIGHTHOUR Mitarbeiterportal eingeladen. Willkommen im Team!
+Ihr Konto wurde freigeschaltet!
 
-Ihre Zugangsdaten:
-E-Mail-Adresse: ${email}
-Temporäres Passwort: ${tempPassword}
+Sie können sich jetzt im FLIGHTHOUR Mitarbeiterportal anmelden.
 
 Bitte melden Sie sich hier an: ${loginUrl}
 
-Nach der Anmeldung können Sie Ihre persönlichen Daten vervollständigen und bei Bedarf Ihr Passwort ändern.
+Verwenden Sie Ihre bei der Registrierung angegebene E-Mail-Adresse und Ihr Passwort, um sich anzumelden.
 
 Bei Fragen wenden Sie sich bitte an Ihren Administrator.
 

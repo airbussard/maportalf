@@ -139,6 +139,18 @@ export async function GET(request: NextRequest) {
             plainTextContent: email.body || email.content,
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined
           })
+        } else if (email.type === 'welcome') {
+          // Welcome/Invitation email - no ticket required
+          console.log('[Email Queue] Sending welcome/invitation email')
+
+          const { sendBookingConfirmationEmail } = await import('@/lib/email/ticket-mailer')
+          emailSent = await sendBookingConfirmationEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            htmlContent: email.content,
+            plainTextContent: email.body || email.content,
+            attachments: []
+          })
         } else {
           // Ticket-related emails - need ticket data
           if (!email.ticket) {

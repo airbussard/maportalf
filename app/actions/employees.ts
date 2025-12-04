@@ -190,6 +190,39 @@ export async function toggleEmployeeStatus(employeeId: string, isActive: boolean
       return { success: false, error: error.message }
     }
 
+    // Send activation email when activating a user
+    if (isActive) {
+      try {
+        // Get employee data for the email
+        const { data: employee } = await adminSupabase
+          .from('profiles')
+          .select('email, first_name, last_name')
+          .eq('id', employeeId)
+          .single()
+
+        if (employee) {
+          const { generateAccountActivatedEmail } = await import('@/lib/email-templates/account-activated')
+          const name = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Mitarbeiter'
+          const htmlContent = generateAccountActivatedEmail(name)
+
+          // Queue activation email
+          await adminSupabase.from('email_queue').insert({
+            type: 'welcome',
+            recipient: employee.email,
+            recipient_email: employee.email,
+            subject: 'Ihr FLIGHTHOUR Konto wurde freigeschaltet',
+            body: htmlContent,
+            content: htmlContent,
+            status: 'pending',
+            created_at: new Date().toISOString()
+          })
+        }
+      } catch (emailError) {
+        console.error('Error sending activation email:', emailError)
+        // Don't fail the status update if email fails
+      }
+    }
+
     revalidatePath('/mitarbeiter')
     return { success: true }
   } catch (error: any) {
@@ -424,8 +457,11 @@ export async function resendInvitationEmail(employeeId: string): Promise<ActionR
       return { success: false, error: 'Nur Administratoren können Einladungen versenden' }
     }
 
+    // Use Admin Client to bypass RLS (employee might be inactive)
+    const adminSupabase = createAdminClient()
+
     // Get employee data
-    const { data: employee, error: employeeError } = await supabase
+    const { data: employee, error: employeeError } = await adminSupabase
       .from('profiles')
       .select('email, first_name, last_name')
       .eq('id', employeeId)
@@ -437,9 +473,6 @@ export async function resendInvitationEmail(employeeId: string): Promise<ActionR
 
     // Generate NEW temporary password
     const tempPassword = `Flighthour${new Date().getFullYear()}!`
-
-    // Update password via Admin API
-    const adminSupabase = createAdminClient()
     const { error: updateError } = await adminSupabase.auth.admin.updateUserById(
       employeeId,
       { password: tempPassword }
