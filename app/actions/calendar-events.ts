@@ -675,6 +675,14 @@ export async function cancelCalendarEvent(
         console.error('Failed to delete from Google Calendar:', googleError)
         // Continue with cancellation even if Google delete fails
       }
+
+      // Clear email_queue FK references BEFORE setting google_event_id to null
+      // This prevents FK constraint violation
+      const adminSupabase = createAdminClient()
+      await adminSupabase
+        .from('email_queue')
+        .update({ calendar_google_event_id: null })
+        .eq('calendar_google_event_id', existingEvent.google_event_id)
     }
 
     // Update status to cancelled in Supabase
