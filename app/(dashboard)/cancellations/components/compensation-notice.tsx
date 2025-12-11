@@ -13,8 +13,8 @@ export function CompensationNotice() {
       </AlertTitle>
       <AlertDescription className="text-amber-700 dark:text-amber-300 mt-2 space-y-3">
         <p>
-          Bei Absage durch den Kunden besteht ein Anspruch auf Schadensersatz
-          in Höhe von <strong>50,00 EUR</strong> gemäß unseren AGB.
+          Bei Absage durch den Kunden <strong>innerhalb von 7 Tagen</strong> vor dem Termin
+          besteht ein Anspruch auf Schadensersatz in Höhe von <strong>50,00 EUR</strong> gemäß unseren AGB.
         </p>
         <p className="flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
