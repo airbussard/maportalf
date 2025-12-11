@@ -55,6 +55,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
   const [isCancelling, setIsCancelling] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState<'cancelled_by_us' | 'cancelled_by_customer'>('cancelled_by_us')
+  const [cancelNote, setCancelNote] = useState('')
   const [employees, setEmployees] = useState<any[]>([])
 
   // Email confirmation state
@@ -446,10 +447,11 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
 
     setIsCancelling(true)
     try {
-      const result = await cancelCalendarEvent(event.id, cancelReason)
+      const result = await cancelCalendarEvent(event.id, cancelReason, cancelNote || undefined)
       if (result.success) {
         toast.success('Termin wurde abgesagt')
         setShowCancelDialog(false)
+        setCancelNote('') // Reset note
         onRefresh?.()
         router.refresh()
         onOpenChange(false)
@@ -1168,25 +1170,40 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            <Label className="text-sm font-medium mb-3 block">Grund der Absage</Label>
-            <RadioGroup
-              value={cancelReason}
-              onValueChange={(value) => setCancelReason(value as 'cancelled_by_us' | 'cancelled_by_customer')}
-            >
-              <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors">
-                <RadioGroupItem value="cancelled_by_us" id="cancelled_by_us" />
-                <Label htmlFor="cancelled_by_us" className="font-normal cursor-pointer flex-1">
-                  Von uns abgesagt
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors mt-2">
-                <RadioGroupItem value="cancelled_by_customer" id="cancelled_by_customer" />
-                <Label htmlFor="cancelled_by_customer" className="font-normal cursor-pointer flex-1">
-                  Vom Kunden abgesagt
-                </Label>
-              </div>
-            </RadioGroup>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-3 block">Grund der Absage</Label>
+              <RadioGroup
+                value={cancelReason}
+                onValueChange={(value) => setCancelReason(value as 'cancelled_by_us' | 'cancelled_by_customer')}
+              >
+                <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors">
+                  <RadioGroupItem value="cancelled_by_us" id="cancelled_by_us" />
+                  <Label htmlFor="cancelled_by_us" className="font-normal cursor-pointer flex-1">
+                    Von uns abgesagt
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors mt-2">
+                  <RadioGroupItem value="cancelled_by_customer" id="cancelled_by_customer" />
+                  <Label htmlFor="cancelled_by_customer" className="font-normal cursor-pointer flex-1">
+                    Vom Kunden abgesagt
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="cancel_note" className="text-sm font-medium mb-2 block">
+                Begründung (optional)
+              </Label>
+              <Textarea
+                id="cancel_note"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder="z.B. Kunde hat kurzfristig abgesagt wegen Krankheit..."
+                rows={3}
+              />
+            </div>
           </div>
 
           <DialogFooter>

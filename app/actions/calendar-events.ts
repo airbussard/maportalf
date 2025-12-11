@@ -645,7 +645,8 @@ export async function getEmployees() {
  */
 export async function cancelCalendarEvent(
   id: string,
-  reason: 'cancelled_by_us' | 'cancelled_by_customer'
+  reason: 'cancelled_by_us' | 'cancelled_by_customer',
+  note?: string
 ) {
   const supabase = await createClient()
 
@@ -693,6 +694,7 @@ export async function cancelCalendarEvent(
         cancelled_at: new Date().toISOString(),
         cancelled_by: user.id,
         cancellation_reason: reason,
+        cancellation_note: note || null,
         google_event_id: null, // Clear Google Event ID since it's deleted
         sync_status: 'synced',
         last_modified_at: new Date().toISOString()

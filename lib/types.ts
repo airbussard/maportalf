@@ -109,6 +109,7 @@ export type CalendarEvent = {
   cancelled_at: string | null
   cancelled_by: string | null
   cancellation_reason: CancellationReason | null
+  cancellation_note: string | null
   created_at: string
   updated_at: string
 }

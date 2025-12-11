@@ -47,6 +47,7 @@ import { toast } from 'sonner'
 import { permanentlyDeleteEvent } from '@/app/actions/calendar-events'
 import { RescheduleDialog } from './reschedule-dialog'
 import { CompensationNotice } from './compensation-notice'
+import { EventDetailDialog } from './event-detail-dialog'
 
 interface CancelledEvent {
   id: string
@@ -61,9 +62,12 @@ interface CancelledEvent {
   attendee_count: number | null
   location: string | null
   remarks: string | null
+  has_video_recording?: boolean
+  on_site_payment_amount?: number | null
   cancelled_at: string
   cancelled_by: string | null
   cancellation_reason: 'cancelled_by_us' | 'cancelled_by_customer'
+  cancellation_note?: string | null
   canceller_name?: string
 }
 
@@ -77,6 +81,7 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [rescheduleEvent, setRescheduleEvent] = useState<CancelledEvent | null>(null)
+  const [detailEvent, setDetailEvent] = useState<CancelledEvent | null>(null)
 
   const filteredEvents = events.filter(event => {
     if (filter === 'all') return true
@@ -164,7 +169,11 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
             </TableHeader>
             <TableBody>
               {filteredEvents.map((event) => (
-                <TableRow key={event.id}>
+                <TableRow
+                  key={event.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => setDetailEvent(event)}
+                >
                   {/* Date */}
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -218,11 +227,18 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
 
                   {/* Reason */}
                   <TableCell>
-                    <Badge
-                      variant={event.cancellation_reason === 'cancelled_by_customer' ? 'destructive' : 'secondary'}
-                    >
-                      {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
-                    </Badge>
+                    <div className="space-y-1">
+                      <Badge
+                        variant={event.cancellation_reason === 'cancelled_by_customer' ? 'destructive' : 'secondary'}
+                      >
+                        {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
+                      </Badge>
+                      {event.cancellation_note && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]">
+                          {event.cancellation_note}
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
 
                   {/* Cancelled At */}
@@ -246,7 +262,10 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setRescheduleEvent(event)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setRescheduleEvent(event)
+                        }}
                       >
                         <CalendarPlus className="h-4 w-4 mr-1" />
                         Neues Datum
@@ -254,7 +273,10 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => setDeleteEventId(event.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteEventId(event.id)
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -302,6 +324,13 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
         event={rescheduleEvent}
         open={!!rescheduleEvent}
         onOpenChange={(open) => !open && setRescheduleEvent(null)}
+      />
+
+      {/* Event Detail Dialog */}
+      <EventDetailDialog
+        event={detailEvent}
+        open={!!detailEvent}
+        onOpenChange={(open) => !open && setDetailEvent(null)}
       />
     </div>
   )
