@@ -77,3 +77,38 @@ export type WorkRequest = {
   created_at: string
   updated_at: string
 }
+
+export type CancellationReason = 'cancelled_by_us' | 'cancelled_by_customer'
+
+export type CalendarEvent = {
+  id: string
+  google_event_id: string | null
+  event_type: 'booking' | 'fi_assignment' | 'blocker'
+  title: string | null
+  customer_first_name: string | null
+  customer_last_name: string | null
+  customer_email: string | null
+  customer_phone: string | null
+  start_time: string
+  end_time: string
+  duration: number | null
+  attendee_count: number | null
+  location: string | null
+  remarks: string | null
+  status: 'pending' | 'confirmed' | 'cancelled'
+  sync_status: 'pending' | 'synced' | 'error'
+  is_all_day: boolean
+  assigned_instructor_id: string | null
+  assigned_instructor_name: string | null
+  assigned_instructor_number: string | null
+  actual_work_start_time: string | null
+  actual_work_end_time: string | null
+  request_id: string | null
+  has_video_recording: boolean
+  on_site_payment_amount: number | null
+  cancelled_at: string | null
+  cancelled_by: string | null
+  cancellation_reason: CancellationReason | null
+  created_at: string
+  updated_at: string
+}

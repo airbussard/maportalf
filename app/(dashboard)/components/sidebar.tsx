@@ -15,6 +15,7 @@ import {
   CalendarClock,
   CalendarCheck,
   Calendar,
+  CalendarX2,
   BarChart3,
   LogOut,
   FileText,
@@ -93,6 +94,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/kalender',
           label: 'Kalender',
           icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          href: '/cancellations',
+          label: 'Absagen',
+          icon: <CalendarX2 className="w-5 h-5" />,
         },
         {
           href: '/tickets',
@@ -243,7 +249,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.106
+            Version 2.107
           </p>
         </div>
       </aside>

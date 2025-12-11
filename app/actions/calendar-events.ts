@@ -56,6 +56,7 @@ export async function getCalendarEvents(
   let query = supabase
     .from('calendar_events')
     .select('*')
+    .neq('status', 'cancelled') // Exclude cancelled events from calendar view
     .order('start_time', { ascending: true })
     .limit(5000) // Explicit limit to override Supabase default of 1000
 
@@ -636,6 +637,317 @@ export async function getEmployees() {
   }
 
   return data || []
+}
+
+/**
+ * Cancel a calendar event (soft delete)
+ * Removes from Google Calendar but keeps in database with cancelled status
+ */
+export async function cancelCalendarEvent(
+  id: string,
+  reason: 'cancelled_by_us' | 'cancelled_by_customer'
+) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    // Get existing event
+    const { data: existingEvent, error: fetchError } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !existingEvent) {
+      throw new Error('Calendar event not found')
+    }
+
+    // Delete from Google Calendar if google_event_id exists
+    if (existingEvent.google_event_id) {
+      try {
+        await deleteGoogleCalendarEvent(existingEvent.google_event_id)
+      } catch (googleError) {
+        console.error('Failed to delete from Google Calendar:', googleError)
+        // Continue with cancellation even if Google delete fails
+      }
+    }
+
+    // Update status to cancelled in Supabase
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user.id,
+        cancellation_reason: reason,
+        google_event_id: null, // Clear Google Event ID since it's deleted
+        sync_status: 'synced',
+        last_modified_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to cancel calendar event: ${error.message}`)
+    }
+
+    // Reverse sync: If this was a request-generated FI event, withdraw the request
+    if (existingEvent.request_id && existingEvent.event_type === 'fi_assignment') {
+      try {
+        const { data: workRequest } = await supabase
+          .from('work_requests')
+          .select('status')
+          .eq('id', existingEvent.request_id)
+          .single()
+
+        if (workRequest && workRequest.status === 'approved') {
+          await supabase
+            .from('work_requests')
+            .update({
+              status: 'withdrawn',
+              calendar_event_id: null
+            })
+            .eq('id', existingEvent.request_id)
+
+          console.log(`[Reverse Sync] Auto-withdrew request ${existingEvent.request_id} due to event cancellation`)
+
+          revalidatePath('/requests')
+          revalidatePath('/requests/manage')
+        }
+      } catch (reverseError) {
+        console.error('[Reverse Sync] Error auto-withdrawing request:', reverseError)
+      }
+    }
+
+    revalidatePath('/kalender')
+    revalidatePath('/cancellations')
+    revalidatePath('/dashboard')
+
+    return { success: true, data }
+
+  } catch (error) {
+    console.error('Error cancelling calendar event:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten', data: null }
+  }
+}
+
+/**
+ * Get all cancelled events for the Cancellations page
+ * Manager/Admin only
+ */
+export async function getCancelledEvents() {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Nicht authentifiziert', data: [] }
+  }
+
+  // Check if user is manager or admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['manager', 'admin'].includes(profile.role)) {
+    return { success: false, error: 'Keine Berechtigung', data: [] }
+  }
+
+  // Fetch cancelled events with canceller info
+  const adminSupabase = createAdminClient()
+  const { data, error } = await adminSupabase
+    .from('calendar_events')
+    .select(`
+      *,
+      canceller:cancelled_by(first_name, last_name, email)
+    `)
+    .eq('status', 'cancelled')
+    .not('cancellation_reason', 'is', null)
+    .order('cancelled_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching cancelled events:', error)
+    return { success: false, error: error.message, data: [] }
+  }
+
+  return { success: true, data: data || [] }
+}
+
+/**
+ * Reschedule a cancelled event with a new date/time
+ * Creates new Google Calendar event and reactivates the booking
+ */
+export async function rescheduleEvent(
+  id: string,
+  newStartTime: string,
+  newEndTime: string
+) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    // Get existing cancelled event
+    const { data: existingEvent, error: fetchError } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !existingEvent) {
+      throw new Error('Calendar event not found')
+    }
+
+    if (existingEvent.status !== 'cancelled') {
+      throw new Error('Event is not cancelled')
+    }
+
+    // Generate title based on event type
+    let eventTitle: string
+    if (existingEvent.event_type === 'fi_assignment') {
+      eventTitle = `FI: ${existingEvent.assigned_instructor_name}${existingEvent.assigned_instructor_number ? ` (${existingEvent.assigned_instructor_number})` : ''}`
+      if (!existingEvent.is_all_day && existingEvent.actual_work_start_time && existingEvent.actual_work_end_time) {
+        eventTitle += ` ${existingEvent.actual_work_start_time.slice(0, 5)}-${existingEvent.actual_work_end_time.slice(0, 5)}`
+      }
+    } else {
+      eventTitle = `${existingEvent.customer_first_name} ${existingEvent.customer_last_name}`
+    }
+
+    // Create new Google Calendar event
+    const googleEvent = await createGoogleCalendarEvent({
+      event_type: existingEvent.event_type,
+      customer_first_name: existingEvent.customer_first_name,
+      customer_last_name: existingEvent.customer_last_name,
+      customer_phone: existingEvent.customer_phone,
+      customer_email: existingEvent.customer_email,
+      assigned_instructor_id: existingEvent.assigned_instructor_id,
+      assigned_instructor_number: existingEvent.assigned_instructor_number,
+      assigned_instructor_name: existingEvent.assigned_instructor_name,
+      is_all_day: existingEvent.is_all_day,
+      title: eventTitle,
+      start_time: newStartTime,
+      end_time: newEndTime,
+      actual_work_start_time: existingEvent.actual_work_start_time,
+      actual_work_end_time: existingEvent.actual_work_end_time,
+      duration: existingEvent.duration,
+      attendee_count: existingEvent.attendee_count,
+      remarks: existingEvent.remarks,
+      location: existingEvent.location,
+      has_video_recording: existingEvent.has_video_recording,
+      on_site_payment_amount: existingEvent.on_site_payment_amount
+    })
+
+    // Update event in database
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .update({
+        status: 'confirmed',
+        start_time: newStartTime,
+        end_time: newEndTime,
+        google_event_id: googleEvent.id,
+        etag: googleEvent.etag,
+        cancelled_at: null,
+        cancelled_by: null,
+        cancellation_reason: null,
+        sync_status: 'synced',
+        last_synced_at: new Date().toISOString(),
+        last_modified_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      // Rollback: Delete from Google Calendar if database update fails
+      try {
+        await deleteGoogleCalendarEvent(googleEvent.id)
+      } catch (rollbackError) {
+        console.error('Failed to rollback Google Calendar event:', rollbackError)
+      }
+      throw new Error(`Failed to reschedule event: ${error.message}`)
+    }
+
+    revalidatePath('/kalender')
+    revalidatePath('/cancellations')
+    revalidatePath('/dashboard')
+
+    return { success: true, data }
+
+  } catch (error) {
+    console.error('Error rescheduling event:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten', data: null }
+  }
+}
+
+/**
+ * Permanently delete a cancelled event from database
+ */
+export async function permanentlyDeleteEvent(id: string) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  // Check if user is manager or admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['manager', 'admin'].includes(profile.role)) {
+    throw new Error('Unauthorized - Manager or Admin access required')
+  }
+
+  try {
+    // Get event to verify it's cancelled
+    const { data: existingEvent, error: fetchError } = await supabase
+      .from('calendar_events')
+      .select('status')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !existingEvent) {
+      throw new Error('Event nicht gefunden')
+    }
+
+    if (existingEvent.status !== 'cancelled') {
+      throw new Error('Nur abgesagte Termine können endgültig gelöscht werden')
+    }
+
+    // Delete from database
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      throw new Error(`Failed to delete event: ${error.message}`)
+    }
+
+    revalidatePath('/cancellations')
+
+    return { success: true }
+
+  } catch (error) {
+    console.error('Error permanently deleting event:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten' }
+  }
 }
 
 /**

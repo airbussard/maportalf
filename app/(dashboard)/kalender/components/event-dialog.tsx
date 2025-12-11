@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro, ChevronDown } from 'lucide-react'
+import { Calendar, User, Phone, Mail, Clock, MapPin, FileText, Loader2, Users, Info, Video, Euro, ChevronDown, CalendarX2 } from 'lucide-react'
 import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat, extractLocalTimeFromISO, trimSecondsFromTime } from '@/lib/utils/timezone'
 import {
   Dialog,
@@ -21,7 +21,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, getEmployees, resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent, cancelCalendarEvent, getEmployees, resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -52,6 +52,9 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState<'cancelled_by_us' | 'cancelled_by_customer'>('cancelled_by_us')
   const [employees, setEmployees] = useState<any[]>([])
 
   // Email confirmation state
@@ -435,6 +438,28 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
       toast.error('Fehler beim Senden der E-Mail')
     } finally {
       setIsResendingEmail(false)
+    }
+  }
+
+  const handleCancelEvent = async () => {
+    if (!event) return
+
+    setIsCancelling(true)
+    try {
+      const result = await cancelCalendarEvent(event.id, cancelReason)
+      if (result.success) {
+        toast.success('Termin wurde abgesagt')
+        setShowCancelDialog(false)
+        onRefresh?.()
+        router.refresh()
+        onOpenChange(false)
+      } else {
+        toast.error(result.error || 'Fehler beim Absagen des Termins')
+      }
+    } catch (error) {
+      toast.error('Ein unerwarteter Fehler ist aufgetreten')
+    } finally {
+      setIsCancelling(false)
     }
   }
 
@@ -1065,7 +1090,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
               type="button"
               variant="destructive"
               onClick={handleDelete}
-              disabled={isDeleting || isLoading}
+              disabled={isDeleting || isLoading || isCancelling}
             >
               {isDeleting ? (
                 <>
@@ -1075,6 +1100,18 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
               ) : (
                 'Löschen'
               )}
+            </Button>
+          )}
+          {event && !isReadOnly && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCancelDialog(true)}
+              disabled={isDeleting || isLoading || isCancelling}
+              className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+            >
+              <CalendarX2 className="h-4 w-4 mr-2" />
+              Absagen
             </Button>
           )}
           {event && formData.event_type === 'booking' && formData.customer_email && (
@@ -1116,6 +1153,69 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Cancel Event Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarX2 className="h-5 w-5 text-orange-500" />
+              Termin absagen
+            </DialogTitle>
+            <DialogDescription>
+              Wählen Sie den Grund für die Absage. Der Termin wird aus dem Google Kalender entfernt,
+              bleibt aber zur Nachverfolgung gespeichert.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <Label className="text-sm font-medium mb-3 block">Grund der Absage</Label>
+            <RadioGroup
+              value={cancelReason}
+              onValueChange={(value) => setCancelReason(value as 'cancelled_by_us' | 'cancelled_by_customer')}
+            >
+              <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors">
+                <RadioGroupItem value="cancelled_by_us" id="cancelled_by_us" />
+                <Label htmlFor="cancelled_by_us" className="font-normal cursor-pointer flex-1">
+                  Von uns abgesagt
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-accent transition-colors mt-2">
+                <RadioGroupItem value="cancelled_by_customer" id="cancelled_by_customer" />
+                <Label htmlFor="cancelled_by_customer" className="font-normal cursor-pointer flex-1">
+                  Vom Kunden abgesagt
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCancelDialog(false)}
+              disabled={isCancelling}
+            >
+              Zurück
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCancelEvent}
+              disabled={isCancelling}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird abgesagt...
+                </>
+              ) : (
+                'Termin absagen'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
