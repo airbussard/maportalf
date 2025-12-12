@@ -56,6 +56,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState<'cancelled_by_us' | 'cancelled_by_customer'>('cancelled_by_us')
   const [cancelNote, setCancelNote] = useState('')
+  const [sendCancellationEmail, setSendCancellationEmail] = useState(true)
   const [employees, setEmployees] = useState<any[]>([])
 
   // Email confirmation state
@@ -447,7 +448,12 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
 
     setIsCancelling(true)
     try {
-      const result = await cancelCalendarEvent(event.id, cancelReason, cancelNote || undefined)
+      const result = await cancelCalendarEvent(
+          event.id,
+          cancelReason,
+          cancelNote || undefined,
+          sendCancellationEmail && !!event.customer_email
+        )
       if (result.success) {
         toast.success('Termin wurde abgesagt')
         setShowCancelDialog(false)
@@ -1204,6 +1210,26 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
                 rows={3}
               />
             </div>
+
+            {/* Email Confirmation Checkbox - Only show if customer has email */}
+            {event?.customer_email && (
+              <div className="flex items-center space-x-2 p-3 rounded-lg border bg-muted/50">
+                <Checkbox
+                  id="send_cancellation_email"
+                  checked={sendCancellationEmail}
+                  onCheckedChange={(checked) => setSendCancellationEmail(checked as boolean)}
+                />
+                <Label htmlFor="send_cancellation_email" className="font-normal cursor-pointer flex-1">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Bestätigungsmail an Kunden senden
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {event.customer_email}
+                  </p>
+                </Label>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

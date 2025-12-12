@@ -18,6 +18,7 @@ import {
 import { fullSync } from '@/lib/google-calendar/sync'
 import type { CalendarEventData, SyncResult } from '@/lib/google-calendar/types'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
+import { generateCancellationNotificationEmail } from '@/lib/email-templates/cancellation-notification'
 
 /**
  * Helper: Convert empty strings to null for UUID fields
@@ -646,7 +647,8 @@ export async function getEmployees() {
 export async function cancelCalendarEvent(
   id: string,
   reason: 'cancelled_by_us' | 'cancelled_by_customer',
-  note?: string
+  note?: string,
+  sendConfirmationEmail?: boolean
 ) {
   const supabase = await createClient()
 
@@ -705,6 +707,48 @@ export async function cancelCalendarEvent(
 
     if (error) {
       throw new Error(`Failed to cancel calendar event: ${error.message}`)
+    }
+
+    // Queue cancellation confirmation email if requested
+    if (sendConfirmationEmail && existingEvent.customer_email && existingEvent.event_type === 'booking') {
+      try {
+        const adminSupabase = createAdminClient()
+
+        // Generate email template
+        const emailTemplate = generateCancellationNotificationEmail({
+          customer_first_name: existingEvent.customer_first_name || '',
+          customer_last_name: existingEvent.customer_last_name || '',
+          start_time: existingEvent.start_time,
+          end_time: existingEvent.end_time,
+          duration: existingEvent.duration || 60,
+          attendee_count: existingEvent.attendee_count || 1,
+          location: existingEvent.location || 'FLIGHTHOUR Flugsimulator'
+        })
+
+        // Insert into email queue
+        const { error: emailError } = await adminSupabase
+          .from('email_queue')
+          .insert({
+            type: 'cancellation_notification',
+            recipient: existingEvent.customer_email,
+            recipient_email: existingEvent.customer_email,
+            subject: emailTemplate.subject,
+            body: emailTemplate.plainText,
+            content: emailTemplate.htmlContent,
+            status: 'pending',
+            event_id: existingEvent.id
+          })
+
+        if (emailError) {
+          console.error('Failed to queue cancellation email:', emailError)
+          // Don't throw - cancellation was successful, email is secondary
+        } else {
+          console.log(`[Cancellation] Queued confirmation email to ${existingEvent.customer_email}`)
+        }
+      } catch (emailErr) {
+        console.error('Error queueing cancellation email:', emailErr)
+        // Don't throw - cancellation was successful, email is secondary
+      }
     }
 
     // Reverse sync: If this was a request-generated FI event, withdraw the request

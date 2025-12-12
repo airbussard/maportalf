@@ -151,6 +151,18 @@ export async function GET(request: NextRequest) {
             plainTextContent: email.body || email.content,
             attachments: []
           })
+        } else if (email.type === 'cancellation_notification') {
+          // Cancellation notification email - no ticket required, no attachments
+          console.log('[Email Queue] Sending cancellation notification email')
+
+          const { sendBookingConfirmationEmail } = await import('@/lib/email/ticket-mailer')
+          emailSent = await sendBookingConfirmationEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            htmlContent: email.content,
+            plainTextContent: email.body || email.content,
+            attachments: [] // No attachments for cancellation
+          })
         } else {
           // Ticket-related emails - need ticket data
           if (!email.ticket) {
