@@ -143,7 +143,7 @@ export default function RebookPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="bg-[#121212] p-6 flex justify-center">
+          <div className="bg-white p-6 flex justify-center border-b border-gray-200">
             <Image src="/logo.png" alt="FLIGHTHOUR" width={180} height={48} className="h-10 w-auto" />
           </div>
           <div className="p-8 text-center">
@@ -168,7 +168,7 @@ export default function RebookPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-[#121212] py-6">
+      <div className="bg-white py-6 border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 flex justify-center">
           <Image src="/logo.png" alt="FLIGHTHOUR" width={180} height={48} className="h-10 w-auto" />
         </div>
@@ -298,8 +298,8 @@ export default function RebookPage() {
         {/* Selected slot & booking */}
         {selectedSlot && (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-lg font-semibold mb-4">Ausgewählter Termin</h3>
-            <div className="p-4 bg-[#fbb928]/10 border-2 border-[#fbb928] rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900">Ausgewählter Termin</h3>
+            <div className="p-4 bg-amber-50 border-2 border-[#fbb928] rounded-lg mb-6">
               <p className="text-lg font-bold text-gray-900">
                 {format(new Date(selectedSlot.start), 'EEEE, dd. MMMM yyyy', { locale: de })}
               </p>

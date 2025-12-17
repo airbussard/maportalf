@@ -58,7 +58,7 @@ function ConfirmedContent() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Header with Logo */}
-        <div className="bg-[#121212] p-6 flex justify-center">
+        <div className="bg-white p-6 flex justify-center border-b border-gray-200">
           <Image
             src="/logo.png"
             alt="FLIGHTHOUR"
