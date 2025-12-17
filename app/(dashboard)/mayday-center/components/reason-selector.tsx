@@ -3,30 +3,18 @@
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { Wrench, Stethoscope, HelpCircle } from 'lucide-react'
+import { Wrench, Stethoscope, HelpCircle, LucideIcon } from 'lucide-react'
+import { MAYDAY_REASONS, type MaydayReason } from '@/lib/mayday-constants'
 
-export type MaydayReason = 'technical_issue' | 'staff_illness' | 'other'
+// Re-export for backwards compatibility
+export { MAYDAY_REASONS, type MaydayReason } from '@/lib/mayday-constants'
 
-export const MAYDAY_REASONS = {
-  technical_issue: {
-    label: 'Technische Probleme',
-    icon: Wrench,
-    emailText: 'Aufgrund eines technischen Problems',
-    smsText: 'wegen techn. Probleme'
-  },
-  staff_illness: {
-    label: 'Krankheitsfall',
-    icon: Stethoscope,
-    emailText: 'Aufgrund eines kurzfristigen Krankheitsfalls',
-    smsText: 'wegen Krankheit'
-  },
-  other: {
-    label: 'Sonstiges',
-    icon: HelpCircle,
-    emailText: 'Aus organisatorischen Gründen',
-    smsText: 'aus org. Gründen'
-  }
-} as const
+// Icons are defined separately since they can't be in the shared constants file
+const REASON_ICONS: Record<MaydayReason, LucideIcon> = {
+  technical_issue: Wrench,
+  staff_illness: Stethoscope,
+  other: HelpCircle
+}
 
 interface ReasonSelectorProps {
   value: MaydayReason
@@ -52,9 +40,9 @@ export function ReasonSelector({
           onValueChange={(v) => onChange(v as MaydayReason)}
           className="grid gap-2"
         >
-          {(Object.entries(MAYDAY_REASONS) as [MaydayReason, typeof MAYDAY_REASONS[MaydayReason]][]).map(
-            ([key, reason]) => {
-              const Icon = reason.icon
+          {(Object.keys(MAYDAY_REASONS) as MaydayReason[]).map((key) => {
+              const reason = MAYDAY_REASONS[key]
+              const Icon = REASON_ICONS[key]
               return (
                 <div key={key} className="flex items-center space-x-3">
                   <RadioGroupItem value={key} id={`reason-${key}`} />

@@ -64,13 +64,6 @@ export function generateCancelSMS(data: CancelSMSData): string {
   return `FLIGHTHOUR: Ihr Termin am ${shortDate} muss ${reason} leider ausfallen. Details zur Neubuchung per E-Mail.`
 }
 
-/**
- * Get SMS text for MAYDAY reasons (shorter than email text)
- */
-export const MAYDAY_SMS_REASONS = {
-  technical_issue: 'wegen techn. Probleme',
-  staff_illness: 'wegen Krankheit',
-  other: 'aus org. Gründen'
-} as const
-
-export type MaydaySMSReason = keyof typeof MAYDAY_SMS_REASONS
+// Re-export from shared constants for backwards compatibility
+export { MAYDAY_SMS_REASONS } from '@/lib/mayday-constants'
+export type { MaydayReason as MaydaySMSReason } from '@/lib/mayday-constants'

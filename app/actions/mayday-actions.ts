@@ -17,9 +17,9 @@ import {
 import { cancelCalendarEvent } from './calendar-events'
 import { generateMaydayShiftEmail } from '@/lib/email-templates/mayday-shift'
 import { generateMaydayCancelEmail } from '@/lib/email-templates/mayday-cancel'
-import { generateShiftSMS, generateCancelSMS, MAYDAY_SMS_REASONS } from '@/lib/sms/templates'
+import { generateShiftSMS, generateCancelSMS } from '@/lib/sms/templates'
 import { normalizePhoneNumber, isValidPhoneNumber } from '@/lib/sms/twilio-client'
-import { MAYDAY_REASONS, type MaydayReason } from '@/app/(dashboard)/mayday-center/components/reason-selector'
+import { MAYDAY_REASONS, MAYDAY_SMS_REASONS, type MaydayReason } from '@/lib/mayday-constants'
 
 interface CalendarEvent {
   id: string
