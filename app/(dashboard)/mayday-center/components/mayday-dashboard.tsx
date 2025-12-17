@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Clock, CalendarX2, Bell, ArrowRight, AlertTriangle, Loader2 } from 'lucide-react'
@@ -41,7 +42,8 @@ export function MaydayDashboard() {
   const loadEvents = async () => {
     setLoading(true)
     try {
-      const customDateStr = customDate ? customDate.toISOString().split('T')[0] : undefined
+      // Use format() to preserve local date (toISOString converts to UTC which shifts the day!)
+      const customDateStr = customDate ? format(customDate, 'yyyy-MM-dd') : undefined
       const result = await getUpcomingBookings(filterDate, filterFromTime || undefined, customDateStr)
       if (result.success && result.events) {
         setEvents(result.events)
