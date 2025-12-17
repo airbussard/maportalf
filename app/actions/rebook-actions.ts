@@ -309,6 +309,7 @@ export async function rebookEvent(params: {
       .from('calendar_events')
       .insert({
         id: eventId,
+        user_id: null, // Public booking via rebook portal - no authenticated user
         google_event_id: googleEvent.id,
         title: eventTitle,
         description: 'Neu gebucht über MAYDAY Rebook-Portal',
