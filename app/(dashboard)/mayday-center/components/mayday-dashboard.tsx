@@ -34,13 +34,15 @@ export function MaydayDashboard() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
   // Filter states
-  const [filterDate, setFilterDate] = useState<'today' | 'tomorrow' | 'week'>('today')
+  const [filterDate, setFilterDate] = useState<'today' | 'tomorrow' | 'week' | 'custom'>('today')
   const [filterFromTime, setFilterFromTime] = useState<string>('')
+  const [customDate, setCustomDate] = useState<Date | null>(null)
 
   const loadEvents = async () => {
     setLoading(true)
     try {
-      const result = await getUpcomingBookings(filterDate, filterFromTime || undefined)
+      const customDateStr = customDate ? customDate.toISOString().split('T')[0] : undefined
+      const result = await getUpcomingBookings(filterDate, filterFromTime || undefined, customDateStr)
       if (result.success && result.events) {
         setEvents(result.events)
       }
@@ -53,7 +55,7 @@ export function MaydayDashboard() {
 
   useEffect(() => {
     loadEvents()
-  }, [filterDate, filterFromTime])
+  }, [filterDate, filterFromTime, customDate])
 
   const handleSelectAll = () => {
     if (selectedEvents.length === events.length) {
@@ -203,6 +205,8 @@ export function MaydayDashboard() {
               onFilterDateChange={setFilterDate}
               filterFromTime={filterFromTime}
               onFilterFromTimeChange={setFilterFromTime}
+              customDate={customDate}
+              onCustomDateChange={setCustomDate}
             />
           )}
         </CardContent>

@@ -59,8 +59,9 @@ interface CalendarEvent {
  * Get upcoming booking events for MAYDAY Center
  */
 export async function getUpcomingBookings(
-  filterDate: 'today' | 'tomorrow' | 'week',
-  filterFromTime?: string
+  filterDate: 'today' | 'tomorrow' | 'week' | 'custom',
+  filterFromTime?: string,
+  customDate?: string // ISO date string YYYY-MM-DD
 ): Promise<{
   success: boolean
   events?: CalendarEvent[]
@@ -74,7 +75,12 @@ export async function getUpcomingBookings(
     let startDate: Date
     let endDate: Date
 
-    if (filterDate === 'today') {
+    if (filterDate === 'custom' && customDate) {
+      // Custom date selected - parse the ISO date string
+      const [year, month, day] = customDate.split('-').map(Number)
+      startDate = new Date(year, month - 1, day)
+      endDate = new Date(year, month - 1, day, 23, 59, 59)
+    } else if (filterDate === 'today') {
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
     } else if (filterDate === 'tomorrow') {

@@ -11,6 +11,7 @@ import {
   Users,
   Tag,
   Mail,
+  Phone,
   X,
   CalendarClock,
   CalendarCheck,
@@ -153,6 +154,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           icon: <Mail className="w-5 h-5" />,
         },
         {
+          href: '/admin/sms-queue',
+          label: 'SMS Warteschlange',
+          icon: <Phone className="w-5 h-5" />,
+        },
+        {
           href: '/admin/cron-jobs',
           label: 'Cron Jobs',
           icon: <Settings className="w-5 h-5" />,
@@ -255,7 +261,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.115
+            Version 2.116
           </p>
         </div>
       </aside>

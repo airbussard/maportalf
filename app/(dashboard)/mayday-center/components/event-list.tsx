@@ -13,7 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Mail, Phone, Users, Clock, Calendar } from 'lucide-react'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Mail, Phone, Users, Calendar, CalendarIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface CalendarEvent {
   id: string
@@ -34,10 +41,12 @@ interface EventListProps {
   selectedEvents: string[]
   onSelectEvent: (eventId: string) => void
   onSelectAll: () => void
-  filterDate: 'today' | 'tomorrow' | 'week'
-  onFilterDateChange: (value: 'today' | 'tomorrow' | 'week') => void
+  filterDate: 'today' | 'tomorrow' | 'week' | 'custom'
+  onFilterDateChange: (value: 'today' | 'tomorrow' | 'week' | 'custom') => void
   filterFromTime: string
   onFilterFromTimeChange: (value: string) => void
+  customDate: Date | null
+  onCustomDateChange: (date: Date | null) => void
 }
 
 export function EventList({
@@ -48,7 +57,9 @@ export function EventList({
   filterDate,
   onFilterDateChange,
   filterFromTime,
-  onFilterFromTimeChange
+  onFilterFromTimeChange,
+  customDate,
+  onCustomDateChange
 }: EventListProps) {
   const allSelected = events.length > 0 && selectedEvents.length === events.length
 
@@ -63,8 +74,23 @@ export function EventList({
     return format(new Date(dateString), 'HH:mm', { locale: de })
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDateDisplay = (dateString: string) => {
     return format(new Date(dateString), 'EEE, dd.MM.', { locale: de })
+  }
+
+  const handleDateFilterChange = (value: string) => {
+    const filterValue = value as 'today' | 'tomorrow' | 'week' | 'custom'
+    onFilterDateChange(filterValue)
+    if (filterValue !== 'custom') {
+      onCustomDateChange(null)
+    }
+  }
+
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (date) {
+      onCustomDateChange(date)
+      onFilterDateChange('custom')
+    }
   }
 
   return (
@@ -73,17 +99,47 @@ export function EventList({
       <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
         <div className="space-y-1.5">
           <Label htmlFor="filter-date" className="text-xs">Zeitraum</Label>
-          <Select value={filterDate} onValueChange={(v) => onFilterDateChange(v as 'today' | 'tomorrow' | 'week')}>
-            <SelectTrigger id="filter-date" className="w-[140px]">
+          <Select value={filterDate} onValueChange={handleDateFilterChange}>
+            <SelectTrigger id="filter-date" className="w-[160px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Heute</SelectItem>
               <SelectItem value="tomorrow">Morgen</SelectItem>
               <SelectItem value="week">Diese Woche</SelectItem>
+              <SelectItem value="custom">Bestimmtes Datum</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {filterDate === 'custom' && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Datum wählen</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[160px] justify-start text-left font-normal",
+                    !customDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customDate ? format(customDate, 'dd.MM.yyyy', { locale: de }) : 'Datum wählen'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={customDate || undefined}
+                  onSelect={handleCalendarSelect}
+                  locale={de}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="filter-time" className="text-xs">Ab Uhrzeit</Label>
@@ -97,12 +153,16 @@ export function EventList({
           />
         </div>
 
-        {filterFromTime && (
+        {(filterFromTime || filterDate === 'custom') && (
           <div className="flex items-end">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onFilterFromTimeChange('')}
+              onClick={() => {
+                onFilterFromTimeChange('')
+                onFilterDateChange('today')
+                onCustomDateChange(null)
+              }}
             >
               Filter zurücksetzen
             </Button>
@@ -165,7 +225,7 @@ export function EventList({
                     {formatTime(event.start_time)} - {formatTime(event.end_time)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {formatDate(event.start_time)}
+                    {formatDateDisplay(event.start_time)}
                   </div>
                 </div>
 
