@@ -57,12 +57,29 @@ export async function getUpcomingBookings(
     let endDate: Date
 
     if (filterDate === 'custom' && customDate) {
-      // Custom date selected - use ISO string directly to avoid timezone issues
-      // customDate is in format YYYY-MM-DD, construct full ISO strings
-      const startISO = `${customDate}T00:00:00.000Z`
-      const endISO = `${customDate}T23:59:59.999Z`
+      // Custom date selected - customDate is YYYY-MM-DD in Berlin timezone
+      // We need to convert Berlin local time to UTC for the DB query
+      // Berlin is UTC+1 (winter) or UTC+2 (summer)
+      //
+      // Example: User selects 15.12.2025
+      // - Berlin 00:00 = UTC 23:00 on 14.12 (winter, UTC+1)
+      // - Berlin 23:59 = UTC 22:59 on 15.12 (winter, UTC+1)
+      //
+      // So we query: 2025-12-14T23:00:00Z to 2025-12-15T22:59:59Z
 
-      // Query directly with ISO strings for custom date
+      const [year, month, day] = customDate.split('-').map(Number)
+
+      // Create dates in Berlin timezone by using a fixed offset
+      // Winter (Nov-Mar): UTC+1, Summer (Apr-Oct): UTC+2
+      // For simplicity, check if month is in summer time range
+      const isSummerTime = month >= 4 && month <= 10
+      const offsetHours = isSummerTime ? 2 : 1
+
+      // Berlin 00:00 → UTC is -offsetHours
+      // Berlin 23:59:59 → UTC is -offsetHours
+      const startUTC = new Date(Date.UTC(year, month - 1, day, 0 - offsetHours, 0, 0))
+      const endUTC = new Date(Date.UTC(year, month - 1, day, 23 - offsetHours, 59, 59))
+
       const { data, error } = await supabase
         .from('calendar_events')
         .select(`
@@ -81,8 +98,8 @@ export async function getUpcomingBookings(
         `)
         .eq('event_type', 'booking')
         .eq('status', 'confirmed')
-        .gte('start_time', startISO)
-        .lte('start_time', endISO)
+        .gte('start_time', startUTC.toISOString())
+        .lte('start_time', endUTC.toISOString())
         .order('start_time', { ascending: true })
 
       if (error) {
