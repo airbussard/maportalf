@@ -102,8 +102,9 @@ export async function getAvailableSlots(params: {
   const { startDate, endDate, duration } = params
 
   // Time restrictions for public bookings (German time)
-  const EARLIEST_START_HOUR = 10 // 10:00 Uhr
-  const LATEST_END_HOUR = 22     // 22:00 Uhr
+  // Using 9 and 22 with boundary checks to allow 10:00-22:00 slots
+  const EARLIEST_START_HOUR = 9  // Slots starting at 10:00 or later (> 9:59)
+  const LATEST_END_HOUR = 22     // Slots ending at 22:00 or earlier (< 22:01)
 
   // Earliest bookable date is tomorrow (not today)
   const tomorrow = new Date()
@@ -129,9 +130,9 @@ export async function getAvailableSlots(params: {
     const endHour = getHourFromISO(slotEndISO)
     const endMinutes = getMinutesFromISO(slotEndISO)
 
-    // Start must be >= 10:00
-    // End must be <= 22:00 (22:00 exactly is allowed, 22:01 is not)
-    return startHour >= EARLIEST_START_HOUR &&
+    // Start must be >= 10:00 (hour > 9, i.e. 10:00 or later)
+    // End must be <= 22:00 (hour < 22, or hour = 22 with minutes <= 0)
+    return startHour > EARLIEST_START_HOUR &&
       (endHour < LATEST_END_HOUR || (endHour === LATEST_END_HOUR && endMinutes === 0))
   }
 
