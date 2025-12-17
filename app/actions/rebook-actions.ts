@@ -110,11 +110,24 @@ export async function getAvailableSlots(params: {
   tomorrow.setHours(0, 0, 0, 0)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
+  // Helper to extract hour from ISO time string (e.g., "2025-01-19T10:00:00" -> 10)
+  // We use string parsing instead of getHours() because getHours() returns UTC on server
+  const getHourFromISO = (isoString: string): number => {
+    const timeMatch = isoString.match(/T(\d{2}):/)
+    return timeMatch ? parseInt(timeMatch[1], 10) : 0
+  }
+
+  const getMinutesFromISO = (isoString: string): number => {
+    const timeMatch = isoString.match(/T\d{2}:(\d{2})/)
+    return timeMatch ? parseInt(timeMatch[1], 10) : 0
+  }
+
   // Helper to check if a slot is within allowed hours
-  const isSlotWithinAllowedHours = (slotStart: Date, slotEnd: Date): boolean => {
-    const startHour = slotStart.getHours()
-    const endHour = slotEnd.getHours()
-    const endMinutes = slotEnd.getMinutes()
+  // Uses ISO strings because Date.getHours() returns UTC on server, not local time
+  const isSlotWithinAllowedHours = (slotStartISO: string, slotEndISO: string): boolean => {
+    const startHour = getHourFromISO(slotStartISO)
+    const endHour = getHourFromISO(slotEndISO)
+    const endMinutes = getMinutesFromISO(slotEndISO)
 
     // Start must be >= 10:00
     // End must be <= 22:00 (22:00 exactly is allowed, 22:01 is not)
@@ -208,10 +221,13 @@ export async function getAvailableSlots(params: {
             while (slotStart.getTime() + duration * 60000 <= blocked.start.getTime()) {
               // Only add slots that start from tomorrow and within allowed hours (10:00-22:00)
               const slotEnd = new Date(slotStart.getTime() + duration * 60000)
-              if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStart, slotEnd)) {
+              // Build ISO strings preserving local time (format: YYYY-MM-DDTHH:MM:SS)
+              const slotStartISO = `${eventDate}T${String(slotStart.getUTCHours()).padStart(2, '0')}:${String(slotStart.getUTCMinutes()).padStart(2, '0')}:00`
+              const slotEndISO = `${eventDate}T${String(slotEnd.getUTCHours()).padStart(2, '0')}:${String(slotEnd.getUTCMinutes()).padStart(2, '0')}:00`
+              if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStartISO, slotEndISO)) {
                 availableSlots.push({
-                  start: slotStart.toISOString(),
-                  end: slotEnd.toISOString()
+                  start: slotStartISO,
+                  end: slotEndISO
                 })
               }
               // Move to next 30-minute interval
@@ -232,10 +248,13 @@ export async function getAvailableSlots(params: {
           while (slotStart.getTime() + duration * 60000 <= workEnd.getTime()) {
             // Only add slots that start from tomorrow and within allowed hours (10:00-22:00)
             const slotEnd = new Date(slotStart.getTime() + duration * 60000)
-            if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStart, slotEnd)) {
+            // Build ISO strings preserving local time (format: YYYY-MM-DDTHH:MM:SS)
+            const slotStartISO = `${eventDate}T${String(slotStart.getUTCHours()).padStart(2, '0')}:${String(slotStart.getUTCMinutes()).padStart(2, '0')}:00`
+            const slotEndISO = `${eventDate}T${String(slotEnd.getUTCHours()).padStart(2, '0')}:${String(slotEnd.getUTCMinutes()).padStart(2, '0')}:00`
+            if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStartISO, slotEndISO)) {
               availableSlots.push({
-                start: slotStart.toISOString(),
-                end: slotEnd.toISOString()
+                start: slotStartISO,
+                end: slotEndISO
               })
             }
             slotStart = new Date(slotStart.getTime() + 30 * 60000)
