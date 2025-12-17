@@ -19,26 +19,7 @@ import { generateMaydayShiftEmail } from '@/lib/email-templates/mayday-shift'
 import { generateMaydayCancelEmail } from '@/lib/email-templates/mayday-cancel'
 import { generateShiftSMS, generateCancelSMS, MAYDAY_SMS_REASONS } from '@/lib/sms/templates'
 import { normalizePhoneNumber, isValidPhoneNumber } from '@/lib/sms/twilio-client'
-
-export type MaydayReason = 'technical_issue' | 'staff_illness' | 'other'
-
-export const MAYDAY_REASONS = {
-  technical_issue: {
-    label: 'Technische Probleme',
-    emailText: 'Aufgrund eines technischen Problems',
-    smsText: 'wegen techn. Probleme'
-  },
-  staff_illness: {
-    label: 'Krankheitsfall',
-    emailText: 'Aufgrund eines kurzfristigen Krankheitsfalls',
-    smsText: 'wegen Krankheit'
-  },
-  other: {
-    label: 'Sonstiges',
-    emailText: 'Aus organisatorischen Gründen',
-    smsText: 'aus org. Gründen'
-  }
-} as const
+import { MAYDAY_REASONS, type MaydayReason } from '@/app/(dashboard)/mayday-center/components/reason-selector'
 
 interface CalendarEvent {
   id: string
