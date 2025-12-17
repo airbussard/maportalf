@@ -295,7 +295,7 @@ export async function shiftEvents(params: {
               confirmUrl
             })
 
-            await adminSupabase.from('email_queue').insert({
+            const { error: emailInsertError } = await adminSupabase.from('email_queue').insert({
               type: 'mayday_notification',
               recipient: event.customer_email,
               recipient_email: event.customer_email,
@@ -307,7 +307,12 @@ export async function shiftEvents(params: {
               created_at: new Date().toISOString()
             })
 
-            notified++
+            if (emailInsertError) {
+              console.error('[MAYDAY] Failed to insert email into queue:', emailInsertError)
+            } else {
+              notified++
+              console.log(`[MAYDAY] Email queued for ${event.customer_email}`)
+            }
           } catch (emailError) {
             console.error('[MAYDAY] Failed to queue notification:', event.id, emailError)
             // Continue anyway - event is shifted
@@ -486,7 +491,7 @@ export async function cancelEventsWithNotification(params: {
               confirmUrl
             })
 
-            await adminSupabase.from('email_queue').insert({
+            const { error: emailInsertError } = await adminSupabase.from('email_queue').insert({
               type: 'mayday_notification',
               recipient: event.customer_email,
               recipient_email: event.customer_email,
@@ -498,7 +503,12 @@ export async function cancelEventsWithNotification(params: {
               created_at: new Date().toISOString()
             })
 
-            notified++
+            if (emailInsertError) {
+              console.error('[MAYDAY] Failed to insert cancel email into queue:', emailInsertError)
+            } else {
+              notified++
+              console.log(`[MAYDAY] Cancel email queued for ${event.customer_email}`)
+            }
           } catch (emailError) {
             console.error('[MAYDAY] Failed to queue notification:', event.id, emailError)
             // Continue anyway - event is cancelled
