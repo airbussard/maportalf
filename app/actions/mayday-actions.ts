@@ -17,6 +17,8 @@ import {
 import { cancelCalendarEvent } from './calendar-events'
 import { generateMaydayShiftEmail } from '@/lib/email-templates/mayday-shift'
 import { generateMaydayCancelEmail } from '@/lib/email-templates/mayday-cancel'
+import { generateShiftSMS, generateCancelSMS, MAYDAY_SMS_REASONS } from '@/lib/sms/templates'
+import { normalizePhoneNumber, isValidPhoneNumber } from '@/lib/sms/twilio-client'
 
 export type MaydayReason = 'technical_issue' | 'staff_illness' | 'other'
 
@@ -140,13 +142,15 @@ export async function shiftEvents(params: {
   reason: MaydayReason
   reasonNote?: string
   sendNotifications: boolean
+  sendSMS?: boolean
 }): Promise<{
   success: boolean
   shifted: number
   notified: number
+  smsQueued: number
   error?: string
 }> {
-  const { eventIds, shiftMinutes, reason, reasonNote, sendNotifications } = params
+  const { eventIds, shiftMinutes, reason, reasonNote, sendNotifications, sendSMS = false } = params
 
   try {
     const supabase = await createClient()
@@ -160,11 +164,12 @@ export async function shiftEvents(params: {
 
     if (fetchError || !events) {
       console.error('[MAYDAY] Failed to fetch events:', fetchError)
-      return { success: false, shifted: 0, notified: 0, error: fetchError?.message }
+      return { success: false, shifted: 0, notified: 0, smsQueued: 0, error: fetchError?.message }
     }
 
     let shifted = 0
     let notified = 0
+    let smsQueued = 0
 
     for (const event of events) {
       try {
@@ -217,6 +222,30 @@ export async function shiftEvents(params: {
         // Queue notification email if requested and email exists
         if (sendNotifications && event.customer_email) {
           try {
+            // Create confirmation token
+            const { data: tokenData, error: tokenError } = await adminSupabase
+              .from('mayday_confirmation_tokens')
+              .insert({
+                event_id: event.id,
+                action_type: 'shift',
+                customer_email: event.customer_email,
+                customer_name: `${event.customer_first_name || ''} ${event.customer_last_name || ''}`.trim() || null,
+                reason: MAYDAY_REASONS[reason].emailText,
+                shift_minutes: shiftMinutes,
+                old_start_time: event.start_time,
+                new_start_time: newStartTime.toISOString()
+              })
+              .select('token')
+              .single()
+
+            if (tokenError) {
+              console.error('[MAYDAY] Failed to create token:', tokenError)
+            }
+
+            const confirmUrl = tokenData?.token
+              ? `https://flighthour.getemergence.com/api/mayday/confirm/${tokenData.token}`
+              : undefined
+
             const emailContent = generateMaydayShiftEmail({
               customerFirstName: event.customer_first_name || '',
               customerLastName: event.customer_last_name || '',
@@ -226,7 +255,8 @@ export async function shiftEvents(params: {
               newEndTime: newEndTime.toISOString(),
               reason: MAYDAY_REASONS[reason].emailText,
               reasonNote,
-              location: event.location || 'FLIGHTHOUR GmbH'
+              location: event.location || 'FLIGHTHOUR GmbH',
+              confirmUrl
             })
 
             await adminSupabase.from('email_queue').insert({
@@ -247,6 +277,31 @@ export async function shiftEvents(params: {
             // Continue anyway - event is shifted
           }
         }
+
+        // Queue SMS if requested and phone exists
+        if (sendSMS && event.customer_phone && isValidPhoneNumber(event.customer_phone)) {
+          try {
+            const smsMessage = generateShiftSMS({
+              originalStartTime: event.start_time,
+              newStartTime: newStartTime.toISOString(),
+              reason: MAYDAY_SMS_REASONS[reason]
+            })
+
+            await adminSupabase.from('sms_queue').insert({
+              phone_number: normalizePhoneNumber(event.customer_phone),
+              message: smsMessage,
+              event_id: event.id,
+              notification_type: 'shift',
+              status: 'pending'
+            })
+
+            smsQueued++
+            console.log(`[MAYDAY] SMS queued for ${event.customer_phone}`)
+          } catch (smsError) {
+            console.error('[MAYDAY] Failed to queue SMS:', event.id, smsError)
+            // Continue anyway - event is shifted
+          }
+        }
       } catch (eventError) {
         console.error('[MAYDAY] Error processing event:', event.id, eventError)
         continue
@@ -256,13 +311,14 @@ export async function shiftEvents(params: {
     revalidatePath('/mayday-center')
     revalidatePath('/kalender')
 
-    return { success: true, shifted, notified }
+    return { success: true, shifted, notified, smsQueued }
   } catch (error) {
     console.error('[MAYDAY] Unexpected error in shiftEvents:', error)
     return {
       success: false,
       shifted: 0,
       notified: 0,
+      smsQueued: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
@@ -277,13 +333,15 @@ export async function cancelEventsWithNotification(params: {
   reasonNote?: string
   sendNotifications: boolean
   offerRebooking: boolean
+  sendSMS?: boolean
 }): Promise<{
   success: boolean
   cancelled: number
   notified: number
+  smsQueued: number
   error?: string
 }> {
-  const { eventIds, reason, reasonNote, sendNotifications, offerRebooking } = params
+  const { eventIds, reason, reasonNote, sendNotifications, offerRebooking, sendSMS = false } = params
 
   try {
     const supabase = await createClient()
@@ -297,11 +355,12 @@ export async function cancelEventsWithNotification(params: {
 
     if (fetchError || !events) {
       console.error('[MAYDAY] Failed to fetch events:', fetchError)
-      return { success: false, cancelled: 0, notified: 0, error: fetchError?.message }
+      return { success: false, cancelled: 0, notified: 0, smsQueued: 0, error: fetchError?.message }
     }
 
     let cancelled = 0
     let notified = 0
+    let smsQueued = 0
 
     for (const event of events) {
       try {
@@ -324,6 +383,60 @@ export async function cancelEventsWithNotification(params: {
         // Queue MAYDAY notification email if requested and email exists
         if (sendNotifications && event.customer_email) {
           try {
+            // Create confirmation token
+            const { data: tokenData, error: tokenError } = await adminSupabase
+              .from('mayday_confirmation_tokens')
+              .insert({
+                event_id: event.id,
+                action_type: 'cancel',
+                customer_email: event.customer_email,
+                customer_name: `${event.customer_first_name || ''} ${event.customer_last_name || ''}`.trim() || null,
+                reason: MAYDAY_REASONS[reason].emailText,
+                shift_minutes: null,
+                old_start_time: event.start_time,
+                new_start_time: null
+              })
+              .select('token')
+              .single()
+
+            if (tokenError) {
+              console.error('[MAYDAY] Failed to create token:', tokenError)
+            }
+
+            const confirmUrl = tokenData?.token
+              ? `https://flighthour.getemergence.com/api/mayday/confirm/${tokenData.token}`
+              : undefined
+
+            // Create rebook token if rebooking is offered
+            let rebookUrl: string | undefined
+            if (offerRebooking) {
+              // Calculate duration from event times
+              const startTime = new Date(event.start_time)
+              const endTime = new Date(event.end_time)
+              const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+
+              const { data: rebookTokenData, error: rebookTokenError } = await adminSupabase
+                .from('rebook_tokens')
+                .insert({
+                  original_event_id: event.id,
+                  customer_email: event.customer_email,
+                  customer_first_name: event.customer_first_name || null,
+                  customer_last_name: event.customer_last_name || null,
+                  customer_phone: event.customer_phone || null,
+                  original_duration: event.duration || durationMinutes || 60,
+                  original_attendee_count: event.attendee_count || 1,
+                  original_location: event.location || 'FLIGHTHOUR Flugsimulator'
+                })
+                .select('token')
+                .single()
+
+              if (rebookTokenError) {
+                console.error('[MAYDAY] Failed to create rebook token:', rebookTokenError)
+              } else if (rebookTokenData?.token) {
+                rebookUrl = `https://flighthour.getemergence.com/rebook/${rebookTokenData.token}`
+              }
+            }
+
             const emailContent = generateMaydayCancelEmail({
               customerFirstName: event.customer_first_name || '',
               customerLastName: event.customer_last_name || '',
@@ -333,7 +446,8 @@ export async function cancelEventsWithNotification(params: {
               reasonNote,
               location: event.location || 'FLIGHTHOUR GmbH',
               offerRebooking,
-              rebookUrl: offerRebooking ? `https://flighthour.de/rebook/${event.id}` : undefined
+              rebookUrl,
+              confirmUrl
             })
 
             await adminSupabase.from('email_queue').insert({
@@ -354,6 +468,30 @@ export async function cancelEventsWithNotification(params: {
             // Continue anyway - event is cancelled
           }
         }
+
+        // Queue SMS if requested and phone exists
+        if (sendSMS && event.customer_phone && isValidPhoneNumber(event.customer_phone)) {
+          try {
+            const smsMessage = generateCancelSMS({
+              originalStartTime: event.start_time,
+              reason: MAYDAY_SMS_REASONS[reason]
+            })
+
+            await adminSupabase.from('sms_queue').insert({
+              phone_number: normalizePhoneNumber(event.customer_phone),
+              message: smsMessage,
+              event_id: event.id,
+              notification_type: 'cancel',
+              status: 'pending'
+            })
+
+            smsQueued++
+            console.log(`[MAYDAY] SMS queued for ${event.customer_phone}`)
+          } catch (smsError) {
+            console.error('[MAYDAY] Failed to queue SMS:', event.id, smsError)
+            // Continue anyway - event is cancelled
+          }
+        }
       } catch (eventError) {
         console.error('[MAYDAY] Error processing event:', event.id, eventError)
         continue
@@ -364,13 +502,14 @@ export async function cancelEventsWithNotification(params: {
     revalidatePath('/kalender')
     revalidatePath('/cancellations')
 
-    return { success: true, cancelled, notified }
+    return { success: true, cancelled, notified, smsQueued }
   } catch (error) {
     console.error('[MAYDAY] Unexpected error in cancelEvents:', error)
     return {
       success: false,
       cancelled: 0,
       notified: 0,
+      smsQueued: 0,
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }

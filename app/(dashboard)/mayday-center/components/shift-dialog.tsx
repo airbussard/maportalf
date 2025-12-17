@@ -48,6 +48,7 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
   const [reason, setReason] = useState<MaydayReason>('technical_issue')
   const [reasonNote, setReasonNote] = useState('')
   const [sendNotifications, setSendNotifications] = useState(true)
+  const [sendSMS, setSendSMS] = useState(true)
   const [loading, setLoading] = useState(false)
 
   const totalMinutes = shiftHours * 60 + shiftMinutes
@@ -67,13 +68,21 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
         shiftMinutes: totalMinutes,
         reason,
         reasonNote: reason === 'other' ? reasonNote : undefined,
-        sendNotifications
+        sendNotifications,
+        sendSMS: sendSMS && eventsWithPhone > 0
       })
 
       if (result.success) {
+        const notifications = []
+        if (sendNotifications && result.notified > 0) {
+          notifications.push(`${result.notified} E-Mails`)
+        }
+        if (sendSMS && result.smsQueued > 0) {
+          notifications.push(`${result.smsQueued} SMS`)
+        }
         toast.success(`${result.shifted} Termine um ${formatDuration(totalMinutes)} verschoben`, {
-          description: sendNotifications
-            ? `${result.notified} Benachrichtigungen gesendet`
+          description: notifications.length > 0
+            ? `Benachrichtigungen: ${notifications.join(', ')}`
             : undefined
         })
         onOpenChange(false)
@@ -184,18 +193,42 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
                 onCheckedChange={(checked) => setSendNotifications(checked === true)}
               />
               <Label htmlFor="send-notifications" className="cursor-pointer">
-                Kunden automatisch benachrichtigen
+                Kunden per E-Mail benachrichtigen
               </Label>
             </div>
             {sendNotifications && (
-              <div className="ml-6 text-sm text-muted-foreground space-y-1">
+              <div className="ml-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   <span>{eventsWithEmail} Kunden erhalten eine E-Mail</span>
                 </div>
-                <div className="flex items-center gap-2 opacity-50">
+              </div>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="send-sms"
+                checked={sendSMS}
+                onCheckedChange={(checked) => setSendSMS(checked === true)}
+                disabled={eventsWithPhone === 0}
+              />
+              <Label htmlFor="send-sms" className={`cursor-pointer ${eventsWithPhone === 0 ? 'text-muted-foreground' : ''}`}>
+                Kunden per SMS benachrichtigen
+              </Label>
+            </div>
+            {sendSMS && eventsWithPhone > 0 && (
+              <div className="ml-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  <span>{eventsWithPhone} Kunden mit Telefonnummer (SMS kommt bald)</span>
+                  <span>{eventsWithPhone} Kunden erhalten eine SMS</span>
+                </div>
+              </div>
+            )}
+            {eventsWithPhone === 0 && (
+              <div className="ml-6 text-sm text-muted-foreground opacity-50">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>Keine Kunden mit Telefonnummer</span>
                 </div>
               </div>
             )}

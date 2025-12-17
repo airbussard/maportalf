@@ -20,6 +20,7 @@ export interface MaydayShiftEmailData {
   reason: string
   reasonNote?: string
   location: string
+  confirmUrl?: string  // URL for "Verstanden" button
 }
 
 export function generateMaydayShiftEmail(data: MaydayShiftEmailData) {
@@ -31,7 +32,8 @@ export function generateMaydayShiftEmail(data: MaydayShiftEmailData) {
     newStartTime,
     newEndTime,
     reason,
-    location
+    location,
+    confirmUrl
   } = data
 
   const customerName = customerFirstName || customerLastName || 'Kunde'
@@ -59,6 +61,7 @@ ${newDate} um ${newTime} - ${newEndTimeFormatted} Uhr
 Ort: ${location}
 
 Wir entschuldigen uns für die Unannehmlichkeiten und freuen uns auf Ihren Besuch!
+${confirmUrl ? `\nBestätigen Sie den Erhalt dieser Nachricht: ${confirmUrl}` : ''}
 
 Herzliche Grüße,
 Ihr FLIGHTHOUR Team
@@ -137,6 +140,18 @@ www.flighthour.de
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #333333;">
                 Wir entschuldigen uns für die Unannehmlichkeiten und freuen uns auf Ihren Besuch!
               </p>
+
+              ${confirmUrl ? `
+              <!-- Confirm Button -->
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${confirmUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; padding: 16px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
+                  Verstanden
+                </a>
+              </div>
+              <p style="margin: 0 0 24px 0; font-size: 12px; text-align: center; color: #999999;">
+                Mit Klick auf "Verstanden" bestätigen Sie den Erhalt dieser Nachricht.
+              </p>
+              ` : ''}
 
               <!-- Signature -->
               <p style="margin: 0; font-size: 16px; color: #333333;">
