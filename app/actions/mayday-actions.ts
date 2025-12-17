@@ -15,6 +15,7 @@ import {
   deleteGoogleCalendarEvent
 } from '@/lib/google-calendar/service'
 import { cancelCalendarEvent } from './calendar-events'
+import { fromZonedTime } from 'date-fns-tz'
 import { generateMaydayShiftEmail } from '@/lib/email-templates/mayday-shift'
 import { generateMaydayCancelEmail } from '@/lib/email-templates/mayday-cancel'
 import { generateShiftSMS, generateCancelSMS } from '@/lib/sms/templates'
@@ -59,26 +60,14 @@ export async function getUpcomingBookings(
     if (filterDate === 'custom' && customDate) {
       // Custom date selected - customDate is YYYY-MM-DD in Berlin timezone
       // We need to convert Berlin local time to UTC for the DB query
-      // Berlin is UTC+1 (winter) or UTC+2 (summer)
-      //
-      // Example: User selects 15.12.2025
-      // - Berlin 00:00 = UTC 23:00 on 14.12 (winter, UTC+1)
-      // - Berlin 23:59 = UTC 22:59 on 15.12 (winter, UTC+1)
-      //
-      // So we query: 2025-12-14T23:00:00Z to 2025-12-15T22:59:59Z
+      // Using date-fns-tz for correct timezone handling (incl. DST)
 
       const [year, month, day] = customDate.split('-').map(Number)
 
-      // Create dates in Berlin timezone by using a fixed offset
-      // Winter (Nov-Mar): UTC+1, Summer (Apr-Oct): UTC+2
-      // For simplicity, check if month is in summer time range
-      const isSummerTime = month >= 4 && month <= 10
-      const offsetHours = isSummerTime ? 2 : 1
-
-      // Berlin 00:00 → UTC is -offsetHours
-      // Berlin 23:59:59 → UTC is -offsetHours
-      const startUTC = new Date(Date.UTC(year, month - 1, day, 0 - offsetHours, 0, 0))
-      const endUTC = new Date(Date.UTC(year, month - 1, day, 23 - offsetHours, 59, 59))
+      // Berlin 00:00:00 → UTC (handles DST automatically)
+      const startUTC = fromZonedTime(new Date(year, month - 1, day, 0, 0, 0), 'Europe/Berlin')
+      // Berlin 23:59:59 → UTC
+      const endUTC = fromZonedTime(new Date(year, month - 1, day, 23, 59, 59), 'Europe/Berlin')
 
       const { data, error } = await supabase
         .from('calendar_events')

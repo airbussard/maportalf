@@ -67,7 +67,7 @@ Herzliche Grüße,
 Ihr FLIGHTHOUR Team
 
 --
-FLIGHTHOUR GmbH
+FLIGHTHOUR
 info@flighthour.de
 www.flighthour.de
   `.trim()
@@ -168,7 +168,7 @@ www.flighthour.de
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; font-size: 14px; color: #ffffff;">
-                      FLIGHTHOUR GmbH
+                      FLIGHTHOUR
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #999999;">
                       <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a>
