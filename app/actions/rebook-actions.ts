@@ -84,6 +84,11 @@ export async function getAvailableSlots(params: {
   const EARLIEST_START_HOUR = 10 // 10:00 Uhr
   const LATEST_END_HOUR = 22     // 22:00 Uhr
 
+  // Earliest bookable date is tomorrow (not today)
+  const tomorrow = new Date()
+  tomorrow.setHours(0, 0, 0, 0)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
   // Helper to check if a slot is within allowed hours
   const isSlotWithinAllowedHours = (slotStart: Date, slotEnd: Date): boolean => {
     const startHour = slotStart.getHours()
@@ -180,9 +185,9 @@ export async function getAvailableSlots(params: {
             // Generate 30-minute interval slots
             let slotStart = new Date(currentStart)
             while (slotStart.getTime() + duration * 60000 <= blocked.start.getTime()) {
-              // Only add slots that start in the future and within allowed hours (10:00-22:00)
+              // Only add slots that start from tomorrow and within allowed hours (10:00-22:00)
               const slotEnd = new Date(slotStart.getTime() + duration * 60000)
-              if (slotStart > new Date() && isSlotWithinAllowedHours(slotStart, slotEnd)) {
+              if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStart, slotEnd)) {
                 availableSlots.push({
                   start: slotStart.toISOString(),
                   end: slotEnd.toISOString()
@@ -204,9 +209,9 @@ export async function getAvailableSlots(params: {
         if (remainingDuration >= duration) {
           let slotStart = new Date(currentStart)
           while (slotStart.getTime() + duration * 60000 <= workEnd.getTime()) {
-            // Only add slots that start in the future and within allowed hours (10:00-22:00)
+            // Only add slots that start from tomorrow and within allowed hours (10:00-22:00)
             const slotEnd = new Date(slotStart.getTime() + duration * 60000)
-            if (slotStart > new Date() && isSlotWithinAllowedHours(slotStart, slotEnd)) {
+            if (slotStart >= tomorrow && isSlotWithinAllowedHours(slotStart, slotEnd)) {
               availableSlots.push({
                 start: slotStart.toISOString(),
                 end: slotEnd.toISOString()
