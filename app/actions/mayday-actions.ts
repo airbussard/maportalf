@@ -57,11 +57,43 @@ export async function getUpcomingBookings(
     let endDate: Date
 
     if (filterDate === 'custom' && customDate) {
-      // Custom date selected - parse the ISO date string
-      const [year, month, day] = customDate.split('-').map(Number)
-      startDate = new Date(year, month - 1, day)
-      endDate = new Date(year, month - 1, day, 23, 59, 59)
-    } else if (filterDate === 'today') {
+      // Custom date selected - use ISO string directly to avoid timezone issues
+      // customDate is in format YYYY-MM-DD, construct full ISO strings
+      const startISO = `${customDate}T00:00:00.000Z`
+      const endISO = `${customDate}T23:59:59.999Z`
+
+      // Query directly with ISO strings for custom date
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select(`
+          id,
+          google_event_id,
+          event_type,
+          title,
+          start_time,
+          end_time,
+          customer_first_name,
+          customer_last_name,
+          customer_email,
+          customer_phone,
+          attendee_count,
+          location
+        `)
+        .eq('event_type', 'booking')
+        .eq('status', 'confirmed')
+        .gte('start_time', startISO)
+        .lte('start_time', endISO)
+        .order('start_time', { ascending: true })
+
+      if (error) {
+        console.error('[MAYDAY] Failed to fetch events:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true, events: data || [] }
+    }
+
+    if (filterDate === 'today') {
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
     } else if (filterDate === 'tomorrow') {
