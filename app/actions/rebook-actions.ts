@@ -80,6 +80,22 @@ export async function getAvailableSlots(params: {
 }): Promise<{ success: boolean; slots?: TimeSlot[]; error?: string }> {
   const { startDate, endDate, duration } = params
 
+  // Time restrictions for public bookings (German time)
+  const EARLIEST_START_HOUR = 10 // 10:00 Uhr
+  const LATEST_END_HOUR = 22     // 22:00 Uhr
+
+  // Helper to check if a slot is within allowed hours
+  const isSlotWithinAllowedHours = (slotStart: Date, slotEnd: Date): boolean => {
+    const startHour = slotStart.getHours()
+    const endHour = slotEnd.getHours()
+    const endMinutes = slotEnd.getMinutes()
+
+    // Start must be >= 10:00
+    // End must be <= 22:00 (22:00 exactly is allowed, 22:01 is not)
+    return startHour >= EARLIEST_START_HOUR &&
+      (endHour < LATEST_END_HOUR || (endHour === LATEST_END_HOUR && endMinutes === 0))
+  }
+
   try {
     const supabase = createAdminClient()
 
@@ -164,11 +180,12 @@ export async function getAvailableSlots(params: {
             // Generate 30-minute interval slots
             let slotStart = new Date(currentStart)
             while (slotStart.getTime() + duration * 60000 <= blocked.start.getTime()) {
-              // Only add slots that start in the future
-              if (slotStart > new Date()) {
+              // Only add slots that start in the future and within allowed hours (10:00-22:00)
+              const slotEnd = new Date(slotStart.getTime() + duration * 60000)
+              if (slotStart > new Date() && isSlotWithinAllowedHours(slotStart, slotEnd)) {
                 availableSlots.push({
                   start: slotStart.toISOString(),
-                  end: new Date(slotStart.getTime() + duration * 60000).toISOString()
+                  end: slotEnd.toISOString()
                 })
               }
               // Move to next 30-minute interval
@@ -187,11 +204,12 @@ export async function getAvailableSlots(params: {
         if (remainingDuration >= duration) {
           let slotStart = new Date(currentStart)
           while (slotStart.getTime() + duration * 60000 <= workEnd.getTime()) {
-            // Only add slots that start in the future
-            if (slotStart > new Date()) {
+            // Only add slots that start in the future and within allowed hours (10:00-22:00)
+            const slotEnd = new Date(slotStart.getTime() + duration * 60000)
+            if (slotStart > new Date() && isSlotWithinAllowedHours(slotStart, slotEnd)) {
               availableSlots.push({
                 start: slotStart.toISOString(),
-                end: new Date(slotStart.getTime() + duration * 60000).toISOString()
+                end: slotEnd.toISOString()
               })
             }
             slotStart = new Date(slotStart.getTime() + 30 * 60000)
