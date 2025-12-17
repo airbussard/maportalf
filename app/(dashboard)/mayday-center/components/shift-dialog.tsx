@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
-import { Clock, Mail, Phone, Loader2, ArrowRight, AlertTriangle } from 'lucide-react'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Clock, Mail, Phone, Loader2, ArrowRight, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { ReasonSelector, MaydayReason, MAYDAY_REASONS } from './reason-selector'
 import { shiftEvents } from '@/app/actions/mayday-actions'
 import { toast } from 'sonner'
@@ -43,6 +44,7 @@ interface ShiftDialogProps {
 }
 
 export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDialogProps) {
+  const [shiftDirection, setShiftDirection] = useState<'forward' | 'backward'>('backward')
   const [shiftHours, setShiftHours] = useState<number>(0)
   const [shiftMinutes, setShiftMinutes] = useState<number>(30)
   const [reason, setReason] = useState<MaydayReason>('technical_issue')
@@ -63,9 +65,12 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
 
     setLoading(true)
     try {
+      // Bei "forward" negative Minuten senden
+      const actualShiftMinutes = shiftDirection === 'forward' ? -totalMinutes : totalMinutes
+
       const result = await shiftEvents({
         eventIds: events.map(e => e.id),
-        shiftMinutes: totalMinutes,
+        shiftMinutes: actualShiftMinutes,
         reason,
         reasonNote: reason === 'other' ? reasonNote : undefined,
         sendNotifications,
@@ -80,7 +85,8 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
         if (sendSMS && result.smsQueued > 0) {
           notifications.push(`${result.smsQueued} SMS`)
         }
-        toast.success(`${result.shifted} Termine um ${formatDuration(totalMinutes)} verschoben`, {
+        const directionText = shiftDirection === 'forward' ? 'nach vorne' : 'nach hinten'
+        toast.success(`${result.shifted} Termine um ${formatDuration(totalMinutes)} ${directionText} verschoben`, {
           description: notifications.length > 0
             ? `Benachrichtigungen: ${notifications.join(', ')}`
             : undefined
@@ -92,6 +98,7 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
         setShiftMinutes(30)
         setReason('technical_issue')
         setReasonNote('')
+        setShiftDirection('backward')
       } else {
         toast.error('Fehler beim Verschieben', {
           description: result.error
@@ -119,7 +126,8 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
 
   const calculateNewTime = (startTime: string) => {
     const date = new Date(startTime)
-    date.setMinutes(date.getMinutes() + totalMinutes)
+    const actualMinutes = shiftDirection === 'forward' ? -totalMinutes : totalMinutes
+    date.setMinutes(date.getMinutes() + actualMinutes)
     return format(date, 'HH:mm', { locale: de })
   }
 
@@ -132,11 +140,38 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
             Termine verschieben
           </DialogTitle>
           <DialogDescription>
-            Verschiebe {events.length} {events.length === 1 ? 'Termin' : 'Termine'} um eine bestimmte Zeit nach hinten.
+            Verschiebe {events.length} {events.length === 1 ? 'Termin' : 'Termine'} um eine bestimmte Zeit.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Shift Direction */}
+          <div className="space-y-3">
+            <Label>Richtung</Label>
+            <RadioGroup
+              value={shiftDirection}
+              onValueChange={(value) => setShiftDirection(value as 'forward' | 'backward')}
+              className="flex gap-6"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="backward" id="backward" />
+                <Label htmlFor="backward" className="cursor-pointer flex items-center gap-2">
+                  <ArrowRight className="h-4 w-4" />
+                  Nach hinten (später)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="forward" id="forward" />
+                <Label htmlFor="forward" className="cursor-pointer flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Nach vorne (früher)
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <Separator />
+
           {/* Shift Duration */}
           <div className="space-y-3">
             <Label>Verschiebung</Label>
@@ -167,7 +202,7 @@ export function ShiftDialog({ open, onOpenChange, events, onSuccess }: ShiftDial
             </div>
             {totalMinutes > 0 && (
               <p className="text-sm text-muted-foreground">
-                Alle Termine werden um <strong>{formatDuration(totalMinutes)}</strong> nach hinten verschoben.
+                Alle Termine werden um <strong>{formatDuration(totalMinutes)}</strong> {shiftDirection === 'forward' ? 'nach vorne (früher)' : 'nach hinten (später)'} verschoben.
               </p>
             )}
           </div>
