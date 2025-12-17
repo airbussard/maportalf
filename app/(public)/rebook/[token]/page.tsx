@@ -191,7 +191,7 @@ export default function RebookPage() {
                 <User className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Name</p>
-                  <p className="font-medium">
+                  <p className="font-medium text-gray-900">
                     {[tokenData.customer_first_name, tokenData.customer_last_name].filter(Boolean).join(' ') || 'Gast'}
                   </p>
                 </div>
@@ -200,21 +200,21 @@ export default function RebookPage() {
                 <Clock className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Dauer</p>
-                  <p className="font-medium">{tokenData.original_duration} Minuten</p>
+                  <p className="font-medium text-gray-900">{tokenData.original_duration} Minuten</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <MapPin className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Ort</p>
-                  <p className="font-medium">{tokenData.original_location || 'FLIGHTHOUR Flugsimulator'}</p>
+                  <p className="font-medium text-gray-900">{tokenData.original_location || 'FLIGHTHOUR Flugsimulator'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Personen</p>
-                  <p className="font-medium">{tokenData.original_attendee_count || 1}</p>
+                  <p className="font-medium text-gray-900">{tokenData.original_attendee_count || 1}</p>
                 </div>
               </div>
             </div>
@@ -229,9 +229,9 @@ export default function RebookPage() {
               disabled={currentWeekStart <= new Date()}
               className="p-2 hover:bg-gray-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 text-gray-700" />
             </button>
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-lg font-semibold text-gray-900">
               {format(currentWeekStart, 'dd. MMMM', { locale: de })} -{' '}
               {format(addDays(currentWeekStart, 6), 'dd. MMMM yyyy', { locale: de })}
             </h2>
@@ -239,7 +239,7 @@ export default function RebookPage() {
               onClick={() => navigateWeek('next')}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 text-gray-700" />
             </button>
           </div>
 
