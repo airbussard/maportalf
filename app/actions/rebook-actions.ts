@@ -34,13 +34,21 @@ export interface RebookTokenData {
   created_at: string
 }
 
+export interface NewEventData {
+  start_time: string
+  end_time: string
+  location: string | null
+}
+
 /**
  * Validate a rebook token and return token data if valid
+ * If token was already used, also return the new event data
  */
 export async function validateRebookToken(token: string): Promise<{
   valid: boolean
   error?: 'invalid' | 'expired' | 'used'
   data?: RebookTokenData
+  newEventData?: NewEventData
 }> {
   const supabase = createAdminClient()
 
@@ -55,7 +63,20 @@ export async function validateRebookToken(token: string): Promise<{
   }
 
   if (tokenData.used) {
-    return { valid: false, error: 'used' }
+    // Token was already used - fetch the new event data to show to customer
+    let newEventData: NewEventData | undefined
+    if (tokenData.new_event_id) {
+      const { data: eventData } = await supabase
+        .from('calendar_events')
+        .select('start_time, end_time, location')
+        .eq('id', tokenData.new_event_id)
+        .single()
+
+      if (eventData) {
+        newEventData = eventData
+      }
+    }
+    return { valid: false, error: 'used', newEventData }
   }
 
   if (new Date(tokenData.expires_at) < new Date()) {

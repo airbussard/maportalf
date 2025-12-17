@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { Calendar, Clock, User, MapPin, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { validateRebookToken, getAvailableSlots, rebookEvent, type TimeSlot, type RebookTokenData } from '@/app/actions/rebook-actions'
+import { validateRebookToken, getAvailableSlots, rebookEvent, type TimeSlot, type RebookTokenData, type NewEventData } from '@/app/actions/rebook-actions'
+import { CheckCircle } from 'lucide-react'
 
 type PageStatus = 'loading' | 'valid' | 'invalid' | 'expired' | 'used' | 'error' | 'booking' | 'success'
 
@@ -18,6 +19,7 @@ export default function RebookPage() {
 
   const [status, setStatus] = useState<PageStatus>('loading')
   const [tokenData, setTokenData] = useState<RebookTokenData | null>(null)
+  const [newEventData, setNewEventData] = useState<NewEventData | null>(null)
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }))
@@ -33,6 +35,10 @@ export default function RebookPage() {
         setStatus('valid')
       } else {
         setStatus(result.error || 'invalid')
+        // Store new event data if token was already used
+        if (result.newEventData) {
+          setNewEventData(result.newEventData)
+        }
       }
     }
     validate()
@@ -118,7 +124,59 @@ export default function RebookPage() {
     )
   }
 
-  if (status === 'invalid' || status === 'expired' || status === 'used' || status === 'error') {
+  // Special case: Already used - show the booked appointment
+  if (status === 'used') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-white p-6 flex justify-center border-b border-gray-200">
+            <Image src="/logo.png" alt="FLIGHTHOUR" width={180} height={48} className="h-10 w-auto" />
+          </div>
+          <div className="p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Termin bereits gebucht</h1>
+            <p className="text-gray-600 mb-6">
+              Sie haben bereits einen neuen Termin über diesen Link gebucht.
+            </p>
+
+            {newEventData && (
+              <div className="p-4 bg-amber-50 border-2 border-[#fbb928] rounded-lg mb-6 text-left">
+                <p className="text-sm text-gray-500 mb-1">Ihr gebuchter Termin:</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {format(new Date(newEventData.start_time), 'EEEE, dd. MMMM yyyy', { locale: de })}
+                </p>
+                <p className="text-xl font-bold text-[#fbb928]">
+                  {format(new Date(newEventData.start_time), 'HH:mm')} - {format(new Date(newEventData.end_time), 'HH:mm')} Uhr
+                </p>
+                {newEventData.location && (
+                  <p className="text-sm text-gray-600 mt-2 flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {newEventData.location}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="text-sm text-gray-500 mb-6">
+              Falls Sie Fragen haben, kontaktieren Sie uns gerne.
+            </p>
+
+            <Link
+              href="https://flighthour.de"
+              className="block w-full py-3 px-6 bg-[#fbb928] hover:bg-[#e5a820] text-white font-semibold rounded-lg transition-colors"
+            >
+              Zur FLIGHTHOUR Website
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error states (invalid, expired, error)
+  if (status === 'invalid' || status === 'expired' || status === 'error') {
     const errorConfig = {
       invalid: {
         title: 'Ungültiger Link',
@@ -127,10 +185,6 @@ export default function RebookPage() {
       expired: {
         title: 'Link abgelaufen',
         message: 'Dieser Buchungslink ist leider abgelaufen. Bitte kontaktieren Sie uns für einen neuen Termin.'
-      },
-      used: {
-        title: 'Bereits gebucht',
-        message: 'Sie haben bereits einen neuen Termin über diesen Link gebucht.'
       },
       error: {
         title: 'Fehler aufgetreten',
