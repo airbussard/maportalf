@@ -19,7 +19,8 @@ import {
   BarChart3,
   LogOut,
   FileText,
-  ScrollText
+  ScrollText,
+  AlertTriangle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -99,6 +100,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/cancellations',
           label: 'Absagen',
           icon: <CalendarX2 className="w-5 h-5" />,
+        },
+        {
+          href: '/mayday-center',
+          label: 'MAYDAY Center',
+          icon: <AlertTriangle className="w-5 h-5" />,
         },
         {
           href: '/tickets',
@@ -249,7 +255,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.111
+            Version 2.112
           </p>
         </div>
       </aside>
