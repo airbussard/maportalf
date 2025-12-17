@@ -14,7 +14,8 @@ import {
   CalendarPlus,
   Filter,
   AlertTriangle,
-  Users
+  Users,
+  CheckCircle2
 } from 'lucide-react'
 import {
   Table,
@@ -69,6 +70,8 @@ interface CancelledEvent {
   cancellation_reason: 'cancelled_by_us' | 'cancelled_by_customer'
   cancellation_note?: string | null
   canceller_name?: string
+  rebooked_at?: string | null
+  rebooked_event_id?: string | null
 }
 
 interface CancellationsTableProps {
@@ -228,11 +231,19 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                   {/* Reason */}
                   <TableCell>
                     <div className="space-y-1">
-                      <Badge
-                        variant={event.cancellation_reason === 'cancelled_by_customer' ? 'destructive' : 'secondary'}
-                      >
-                        {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge
+                          variant={event.cancellation_reason === 'cancelled_by_customer' ? 'destructive' : 'secondary'}
+                        >
+                          {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
+                        </Badge>
+                        {event.rebooked_at && (
+                          <Badge className="bg-green-600 hover:bg-green-700 text-white">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Umgebucht
+                          </Badge>
+                        )}
+                      </div>
                       {event.cancellation_note && (
                         <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]">
                           {event.cancellation_note}

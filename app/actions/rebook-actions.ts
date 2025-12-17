@@ -376,7 +376,21 @@ export async function rebookEvent(params: {
       // Don't fail - event was created successfully
     }
 
-    // 8. Queue confirmation email
+    // 8. Mark original cancelled event as rebooked (for Cancellations page)
+    const { error: originalEventUpdateError } = await supabase
+      .from('calendar_events')
+      .update({
+        rebooked_at: new Date().toISOString(),
+        rebooked_event_id: eventId
+      })
+      .eq('id', tokenData.original_event_id)
+
+    if (originalEventUpdateError) {
+      console.error('[Rebook] Failed to mark original event as rebooked:', originalEventUpdateError)
+      // Don't fail - booking was successful
+    }
+
+    // 9. Queue confirmation email
     try {
       const template = generateBookingConfirmationEmail({
         customer_first_name: tokenData.customer_first_name || '',
