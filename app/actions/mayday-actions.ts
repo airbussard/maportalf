@@ -35,6 +35,8 @@ interface CalendarEvent {
   customer_phone: string | null
   attendee_count: number | null
   location: string | null
+  confirmation_status?: 'pending' | 'confirmed' | 'no_notification'
+  confirmed_at?: string | null
 }
 
 /**
@@ -96,7 +98,9 @@ export async function getUpcomingBookings(
         return { success: false, error: error.message }
       }
 
-      return { success: true, events: data || [] }
+      // Enrich with confirmation status
+      const enrichedEvents = await enrichEventsWithConfirmationStatus(supabase, data || [])
+      return { success: true, events: enrichedEvents }
     }
 
     if (filterDate === 'today') {
@@ -148,7 +152,9 @@ export async function getUpcomingBookings(
       return { success: false, error: error.message }
     }
 
-    return { success: true, events: data || [] }
+    // Enrich with confirmation status
+    const enrichedEvents = await enrichEventsWithConfirmationStatus(supabase, data || [])
+    return { success: true, events: enrichedEvents }
   } catch (error) {
     console.error('[MAYDAY] Unexpected error:', error)
     return {
@@ -156,6 +162,50 @@ export async function getUpcomingBookings(
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
+}
+
+/**
+ * Enrich events with confirmation status from mayday_confirmation_tokens
+ */
+async function enrichEventsWithConfirmationStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  events: Omit<CalendarEvent, 'confirmation_status' | 'confirmed_at'>[]
+): Promise<CalendarEvent[]> {
+  if (events.length === 0) return []
+
+  const eventIds = events.map(e => e.id)
+
+  // Get latest confirmation token for each event
+  const { data: tokens } = await supabase
+    .from('mayday_confirmation_tokens')
+    .select('event_id, confirmed, confirmed_at, created_at')
+    .in('event_id', eventIds)
+    .order('created_at', { ascending: false })
+
+  // Build a map of event_id -> latest token
+  const tokenMap = new Map<string, { confirmed: boolean; confirmed_at: string | null }>()
+  for (const token of tokens || []) {
+    // Only keep the first (most recent) token per event
+    if (!tokenMap.has(token.event_id)) {
+      tokenMap.set(token.event_id, {
+        confirmed: token.confirmed,
+        confirmed_at: token.confirmed_at
+      })
+    }
+  }
+
+  // Enrich events
+  return events.map(event => {
+    const token = tokenMap.get(event.id)
+    if (!token) {
+      return { ...event, confirmation_status: 'no_notification' as const, confirmed_at: null }
+    }
+    return {
+      ...event,
+      confirmation_status: token.confirmed ? 'confirmed' as const : 'pending' as const,
+      confirmed_at: token.confirmed_at
+    }
+  })
 }
 
 /**

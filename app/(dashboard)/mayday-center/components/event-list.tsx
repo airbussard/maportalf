@@ -19,7 +19,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { Mail, Phone, Users, Calendar, CalendarIcon } from 'lucide-react'
+import { Mail, Phone, Users, Calendar, CalendarIcon, Check, Clock } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface CalendarEvent {
@@ -34,6 +41,8 @@ interface CalendarEvent {
   customer_phone: string | null
   attendee_count: number | null
   location: string | null
+  confirmation_status?: 'pending' | 'confirmed' | 'no_notification'
+  confirmed_at?: string | null
 }
 
 interface EventListProps {
@@ -76,6 +85,11 @@ export function EventList({
 
   const formatDateDisplay = (dateString: string) => {
     return format(new Date(dateString), 'EEE, dd.MM.', { locale: de })
+  }
+
+  const formatConfirmedAt = (dateString: string | null | undefined) => {
+    if (!dateString) return ''
+    return format(new Date(dateString), 'dd.MM. HH:mm', { locale: de })
   }
 
   const handleDateFilterChange = (value: string) => {
@@ -254,6 +268,43 @@ export function EventList({
                     <Users className="h-4 w-4" />
                     {event.attendee_count}
                   </div>
+                )}
+
+                {/* Confirmation Status Badge */}
+                {event.confirmation_status && event.confirmation_status !== 'no_notification' && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant={event.confirmation_status === 'confirmed' ? 'default' : 'secondary'}
+                          className={cn(
+                            'text-xs cursor-help',
+                            event.confirmation_status === 'confirmed'
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100'
+                              : 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-100'
+                          )}
+                        >
+                          {event.confirmation_status === 'confirmed' ? (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Bestätigt
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3 mr-1" />
+                              Ausstehend
+                            </>
+                          )}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {event.confirmation_status === 'confirmed'
+                          ? `Bestätigt am ${formatConfirmedAt(event.confirmed_at)} Uhr`
+                          : 'E-Mail gesendet, noch nicht bestätigt'
+                        }
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
 
                 {/* Contact Indicators */}
