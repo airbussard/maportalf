@@ -226,22 +226,29 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
               {/* Group Items */}
               <div className="space-y-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isActive(item.href)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                    )}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                ))}
+                {group.items.map((item) => {
+                  const isMayday = item.href === '/mayday-center'
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        isMayday
+                          ? isActive(item.href)
+                            ? 'bg-red-600 text-white'
+                            : 'text-red-600 hover:bg-red-900 hover:text-white'
+                          : isActive(item.href)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      )}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -261,7 +268,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.117
+            Version 2.118
           </p>
         </div>
       </aside>
