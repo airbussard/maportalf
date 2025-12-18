@@ -110,7 +110,7 @@ export function EventList({
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
+      <div className="flex flex-wrap items-end gap-4 p-4 bg-muted/50 rounded-lg">
         <div className="space-y-1.5">
           <Label htmlFor="filter-date" className="text-xs">Zeitraum</Label>
           <Select value={filterDate} onValueChange={handleDateFilterChange}>
@@ -168,7 +168,7 @@ export function EventList({
         </div>
 
         {(filterFromTime || filterDate === 'custom') && (
-          <div className="flex items-end">
+          <div>
             <Button
               variant="ghost"
               size="sm"
