@@ -175,6 +175,18 @@ export async function GET(request: NextRequest) {
             plainTextContent: email.body || email.content,
             attachments: [] // No attachments for MAYDAY
           })
+        } else if (email.type === 'shift_coverage_request') {
+          // Shift coverage request email to employees - no ticket required, no attachments
+          console.log('[Email Queue] Sending shift coverage request email')
+
+          const { sendBookingConfirmationEmail } = await import('@/lib/email/ticket-mailer')
+          emailSent = await sendBookingConfirmationEmail({
+            to: email.recipient_email,
+            subject: email.subject,
+            htmlContent: email.content,
+            plainTextContent: email.body || email.content,
+            attachments: [] // No attachments for shift coverage
+          })
         } else {
           // Ticket-related emails - need ticket data
           if (!email.ticket) {

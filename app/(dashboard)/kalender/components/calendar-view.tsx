@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import { Calendar, Plus, RefreshCw, Clock } from 'lucide-react'
+import { Calendar, Plus, RefreshCw, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,9 +11,13 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { EventDialog } from './event-dialog'
 import { EventCard } from './event-card'
+import { ShiftCoverageDialog } from './shift-coverage-dialog'
+import { ShiftCoverageList } from './shift-coverage-list'
 import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
+import { getShiftCoverageRequests } from '@/app/actions/shift-coverage'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import type { ShiftCoverageRequestWithRelations } from '@/lib/types/shift-coverage'
 
 /**
  * Sync Button Component with loading state
@@ -87,6 +91,26 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [showFINames, setShowFINames] = useState(true)
   const [showBlockers, setShowBlockers] = useState(true)
+
+  // Shift Coverage State
+  const [isShiftCoverageDialogOpen, setIsShiftCoverageDialogOpen] = useState(false)
+  const [shiftCoverageRequests, setShiftCoverageRequests] = useState<ShiftCoverageRequestWithRelations[]>([])
+
+  // Load shift coverage requests
+  useEffect(() => {
+    if (!isReadOnly) {
+      loadShiftCoverageRequests()
+    }
+  }, [isReadOnly])
+
+  const loadShiftCoverageRequests = async () => {
+    try {
+      const requests = await getShiftCoverageRequests()
+      setShiftCoverageRequests(requests)
+    } catch (error) {
+      console.error('Error loading shift coverage requests:', error)
+    }
+  }
 
   // Show sync result toast based on URL params
   useEffect(() => {
@@ -288,7 +312,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
 
         <div className="flex flex-col gap-2 w-full md:w-auto">
           {!isReadOnly && syncAction && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <form action={syncAction}>
                 <SyncButton />
               </form>
@@ -297,14 +321,34 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 <span className="hidden sm:inline">Neues Event</span>
                 <span className="sm:hidden">Neu</span>
               </Button>
+              <Button
+                onClick={() => setIsShiftCoverageDialogOpen(true)}
+                variant="outline"
+                className="flex-1 md:flex-none border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Schicht anfragen</span>
+                <span className="sm:hidden">Anfragen</span>
+              </Button>
             </div>
           )}
           {!isReadOnly && !syncAction && (
-            <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
-              <Plus className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Neues Event</span>
-              <span className="sm:hidden">Neu</span>
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={handleNewEvent} className="flex-1 md:flex-none">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Neues Event</span>
+                <span className="sm:hidden">Neu</span>
+              </Button>
+              <Button
+                onClick={() => setIsShiftCoverageDialogOpen(true)}
+                variant="outline"
+                className="flex-1 md:flex-none border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Schicht anfragen</span>
+                <span className="sm:hidden">Anfragen</span>
+              </Button>
+            </div>
           )}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -564,6 +608,27 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         event={selectedEvent}
         onRefresh={handleRefresh}
       />
+
+      {/* Shift Coverage Dialog */}
+      {!isReadOnly && (
+        <ShiftCoverageDialog
+          open={isShiftCoverageDialogOpen}
+          onOpenChange={(open) => {
+            setIsShiftCoverageDialogOpen(open)
+            if (!open) {
+              // Reload coverage requests when dialog closes
+              loadShiftCoverageRequests()
+            }
+          }}
+        />
+      )}
+
+      {/* Shift Coverage List */}
+      {!isReadOnly && shiftCoverageRequests.length > 0 && (
+        <div className="mt-6">
+          <ShiftCoverageList requests={shiftCoverageRequests} />
+        </div>
+      )}
     </div>
   )
 }
