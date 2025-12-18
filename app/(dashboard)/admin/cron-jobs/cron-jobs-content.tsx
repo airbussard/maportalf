@@ -55,10 +55,10 @@ export function CronJobsContent() {
 
         {/* Calendar Backfill */}
         <CronJobCard
-          title="Kalender Backfill (7 Tage)"
-          description="Parst Customer-Name und Telefonnummer aus bestehenden Event-Beschreibungen und aktualisiert die Datenbank"
+          title="Kalender Backfill (-30/+90 Tage)"
+          description="Parst Customer-Name und Telefonnummer aus externen Buchungen (ohne event_type) und aktualisiert die Datenbank"
           icon={<Database className="w-5 h-5 text-primary" />}
-          endpoint="/api/admin/backfill-calendar?days=7"
+          endpoint="/api/admin/backfill-calendar"
         />
       </div>
 
