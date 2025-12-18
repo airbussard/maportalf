@@ -68,13 +68,6 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
     }
   }, [open])
 
-  // Update selected employees when selectAll changes
-  useEffect(() => {
-    if (selectAll) {
-      setSelectedEmployees(employees.map(e => e.id))
-    }
-  }, [selectAll, employees])
-
   const loadEmployees = async () => {
     setLoadingEmployees(true)
     try {
@@ -278,12 +271,9 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
                     id="select_all"
                     checked={selectAll}
                     onCheckedChange={(checked) => {
-                      setSelectAll(checked as boolean)
-                      if (checked) {
-                        setSelectedEmployees(employees.map(e => e.id))
-                      } else {
-                        setSelectedEmployees([])
-                      }
+                      const isChecked = checked === true
+                      setSelectAll(isChecked)
+                      setSelectedEmployees(isChecked ? employees.map(e => e.id) : [])
                     }}
                   />
                   <Label htmlFor="select_all" className="text-sm cursor-pointer">
