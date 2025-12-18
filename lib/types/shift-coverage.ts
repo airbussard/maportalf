@@ -60,6 +60,15 @@ export interface ShiftCoverageNotificationWithEmployee extends ShiftCoverageNoti
   }
 }
 
+// Mitarbeiter für Coverage Dialog (von calendar-view geladen)
+export interface CoverageEmployee {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+}
+
 // Input für Erstellung
 export interface CreateShiftCoverageInput {
   request_date: string // YYYY-MM-DD

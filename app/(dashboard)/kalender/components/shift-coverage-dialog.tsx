@@ -2,13 +2,19 @@
  * Shift Coverage Dialog Component
  *
  * Modal for managers/admins to request shift coverage from employees
+ *
+ * v2.145: Komplett neu geschrieben
+ * - Native HTML Checkboxes statt Radix UI (vermeidet Server Action Fehler)
+ * - Set statt Array für selectedIds (O(1) Lookup)
+ * - Employees als Prop statt Server Action im Dialog
+ * - Derived State für "alle ausgewählt"
  */
 
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Mail, MessageSquare, Users, Calendar, Clock, AlertCircle } from 'lucide-react'
+import { Loader2, Mail, MessageSquare, Users, Calendar, AlertCircle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -22,33 +28,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import {
-  createShiftCoverageRequest,
-  getActiveEmployeesForCoverage
-} from '@/app/actions/shift-coverage'
-
-interface Employee {
-  id: string
-  email: string
-  first_name: string | null
-  last_name: string | null
-  phone: string | null
-}
+import { createShiftCoverageRequest } from '@/app/actions/shift-coverage'
+import type { CoverageEmployee } from '@/lib/types/shift-coverage'
 
 interface ShiftCoverageDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  employees: CoverageEmployee[]
 }
 
-export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogProps) {
+export function ShiftCoverageDialog({ open, onOpenChange, employees }: ShiftCoverageDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loadingEmployees, setLoadingEmployees] = useState(false)
 
   // Form state
   const [requestDate, setRequestDate] = useState('')
@@ -56,31 +49,49 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [reason, setReason] = useState('')
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
-  const [selectAll, setSelectAll] = useState(true)
   const [sendEmail, setSendEmail] = useState(true)
   const [sendSMS, setSendSMS] = useState(false)
 
-  // Load employees when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadEmployees()
-    }
-  }, [open])
+  // Employee Selection - nur EIN State mit Set für O(1) Lookup
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  const loadEmployees = async () => {
-    setLoadingEmployees(true)
-    try {
-      const data = await getActiveEmployeesForCoverage()
-      setEmployees(data)
-      // Select all by default
-      setSelectedEmployees(data.map(e => e.id))
-    } catch (error) {
-      console.error('Error loading employees:', error)
-      toast.error('Fehler beim Laden der Mitarbeiter')
-    } finally {
-      setLoadingEmployees(false)
+  // Bei Open: Alle auswählen
+  useEffect(() => {
+    if (open && employees.length > 0) {
+      setSelectedIds(new Set(employees.map(e => e.id)))
     }
+  }, [open, employees])
+
+  // Derived State: Alle ausgewählt?
+  const allSelected = employees.length > 0 && selectedIds.size === employees.length
+  const selectedCount = selectedIds.size
+
+  // Count employees with phone
+  const employeesWithPhone = employees.filter(e => e.phone).length
+
+  // Alle auswählen/abwählen
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set()) // Alle abwählen
+    } else {
+      setSelectedIds(new Set(employees.map(e => e.id))) // Alle auswählen
+    }
+  }
+
+  // Einzelnen toggling
+  const handleToggle = (id: string) => {
+    const newSet = new Set(selectedIds)
+    if (newSet.has(id)) {
+      newSet.delete(id)
+    } else {
+      newSet.add(id)
+    }
+    setSelectedIds(newSet)
+  }
+
+  const getEmployeeName = (employee: CoverageEmployee) => {
+    const parts = [employee.first_name, employee.last_name].filter(Boolean)
+    return parts.length > 0 ? parts.join(' ') : employee.email
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,8 +103,7 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
       return
     }
 
-    const effectiveEmployees = selectAll ? employees.map(e => e.id) : selectedEmployees
-    if (effectiveEmployees.length === 0) {
+    if (selectedCount === 0) {
       toast.error('Bitte wähle mindestens einen Mitarbeiter aus')
       return
     }
@@ -111,14 +121,14 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
         start_time: isFullDay ? undefined : startTime,
         end_time: isFullDay ? undefined : endTime,
         reason: reason || undefined,
-        employee_ids: effectiveEmployees,
+        employee_ids: Array.from(selectedIds),
         send_email: sendEmail,
         send_sms: sendSMS
       })
 
       if (result.success) {
         toast.success('Anfrage gesendet', {
-          description: `${effectiveEmployees.length} Mitarbeiter wurden benachrichtigt`
+          description: `${selectedCount} Mitarbeiter wurden benachrichtigt`
         })
         onOpenChange(false)
         resetForm()
@@ -139,8 +149,7 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
     setStartTime('09:00')
     setEndTime('17:00')
     setReason('')
-    setSelectAll(true)
-    setSelectedEmployees([])
+    setSelectedIds(new Set())
     setSendEmail(true)
     setSendSMS(false)
   }
@@ -151,26 +160,6 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
     }
     onOpenChange(open)
   }
-
-  const toggleEmployee = (employeeId: string) => {
-    setSelectAll(false)
-    setSelectedEmployees(prev =>
-      prev.includes(employeeId)
-        ? prev.filter(id => id !== employeeId)
-        : [...prev, employeeId]
-    )
-  }
-
-  const getEmployeeName = (employee: Employee) => {
-    const parts = [employee.first_name, employee.last_name].filter(Boolean)
-    return parts.length > 0 ? parts.join(' ') : employee.email
-  }
-
-  // Count employees with phone
-  const employeesWithPhone = employees.filter(e => e.phone).length
-
-  // Get effective selected count
-  const selectedCount = selectAll ? employees.length : selectedEmployees.length
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -259,34 +248,25 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
               />
             </div>
 
-            {/* Employee Selection */}
+            {/* Employee Selection - Native HTML Checkboxes */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Users className="h-4 w-4" />
                   Mitarbeiter ({selectedCount} ausgewählt)
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select_all"
-                    checked={selectAll}
-                    onCheckedChange={(checked) => {
-                      const isChecked = checked === true
-                      setSelectAll(isChecked)
-                      setSelectedEmployees(isChecked ? employees.map(e => e.id) : [])
-                    }}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                   />
-                  <Label htmlFor="select_all" className="text-sm cursor-pointer">
-                    Alle auswählen
-                  </Label>
-                </div>
+                  <span className="text-sm">Alle auswählen</span>
+                </label>
               </div>
 
-              {loadingEmployees ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : employees.length === 0 ? (
+              {employees.length === 0 ? (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
@@ -296,16 +276,16 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
               ) : (
                 <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
                   {employees.map((employee) => (
-                    <div
+                    <label
                       key={employee.id}
                       className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => toggleEmployee(employee.id)}
                     >
                       <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={selectAll || selectedEmployees.includes(employee.id)}
-                          onCheckedChange={() => toggleEmployee(employee.id)}
-                          onClick={(e) => e.stopPropagation()}
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(employee.id)}
+                          onChange={() => handleToggle(employee.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                         />
                         <div>
                           <div className="font-medium text-sm">
@@ -322,7 +302,7 @@ export function ShiftCoverageDialog({ open, onOpenChange }: ShiftCoverageDialogP
                           <MessageSquare className="h-3.5 w-3.5 text-green-500" />
                         )}
                       </div>
-                    </div>
+                    </label>
                   ))}
                 </div>
               )}

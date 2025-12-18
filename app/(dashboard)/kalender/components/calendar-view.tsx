@@ -14,10 +14,10 @@ import { EventCard } from './event-card'
 import { ShiftCoverageDialog } from './shift-coverage-dialog'
 import { ShiftCoverageList } from './shift-coverage-list'
 import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
-import { getShiftCoverageRequests } from '@/app/actions/shift-coverage'
+import { getShiftCoverageRequests, getActiveEmployeesForCoverage } from '@/app/actions/shift-coverage'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import type { ShiftCoverageRequestWithRelations } from '@/lib/types/shift-coverage'
+import type { ShiftCoverageRequestWithRelations, CoverageEmployee } from '@/lib/types/shift-coverage'
 
 /**
  * Sync Button Component with loading state
@@ -95,11 +95,13 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   // Shift Coverage State
   const [isShiftCoverageDialogOpen, setIsShiftCoverageDialogOpen] = useState(false)
   const [shiftCoverageRequests, setShiftCoverageRequests] = useState<ShiftCoverageRequestWithRelations[]>([])
+  const [coverageEmployees, setCoverageEmployees] = useState<CoverageEmployee[]>([])
 
-  // Load shift coverage requests
+  // Load shift coverage requests and employees
   useEffect(() => {
     if (!isReadOnly) {
       loadShiftCoverageRequests()
+      loadCoverageEmployees()
     }
   }, [isReadOnly])
 
@@ -109,6 +111,15 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
       setShiftCoverageRequests(requests)
     } catch (error) {
       console.error('Error loading shift coverage requests:', error)
+    }
+  }
+
+  const loadCoverageEmployees = async () => {
+    try {
+      const employees = await getActiveEmployeesForCoverage()
+      setCoverageEmployees(employees)
+    } catch (error) {
+      console.error('Error loading coverage employees:', error)
     }
   }
 
@@ -620,6 +631,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
               loadShiftCoverageRequests()
             }
           }}
+          employees={coverageEmployees}
         />
       )}
 
