@@ -344,10 +344,19 @@ function prepareEventData(
     firstName = ''
     lastName = ''
   } else {
-    // Regular booking event - parse customer name
-    const nameParts = googleEvent.summary.split(' ')
-    firstName = nameParts[0] || 'Unknown'
-    lastName = nameParts.slice(1).join(' ') || 'Customer'
+    // Regular booking event
+    // If EVENT_TYPE marker exists → internal event → parse name from title
+    // If no marker → external event → leave names empty
+    if (parsedData.event_type === 'booking') {
+      // Internal event with BOOKING marker - parse customer name from title
+      const nameParts = googleEvent.summary.split(' ')
+      firstName = nameParts[0] || ''
+      lastName = nameParts.slice(1).join(' ') || ''
+    } else {
+      // External event (no EVENT_TYPE marker) - leave names empty
+      firstName = ''
+      lastName = ''
+    }
   }
 
   // Calculate duration in minutes

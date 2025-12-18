@@ -481,7 +481,13 @@ export function parseGoogleEventDescription(description: string): Partial<Calend
   if (phoneMatch) data.customer_phone = phoneMatch[1].trim()
 
   const emailMatch = description.match(/E-Mail:\s*(.+)/i)
-  if (emailMatch) data.customer_email = emailMatch[1].trim()
+  if (emailMatch) {
+    data.customer_email = emailMatch[1].trim()
+  } else {
+    // Fallback: Find any email address in description (for externally created events)
+    const genericEmailMatch = description.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+    if (genericEmailMatch) data.customer_email = genericEmailMatch[0]
+  }
 
   const attendeeMatch = description.match(/Anzahl Teilnehmer:\s*(\d+)/i)
   if (attendeeMatch) data.attendee_count = parseInt(attendeeMatch[1])
