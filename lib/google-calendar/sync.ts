@@ -346,16 +346,17 @@ function prepareEventData(
   } else {
     // Regular booking event
     // If EVENT_TYPE marker exists → internal event → parse name from title
-    // If no marker → external event → leave names empty
+    // If no marker → external event → use parsed names from description
     if (parsedData.event_type === 'booking') {
       // Internal event with BOOKING marker - parse customer name from title
       const nameParts = googleEvent.summary.split(' ')
       firstName = nameParts[0] || ''
       lastName = nameParts.slice(1).join(' ') || ''
     } else {
-      // External event (no EVENT_TYPE marker) - leave names empty
-      firstName = ''
-      lastName = ''
+      // External event (no EVENT_TYPE marker)
+      // Use parsed names from description (e.g., "Customer: Laura Wittstock")
+      firstName = parsedData.customer_first_name || ''
+      lastName = parsedData.customer_last_name || ''
     }
   }
 

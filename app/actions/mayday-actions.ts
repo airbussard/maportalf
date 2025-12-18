@@ -254,43 +254,28 @@ export async function shiftEvents(params: {
         const newStartTime = new Date(oldStartTime.getTime() + shiftMinutes * 60 * 1000)
         const newEndTime = new Date(oldEndTime.getTime() + shiftMinutes * 60 * 1000)
 
-        // Update in database
+        // Store PENDING times - don't apply immediately!
+        // Event stays at original time until customer confirms
         const { error: updateError } = await adminSupabase
           .from('calendar_events')
           .update({
-            start_time: newStartTime.toISOString(),
-            end_time: newEndTime.toISOString(),
+            // DON'T update start_time/end_time - keep original until confirmed
+            pending_start_time: newStartTime.toISOString(),
+            pending_end_time: newEndTime.toISOString(),
+            shift_notified_at: new Date().toISOString(),
+            shift_reason: MAYDAY_REASONS[reason].emailText,
             updated_at: new Date().toISOString()
           })
           .eq('id', event.id)
 
         if (updateError) {
-          console.error('[MAYDAY] Failed to update event:', event.id, updateError)
+          console.error('[MAYDAY] Failed to update event with pending shift:', event.id, updateError)
           continue
         }
 
-        // Update in Google Calendar if google_event_id exists
-        if (event.google_event_id) {
-          try {
-            // Build full event data for Google Calendar update
-            await updateGoogleCalendarEvent(event.google_event_id, {
-              event_type: event.event_type,
-              customer_first_name: event.customer_first_name || '',
-              customer_last_name: event.customer_last_name || '',
-              customer_phone: event.customer_phone,
-              customer_email: event.customer_email,
-              start_time: newStartTime.toISOString(),
-              end_time: newEndTime.toISOString(),
-              duration: event.duration || Math.round((newEndTime.getTime() - newStartTime.getTime()) / 60000),
-              attendee_count: event.attendee_count,
-              remarks: event.remarks,
-              location: event.location
-            })
-          } catch (googleError) {
-            console.error('[MAYDAY] Failed to update Google Calendar:', event.id, googleError)
-            // Continue anyway - DB is updated
-          }
-        }
+        // DON'T update Google Calendar yet - that happens when customer confirms
+        // The event stays at the original time in both DB and Google Calendar
+        console.log(`[MAYDAY] Pending shift stored for event ${event.id}: ${event.start_time} → ${newStartTime.toISOString()} (awaiting confirmation)`)
 
         shifted++
 
@@ -595,6 +580,98 @@ export async function cancelEventsWithNotification(params: {
       cancelled: 0,
       notified: 0,
       smsQueued: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Apply a pending shift to an event after customer confirmation
+ * This function is called when the customer clicks "Verstanden" in the email
+ */
+export async function applyPendingShift(eventId: string): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    const adminSupabase = createAdminClient()
+
+    // 1. Get event with pending times
+    const { data: event, error: fetchError } = await adminSupabase
+      .from('calendar_events')
+      .select('*')
+      .eq('id', eventId)
+      .single()
+
+    if (fetchError || !event) {
+      console.error('[MAYDAY] applyPendingShift - Event not found:', eventId)
+      return { success: false, error: 'Event not found' }
+    }
+
+    // 2. Check if there are pending times to apply
+    if (!event.pending_start_time || !event.pending_end_time) {
+      console.log('[MAYDAY] applyPendingShift - No pending shift found for event:', eventId)
+      return { success: true } // Not an error, just nothing to do
+    }
+
+    console.log(`[MAYDAY] Applying pending shift for event ${eventId}`)
+    console.log(`  From: ${event.start_time} → ${event.pending_start_time}`)
+
+    // 3. Update Google Calendar to new time (if google_event_id exists)
+    if (event.google_event_id) {
+      try {
+        await updateGoogleCalendarEvent(event.google_event_id, {
+          event_type: event.event_type,
+          customer_first_name: event.customer_first_name || '',
+          customer_last_name: event.customer_last_name || '',
+          customer_phone: event.customer_phone,
+          customer_email: event.customer_email,
+          start_time: event.pending_start_time,
+          end_time: event.pending_end_time,
+          duration: event.duration || Math.round(
+            (new Date(event.pending_end_time).getTime() - new Date(event.pending_start_time).getTime()) / 60000
+          ),
+          attendee_count: event.attendee_count,
+          remarks: event.remarks,
+          location: event.location
+        })
+        console.log('[MAYDAY] Google Calendar updated successfully')
+      } catch (googleError) {
+        console.error('[MAYDAY] Failed to update Google Calendar:', googleError)
+        // Continue anyway - we'll still update the database
+        // Manager can manually sync if needed
+      }
+    }
+
+    // 4. Apply the shift to the database
+    const { error: updateError } = await adminSupabase
+      .from('calendar_events')
+      .update({
+        start_time: event.pending_start_time,
+        end_time: event.pending_end_time,
+        pending_start_time: null,  // Clear pending
+        pending_end_time: null,
+        // Keep shift_notified_at and shift_reason for history
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', eventId)
+
+    if (updateError) {
+      console.error('[MAYDAY] Failed to apply pending shift:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    console.log('[MAYDAY] Pending shift applied successfully for event:', eventId)
+
+    // 5. Revalidate paths
+    revalidatePath('/mayday-center')
+    revalidatePath('/kalender')
+
+    return { success: true }
+  } catch (error) {
+    console.error('[MAYDAY] Unexpected error in applyPendingShift:', error)
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }

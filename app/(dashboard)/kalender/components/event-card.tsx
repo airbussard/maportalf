@@ -7,6 +7,22 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
 import { toast } from 'sonner'
+import { MaydayStatusBadge } from './mayday-status-badge'
+
+interface MaydayToken {
+  id: string
+  action_type: 'shift' | 'cancel'
+  confirmed: boolean
+  confirmed_at: string | null
+  created_at: string
+  shift_applied: boolean
+}
+
+interface RebookToken {
+  id: string
+  used: boolean
+  used_at: string | null
+}
 
 interface EventCardProps {
   event: {
@@ -28,6 +44,14 @@ interface EventCardProps {
     actual_work_end_time?: string
     has_video_recording?: boolean
     on_site_payment_amount?: number | null
+    // MAYDAY pending shift fields
+    pending_start_time?: string | null
+    pending_end_time?: string | null
+    shift_notified_at?: string | null
+    shift_reason?: string | null
+    rebooked_at?: string | null
+    mayday_tokens?: MaydayToken[]
+    rebook_token?: RebookToken | null
   }
   onClick?: () => void
 }
@@ -167,6 +191,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'pending' && '⏳'}
             {event.sync_status === 'error' && '⚠'}
           </Badge>
+          {/* MAYDAY Status Badge (Mobile) */}
+          <MaydayStatusBadge event={event} compact />
           {/* Resend Email Button (only for bookings with email) */}
           {isBookingWithEmail && (
             <Button
@@ -286,6 +312,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'pending' && '⏳'}
             {event.sync_status === 'error' && '⚠'}
           </Badge>
+          {/* MAYDAY Status Badge (Desktop) */}
+          <MaydayStatusBadge event={event} />
           {/* Resend Email Button (only for bookings with email) */}
           {isBookingWithEmail && (
             <Button

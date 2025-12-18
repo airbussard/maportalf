@@ -40,6 +40,21 @@ function SyncButton() {
   )
 }
 
+interface MaydayToken {
+  id: string
+  action_type: 'shift' | 'cancel'
+  confirmed: boolean
+  confirmed_at: string | null
+  created_at: string
+  shift_applied: boolean
+}
+
+interface RebookToken {
+  id: string
+  used: boolean
+  used_at: string | null
+}
+
 interface CalendarEvent {
   id: string
   title: string
@@ -62,6 +77,17 @@ interface CalendarEvent {
   is_all_day?: boolean
   actual_work_start_time?: string
   actual_work_end_time?: string
+  // Pending shift fields (for deferred shift until customer confirms)
+  pending_start_time?: string | null
+  pending_end_time?: string | null
+  shift_notified_at?: string | null
+  shift_reason?: string | null
+  // Rebook tracking
+  rebooked_at?: string | null
+  rebooked_event_id?: string | null
+  // MAYDAY tokens (joined data)
+  mayday_tokens?: MaydayToken[]
+  rebook_token?: RebookToken | null
 }
 
 interface LastSync {
@@ -495,6 +521,8 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
             const isSelected = selectedDay && dateStr === selectedDay.toDateString()
             // Only count booking events (exclude FI events and blockers from count)
             const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
+            // Check if any events have pending shifts awaiting customer confirmation
+            const hasPendingShift = dayEvents.some(e => e.pending_start_time)
 
             return (
               <div
@@ -508,8 +536,17 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                       : 'border-border'
                 } hover:bg-accent transition-colors cursor-pointer`}
               >
-                <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
-                  {day}
+                <div className="flex items-start justify-between">
+                  <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
+                    {day}
+                  </div>
+                  {/* Pending Shift Indicator - pulsing amber dot */}
+                  {hasPendingShift && (
+                    <div
+                      className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"
+                      title="Verschiebung ausstehend"
+                    />
+                  )}
                 </div>
                 {/* FI Names when checkbox is enabled - always show if present */}
                 {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (

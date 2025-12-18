@@ -477,8 +477,36 @@ export function parseGoogleEventDescription(description: string): Partial<Calend
     }
   }
 
+  // Parse customer name from "Customer: Vorname Nachname" line (external booking systems)
+  const customerMatch = description.match(/Customer:\s*(.+)/i)
+  if (customerMatch) {
+    const fullName = customerMatch[1].trim()
+    const nameParts = fullName.split(/\s+/)
+    if (nameParts.length >= 2) {
+      // Last word = last name, rest = first name
+      data.customer_last_name = nameParts[nameParts.length - 1]
+      data.customer_first_name = nameParts.slice(0, -1).join(' ')
+    } else if (nameParts.length === 1) {
+      // Single word -> treat as last name
+      data.customer_last_name = nameParts[0]
+      data.customer_first_name = ''
+    }
+  }
+
+  // Parse phone number - Priority 1: With "Telefon:" prefix
   const phoneMatch = description.match(/Telefon:\s*(.+)/i)
-  if (phoneMatch) data.customer_phone = phoneMatch[1].trim()
+  if (phoneMatch) {
+    data.customer_phone = phoneMatch[1].trim()
+  } else {
+    // Fallback: Find phone number without prefix
+    // Formats: 01777771722, +4917712345678, +41795498801, 0171 234 5678
+    const phoneRegex = /(?:^|\n|\s)((?:\+[1-9][0-9]{0,3}|0)[1-9][0-9\s]{7,14})(?:\s|$|\n)/m
+    const genericPhoneMatch = description.match(phoneRegex)
+    if (genericPhoneMatch) {
+      // Remove spaces for consistent format
+      data.customer_phone = genericPhoneMatch[1].replace(/\s+/g, '')
+    }
+  }
 
   const emailMatch = description.match(/E-Mail:\s*(.+)/i)
   if (emailMatch) {

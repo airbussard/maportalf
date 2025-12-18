@@ -1,6 +1,6 @@
 'use client'
 
-import { Settings, Mail, Calendar, RefreshCw } from 'lucide-react'
+import { Settings, Mail, Calendar, RefreshCw, Database } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CronJobCard } from './components/cron-job-card'
 
@@ -51,6 +51,14 @@ export function CronJobsContent() {
           description="Ruft neue E-Mails vom IMAP Server ab und erstellt automatisch Tickets mit Anhängen im Storage"
           icon={<Mail className="w-5 h-5 text-primary" />}
           endpoint="/api/cron/fetch-emails"
+        />
+
+        {/* Calendar Backfill */}
+        <CronJobCard
+          title="Kalender Backfill (7 Tage)"
+          description="Parst Customer-Name und Telefonnummer aus bestehenden Event-Beschreibungen und aktualisiert die Datenbank"
+          icon={<Database className="w-5 h-5 text-primary" />}
+          endpoint="/api/admin/backfill-calendar?days=7"
         />
       </div>
 
