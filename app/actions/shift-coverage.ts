@@ -444,9 +444,9 @@ export async function acceptShiftCoverage(token: string): Promise<AcceptCoverage
 
       return {
         success: false,
-        message: `Diese Schicht wurde gerade von ${getEmployeeName(acceptor)} übernommen.`,
+        message: `Diese Schicht wurde gerade von ${getEmployeeName(acceptor ?? undefined)} übernommen.`,
         alreadyAccepted: true,
-        acceptorName: getEmployeeName(acceptor)
+        acceptorName: getEmployeeName(acceptor ?? undefined)
       }
     }
 
