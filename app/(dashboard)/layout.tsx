@@ -116,7 +116,7 @@ export default function DashboardLayout({
         {/* Footer */}
         <footer className="border-t py-4 mt-auto">
           <div className="container px-4 text-center text-sm text-muted-foreground">
-            FLIGHTHOUR Employee Portal | v2.145
+            Made with <span className="text-red-500">❤</span> by getemergence.com / Oscar Knabe
           </div>
         </footer>
       </div>
