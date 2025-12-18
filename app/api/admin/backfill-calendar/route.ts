@@ -4,8 +4,8 @@
  * Parses existing event descriptions to extract customer name and phone number
  * using the new parsing rules. Updates all fields where parsed data is available.
  *
- * Only processes events WITHOUT event_type (external bookings).
- * Skips: fi_assignment, blocker, booking (all tagged internal events)
+ * Only processes EXTERNAL bookings (no EVENT_TYPE: marker in description).
+ * Internal events (with EVENT_TYPE: marker) are skipped.
  *
  * Fixed range: -30 days to +90 days from today
  */
@@ -26,14 +26,14 @@ export async function GET() {
 
   const supabase = createAdminClient()
 
-  // Get events WITHOUT event_type (external bookings only)
-  // Skip all tagged events (fi_assignment, blocker, booking)
+  // Get all booking events in range
+  // We'll filter for external events (no EVENT_TYPE: marker) in code
   const { data: events, error } = await supabase
     .from('calendar_events')
     .select('id, title, description, customer_first_name, customer_last_name, customer_phone')
     .gte('start_time', startDate.toISOString())
     .lte('start_time', endDate.toISOString())
-    .is('event_type', null)
+    .eq('event_type', 'booking')
     .order('start_time', { ascending: false })
 
   if (error || !events) {
@@ -41,13 +41,21 @@ export async function GET() {
     return NextResponse.json({ error: error?.message || 'Fehler beim Laden' }, { status: 500 })
   }
 
-  console.log(`[Backfill] Found ${events.length} events to process`)
+  console.log(`[Backfill] Found ${events.length} booking events to check`)
 
   let updated = 0
   let skipped = 0
+  let skippedInternal = 0
   const details: string[] = []
 
   for (const event of events) {
+    // Skip internal events (have EVENT_TYPE: marker in description)
+    if (event.description?.includes('EVENT_TYPE:')) {
+      skippedInternal++
+      continue
+    }
+
+    // Skip events without description
     if (!event.description) {
       skipped++
       continue
@@ -87,12 +95,13 @@ export async function GET() {
     }
   }
 
-  console.log(`[Backfill] Complete: ${updated} updated, ${skipped} skipped`)
+  console.log(`[Backfill] Complete: ${updated} updated, ${skippedInternal} internal skipped, ${skipped} no data`)
 
   return NextResponse.json({
-    message: `${updated} Events aktualisiert, ${skipped} übersprungen`,
+    message: `${updated} Events aktualisiert, ${skippedInternal} interne übersprungen, ${skipped} ohne Daten`,
     processed: updated,
     total: events.length,
+    skippedInternal,
     skipped,
     details
   })
