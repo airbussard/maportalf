@@ -158,7 +158,7 @@ export async function createShiftCoverageRequest(
         const { error: smsError } = await adminSupabase.from('sms_queue').insert({
           phone_number: normalizePhoneNumber(employee.phone),
           message: smsMessage,
-          notification_type: 'shift_coverage',
+          notification_type: 'shift',
           status: 'pending'
         })
 
