@@ -47,7 +47,7 @@ function sanitizeTimeFields(data: any) {
 /**
  * Get calendar events for a date range
  * If no dates provided, gets all events
- * Note: MAYDAY tokens join removed - requires FK relationship setup in Supabase
+ * Includes MAYDAY confirmation tokens and rebook tokens via FK joins
  */
 export async function getCalendarEvents(
   startDate?: string,
@@ -55,11 +55,18 @@ export async function getCalendarEvents(
 ) {
   const supabase = await createClient()
 
-  // Select all calendar_events fields
-  // Note: mayday_tokens and rebook_token joins disabled until FK relationships are set up
+  // Select all calendar_events fields with MAYDAY token joins
   let query = supabase
     .from('calendar_events')
-    .select('*')
+    .select(`
+      *,
+      mayday_tokens:mayday_confirmation_tokens(
+        id, action_type, confirmed, confirmed_at, created_at, shift_applied
+      ),
+      rebook_token:rebook_tokens(
+        id, used, used_at
+      )
+    `)
     .neq('status', 'cancelled') // Exclude cancelled events from calendar view
     .order('start_time', { ascending: true })
     .limit(5000) // Explicit limit to override Supabase default of 1000
@@ -78,12 +85,23 @@ export async function getCalendarEvents(
     throw new Error(`Failed to fetch calendar events: ${error.message}`)
   }
 
-  // Return data with empty arrays for MAYDAY tokens (joins disabled)
-  return (data || []).map(event => ({
-    ...event,
-    mayday_tokens: [],
-    rebook_token: null
-  }))
+  // Process MAYDAY tokens: sort by created_at descending and take the most recent
+  return (data || []).map(event => {
+    // Sort mayday_tokens by created_at (newest first) and get the most recent
+    const sortedTokens = (event.mayday_tokens || []).sort((a: any, b: any) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
+    // rebook_tokens is an array from Supabase, but we only expect one per event
+    const rebookTokenArray = event.rebook_token as any[] | null
+    const rebookToken = rebookTokenArray && rebookTokenArray.length > 0 ? rebookTokenArray[0] : null
+
+    return {
+      ...event,
+      mayday_tokens: sortedTokens,
+      rebook_token: rebookToken
+    }
+  })
 }
 
 /**
