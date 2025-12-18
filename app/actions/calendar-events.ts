@@ -47,7 +47,7 @@ function sanitizeTimeFields(data: any) {
 /**
  * Get calendar events for a date range
  * If no dates provided, gets all events
- * Includes joined MAYDAY confirmation tokens and rebook tokens for status display
+ * Note: MAYDAY tokens join removed - requires FK relationship setup in Supabase
  */
 export async function getCalendarEvents(
   startDate?: string,
@@ -55,25 +55,11 @@ export async function getCalendarEvents(
 ) {
   const supabase = await createClient()
 
-  // Select all calendar_events fields plus joined MAYDAY data
+  // Select all calendar_events fields
+  // Note: mayday_tokens and rebook_token joins disabled until FK relationships are set up
   let query = supabase
     .from('calendar_events')
-    .select(`
-      *,
-      mayday_tokens:mayday_confirmation_tokens(
-        id,
-        action_type,
-        confirmed,
-        confirmed_at,
-        created_at,
-        shift_applied
-      ),
-      rebook_token:rebook_tokens(
-        id,
-        used,
-        used_at
-      )
-    `)
+    .select('*')
     .neq('status', 'cancelled') // Exclude cancelled events from calendar view
     .order('start_time', { ascending: true })
     .limit(5000) // Explicit limit to override Supabase default of 1000
@@ -92,28 +78,12 @@ export async function getCalendarEvents(
     throw new Error(`Failed to fetch calendar events: ${error.message}`)
   }
 
-  // Process the results to handle the joined data
-  // Supabase returns arrays for the relations, we pick the most recent token
-  const processedData = (data || []).map(event => {
-    // For mayday_tokens, keep as array sorted by created_at (most recent first)
-    const sortedTokens = (event.mayday_tokens || []).sort(
-      (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-
-    // For rebook_token, take the first one (most recent)
-    const rebookTokens = event.rebook_token || []
-    const latestRebookToken = Array.isArray(rebookTokens) && rebookTokens.length > 0
-      ? rebookTokens[0]
-      : null
-
-    return {
-      ...event,
-      mayday_tokens: sortedTokens,
-      rebook_token: latestRebookToken
-    }
-  })
-
-  return processedData
+  // Return data with empty arrays for MAYDAY tokens (joins disabled)
+  return (data || []).map(event => ({
+    ...event,
+    mayday_tokens: [],
+    rebook_token: null
+  }))
 }
 
 /**
