@@ -493,6 +493,24 @@ export function parseGoogleEventDescription(description: string): Partial<Calend
     }
   }
 
+  // Fallback: Name at beginning of description (before HTML tags)
+  // Format: "Stefanie Willemsen<br>..." from external booking systems
+  if (!data.customer_first_name && !data.customer_last_name) {
+    // Extract text before first HTML tag or newline
+    const firstLineMatch = description.match(/^([^<\n]+)/)
+    if (firstLineMatch) {
+      const firstLine = firstLineMatch[1].trim()
+      // Check if it looks like a name (not starting with emoji, number, or special chars)
+      if (firstLine && !firstLine.startsWith('✈') && !firstLine.match(/^[0-9+]/) && !firstLine.match(/^EVENT_TYPE:/i)) {
+        const nameParts = firstLine.split(/\s+/)
+        if (nameParts.length >= 2) {
+          data.customer_first_name = nameParts.slice(0, -1).join(' ')
+          data.customer_last_name = nameParts[nameParts.length - 1]
+        }
+      }
+    }
+  }
+
   // Parse phone number - Priority 1: With "Telefon:" prefix
   const phoneMatch = description.match(/Telefon:\s*(.+)/i)
   if (phoneMatch) {
