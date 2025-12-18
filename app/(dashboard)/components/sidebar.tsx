@@ -10,8 +10,6 @@ import {
   Settings,
   Users,
   Tag,
-  Mail,
-  Phone,
   X,
   CalendarClock,
   CalendarCheck,
@@ -144,23 +142,8 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
       roles: ['admin'],
       items: [
         {
-          href: '/zeiterfassung/verwaltung',
-          label: 'Zeiterfassung Verwaltung',
-          icon: <Clock className="w-5 h-5" />,
-        },
-        {
-          href: '/admin/email-queue',
-          label: 'E-Mail Warteschlange',
-          icon: <Mail className="w-5 h-5" />,
-        },
-        {
-          href: '/admin/sms-queue',
-          label: 'SMS Warteschlange',
-          icon: <Phone className="w-5 h-5" />,
-        },
-        {
-          href: '/admin/cron-jobs',
-          label: 'Cron Jobs',
+          href: '/admin',
+          label: 'Administration',
           icon: <Settings className="w-5 h-5" />,
         },
       ],
@@ -268,7 +251,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
 
           {/* Version */}
           <p className="text-xs text-center text-muted-foreground">
-            Version 2.152
+            Version 2.153
           </p>
         </div>
       </aside>
