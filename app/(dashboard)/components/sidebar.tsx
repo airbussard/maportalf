@@ -24,6 +24,8 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { isChristmasPeriod } from '@/components/festive-effects'
 
 interface SidebarProps {
   role: string
@@ -249,10 +251,21 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
             <span>Abmelden</span>
           </Button>
 
-          {/* Version */}
-          <p className="text-xs text-center text-muted-foreground">
-            Version 2.158
-          </p>
+          {/* Version + Christmas Tree */}
+          <div className="flex items-center justify-center gap-2">
+            {isChristmasPeriod() && (
+              <button
+                onClick={() => toast('🎄 Frohe Feiertage vom FLIGHTHOUR Team! 🎁')}
+                className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                title="Frohe Feiertage!"
+              >
+                🎄
+              </button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Version 2.159
+            </p>
+          </div>
         </div>
       </aside>
     </>

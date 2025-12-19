@@ -7,7 +7,7 @@ import { Menu } from 'lucide-react'
 import { Sidebar } from './components/sidebar'
 import Image from 'next/image'
 import { NotificationBell } from '@/components/notification-bell'
-import { Snowfall } from '@/components/snowfall'
+import { FestiveEffects, ChristmasLights, isChristmasPeriod } from '@/components/festive-effects'
 
 export default function DashboardLayout({
   children,
@@ -19,6 +19,30 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState<string>('employee')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [festiveEnabled, setFestiveEnabled] = useState(true)
+
+  // Sync festive state with localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('festive-enabled')
+    if (stored !== null) {
+      setFestiveEnabled(stored === 'true')
+    }
+
+    // Listen for storage changes
+    const handleStorage = () => {
+      const stored = localStorage.getItem('festive-enabled')
+      setFestiveEnabled(stored !== 'false')
+    }
+    window.addEventListener('storage', handleStorage)
+
+    // Poll for changes (same tab)
+    const interval = setInterval(handleStorage, 500)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      clearInterval(interval)
+    }
+  }, [])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -98,8 +122,8 @@ export default function DashboardLayout({
 
             {/* User Info */}
             <div className="ml-auto flex items-center gap-2">
-              {/* Christmas Snowfall Toggle (Dec 19-26) */}
-              <Snowfall />
+              {/* Festive Effects Toggle */}
+              <FestiveEffects />
               {/* Notification Bell (Manager/Admin only) */}
               <NotificationBell role={userRole} />
 
@@ -111,6 +135,9 @@ export default function DashboardLayout({
               </div>
             </div>
           </div>
+
+          {/* Christmas Lights */}
+          <ChristmasLights enabled={festiveEnabled} />
         </header>
 
         {/* Page Content */}

@@ -25,9 +25,12 @@ export default async function DashboardPage() {
     ? `${profile.first_name} ${profile.last_name}`
     : user?.email
 
-  // Weihnachtszeitraum: 19.-26. Dezember
+  // Festliche Zeiträume
   const now = new Date()
-  const isChristmas = now.getMonth() === 11 && now.getDate() >= 19 && now.getDate() <= 26
+  const month = now.getMonth()
+  const day = now.getDate()
+  const isChristmas = month === 11 && day >= 19 && day <= 26 // 19.-26. Dezember
+  const isNewYear = month === 0 && day === 1 // 1. Januar
 
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
@@ -44,7 +47,11 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          {isChristmas ? (
+          {isNewYear ? (
+            <>
+              <span className="text-amber-500">Frohes Neues Jahr</span>, {fullName}! 🥂
+            </>
+          ) : isChristmas ? (
             <>
               <span className="text-red-500">Frohe Weihnachten</span>, {fullName}! 🎅
             </>

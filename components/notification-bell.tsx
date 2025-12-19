@@ -12,6 +12,7 @@ import { getNotifications, getUnreadCount, markAsRead, markAllAsRead, type Notif
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { isChristmasPeriod } from '@/components/festive-effects'
 
 interface NotificationBellProps {
   role: string
@@ -97,7 +98,12 @@ export function NotificationBell({ role }: NotificationBellProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <div className="relative">
+            <Bell className="h-5 w-5" />
+            {isChristmasPeriod() && (
+              <span className="absolute -top-1.5 -right-1.5 text-[10px]">🎀</span>
+            )}
+          </div>
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
               {unreadCount > 9 ? '9+' : unreadCount}
