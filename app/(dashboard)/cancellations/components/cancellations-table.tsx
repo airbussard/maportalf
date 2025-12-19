@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { permanentlyDeleteEvent, archiveCalendarEvent } from '@/app/actions/calendar-events'
+import { permanentlyDeleteEvent, archiveCalendarEvent, manuallyConfirmCancellation } from '@/app/actions/calendar-events'
 import { RescheduleDialog } from './reschedule-dialog'
 import { CompensationNotice } from './compensation-notice'
 import { EventDetailDialog } from './event-detail-dialog'
@@ -91,6 +91,7 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
   const [isArchiving, setIsArchiving] = useState(false)
   const [rescheduleEvent, setRescheduleEvent] = useState<CancelledEvent | null>(null)
   const [detailEvent, setDetailEvent] = useState<CancelledEvent | null>(null)
+  const [confirmingEventId, setConfirmingEventId] = useState<string | null>(null)
 
   const filteredEvents = events.filter(event => {
     if (filter === 'all') return true
@@ -134,6 +135,23 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
     } finally {
       setIsArchiving(false)
       setArchiveEventId(null)
+    }
+  }
+
+  const handleManualConfirm = async (eventId: string) => {
+    setConfirmingEventId(eventId)
+    try {
+      const result = await manuallyConfirmCancellation(eventId)
+      if (result.success) {
+        toast.success('Absage wurde manuell bestätigt')
+        router.refresh()
+      } else {
+        toast.error(result.error || 'Fehler beim Bestätigen')
+      }
+    } catch (error) {
+      toast.error('Ein unerwarteter Fehler ist aufgetreten')
+    } finally {
+      setConfirmingEventId(null)
     }
   }
 
@@ -302,6 +320,22 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                   {/* Actions */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {!event.mayday_confirmed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleManualConfirm(event.id)
+                          }}
+                          disabled={confirmingEventId === event.id}
+                          title="Manuell bestätigen"
+                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          {confirmingEventId === event.id ? 'Wird bestätigt...' : 'Bestätigen'}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

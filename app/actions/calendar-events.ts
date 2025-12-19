@@ -943,6 +943,84 @@ export async function archiveCalendarEvent(eventId: string) {
 }
 
 /**
+ * Manually confirm a cancelled event's MAYDAY notification
+ * Used when customer confirms via phone call instead of email link
+ * Manager/Admin only
+ */
+export async function manuallyConfirmCancellation(eventId: string) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Nicht authentifiziert' }
+  }
+
+  // Check if user is manager or admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['manager', 'admin'].includes(profile.role)) {
+    return { success: false, error: 'Keine Berechtigung' }
+  }
+
+  const adminSupabase = createAdminClient()
+
+  // Check if token exists for this event
+  const { data: existingToken } = await adminSupabase
+    .from('mayday_confirmation_tokens')
+    .select('id, confirmed')
+    .eq('event_id', eventId)
+    .eq('action_type', 'cancel')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (existingToken) {
+    // Token exists - update it
+    if (existingToken.confirmed) {
+      return { success: false, error: 'Bereits bestätigt' }
+    }
+
+    const { error: updateError } = await adminSupabase
+      .from('mayday_confirmation_tokens')
+      .update({
+        confirmed: true,
+        confirmed_at: new Date().toISOString()
+      })
+      .eq('id', existingToken.id)
+
+    if (updateError) {
+      console.error('Error updating token:', updateError)
+      return { success: false, error: updateError.message }
+    }
+  } else {
+    // No token exists - create one (for cases where no MAYDAY email was sent)
+    const { error: insertError } = await adminSupabase
+      .from('mayday_confirmation_tokens')
+      .insert({
+        token: crypto.randomUUID(),
+        event_id: eventId,
+        action_type: 'cancel',
+        confirmed: true,
+        confirmed_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+      })
+
+    if (insertError) {
+      console.error('Error creating token:', insertError)
+      return { success: false, error: insertError.message }
+    }
+  }
+
+  revalidatePath('/cancellations')
+  return { success: true }
+}
+
+/**
  * Reschedule a cancelled event with a new date/time
  * Creates new Google Calendar event and reactivates the booking
  */
