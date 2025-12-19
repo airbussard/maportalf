@@ -820,8 +820,9 @@ export async function cancelCalendarEvent(
 /**
  * Get all cancelled events for the Cancellations page
  * Manager/Admin only
+ * @param showArchived - If true, also include archived events
  */
-export async function getCancelledEvents() {
+export async function getCancelledEvents(showArchived: boolean = false) {
   const supabase = await createClient()
 
   // Check user permissions
@@ -843,7 +844,7 @@ export async function getCancelledEvents() {
 
   // Fetch cancelled events with canceller info
   const adminSupabase = createAdminClient()
-  const { data, error } = await adminSupabase
+  let query = adminSupabase
     .from('calendar_events')
     .select(`
       *,
@@ -851,14 +852,94 @@ export async function getCancelledEvents() {
     `)
     .eq('status', 'cancelled')
     .not('cancellation_reason', 'is', null)
-    .order('cancelled_at', { ascending: false })
+
+  // Filter out archived events unless showArchived is true
+  if (!showArchived) {
+    query = query.is('archived_at', null)
+  }
+
+  const { data, error } = await query.order('cancelled_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching cancelled events:', error)
     return { success: false, error: error.message, data: [] }
   }
 
-  return { success: true, data: data || [] }
+  if (!data || data.length === 0) {
+    return { success: true, data: [] }
+  }
+
+  // Fetch MAYDAY confirmation tokens for these events
+  const eventIds = data.map(e => e.id)
+  const { data: tokens } = await adminSupabase
+    .from('mayday_confirmation_tokens')
+    .select('event_id, confirmed, confirmed_at, action_type')
+    .in('event_id', eventIds)
+    .eq('action_type', 'cancel')
+    .order('created_at', { ascending: false })
+
+  // Build map of event_id -> latest cancel token
+  const tokenMap = new Map<string, { confirmed: boolean; confirmed_at: string | null }>()
+  for (const token of tokens || []) {
+    // Only keep the first (most recent) token per event
+    if (!tokenMap.has(token.event_id)) {
+      tokenMap.set(token.event_id, {
+        confirmed: token.confirmed,
+        confirmed_at: token.confirmed_at
+      })
+    }
+  }
+
+  // Enrich events with MAYDAY confirmation status
+  const enrichedData = data.map(event => {
+    const token = tokenMap.get(event.id)
+    return {
+      ...event,
+      mayday_confirmed: token?.confirmed || false,
+      mayday_confirmed_at: token?.confirmed_at || null
+    }
+  })
+
+  return { success: true, data: enrichedData }
+}
+
+/**
+ * Archive a cancelled event (soft delete)
+ * Manager/Admin only
+ */
+export async function archiveCalendarEvent(eventId: string) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Nicht authentifiziert' }
+  }
+
+  // Check if user is manager or admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['manager', 'admin'].includes(profile.role)) {
+    return { success: false, error: 'Keine Berechtigung' }
+  }
+
+  const adminSupabase = createAdminClient()
+  const { error } = await adminSupabase
+    .from('calendar_events')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', eventId)
+
+  if (error) {
+    console.error('Error archiving event:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/cancellations')
+  return { success: true }
 }
 
 /**

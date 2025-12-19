@@ -15,7 +15,8 @@ import {
   Filter,
   AlertTriangle,
   Users,
-  CheckCircle2
+  CheckCircle2,
+  Archive
 } from 'lucide-react'
 import {
   Table,
@@ -45,7 +46,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { permanentlyDeleteEvent } from '@/app/actions/calendar-events'
+import { permanentlyDeleteEvent, archiveCalendarEvent } from '@/app/actions/calendar-events'
 import { RescheduleDialog } from './reschedule-dialog'
 import { CompensationNotice } from './compensation-notice'
 import { EventDetailDialog } from './event-detail-dialog'
@@ -72,6 +73,9 @@ interface CancelledEvent {
   canceller_name?: string
   rebooked_at?: string | null
   rebooked_event_id?: string | null
+  mayday_confirmed?: boolean
+  mayday_confirmed_at?: string | null
+  archived_at?: string | null
 }
 
 interface CancellationsTableProps {
@@ -83,6 +87,8 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
   const [filter, setFilter] = useState<'all' | 'cancelled_by_us' | 'cancelled_by_customer'>('all')
   const [deleteEventId, setDeleteEventId] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [archiveEventId, setArchiveEventId] = useState<string | null>(null)
+  const [isArchiving, setIsArchiving] = useState(false)
   const [rescheduleEvent, setRescheduleEvent] = useState<CancelledEvent | null>(null)
   const [detailEvent, setDetailEvent] = useState<CancelledEvent | null>(null)
 
@@ -108,6 +114,26 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
     } finally {
       setIsDeleting(false)
       setDeleteEventId(null)
+    }
+  }
+
+  const handleArchive = async () => {
+    if (!archiveEventId) return
+
+    setIsArchiving(true)
+    try {
+      const result = await archiveCalendarEvent(archiveEventId)
+      if (result.success) {
+        toast.success('Termin wurde archiviert')
+        router.refresh()
+      } else {
+        toast.error(result.error || 'Fehler beim Archivieren')
+      }
+    } catch (error) {
+      toast.error('Ein unerwarteter Fehler ist aufgetreten')
+    } finally {
+      setIsArchiving(false)
+      setArchiveEventId(null)
     }
   }
 
@@ -237,6 +263,12 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                         >
                           {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
                         </Badge>
+                        {event.mayday_confirmed && (
+                          <Badge className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Bestätigt
+                          </Badge>
+                        )}
                         {event.rebooked_at && (
                           <Badge className="bg-green-600 hover:bg-green-700 text-white">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -282,12 +314,24 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
                         Neues Datum
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setArchiveEventId(event.id)
+                        }}
+                        title="Archivieren"
+                      >
+                        <Archive className="h-4 w-4" />
+                      </Button>
+                      <Button
                         variant="destructive"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
                           setDeleteEventId(event.id)
                         }}
+                        title="Endgültig löschen"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -304,6 +348,30 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
       {filteredEvents.some(e => e.cancellation_reason === 'cancelled_by_customer') && (
         <CompensationNotice />
       )}
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={!!archiveEventId} onOpenChange={(open) => !open && setArchiveEventId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-muted-foreground" />
+              Termin archivieren?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Termin wird aus der Übersicht entfernt, bleibt aber in der Datenbank erhalten.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isArchiving}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchive}
+              disabled={isArchiving}
+            >
+              {isArchiving ? 'Wird archiviert...' : 'Archivieren'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteEventId} onOpenChange={(open) => !open && setDeleteEventId(null)}>
