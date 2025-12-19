@@ -7,6 +7,7 @@ import { Menu } from 'lucide-react'
 import { Sidebar } from './components/sidebar'
 import Image from 'next/image'
 import { NotificationBell } from '@/components/notification-bell'
+import { Snowfall } from '@/components/snowfall'
 
 export default function DashboardLayout({
   children,
@@ -97,6 +98,8 @@ export default function DashboardLayout({
 
             {/* User Info */}
             <div className="ml-auto flex items-center gap-2">
+              {/* Christmas Snowfall Toggle (Dec 19-26) */}
+              <Snowfall />
               {/* Notification Bell (Manager/Admin only) */}
               <NotificationBell role={userRole} />
 

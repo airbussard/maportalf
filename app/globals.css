@@ -150,3 +150,28 @@
 .animate-shimmer {
   animation: shimmer 3s infinite;
 }
+
+/* Christmas Snowfall Animation */
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+.snowflake {
+  position: absolute;
+  top: -20px;
+  animation: snowfall linear infinite;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+}
