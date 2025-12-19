@@ -276,12 +276,18 @@ function generateTextSignature(options: TicketEmailOptions, ticketNumber: string
   return `Mit freundlichen Grüßen
 ${options.senderName}
 
-FLIGHTHOUR Flugsimulator
+---
+FLIGHTHOUR
 Ticket-Nummer: ${ticketNumber}
 
-Kontakt:
-E-Mail: info@flighthour.de
-Web: https://flighthour.de`
+Bürozeiten: Mo-Fr 09-17 Uhr, Sa 09-15 Uhr
+Flugtermine: Mo-So 10-22 Uhr
+
+Essener Str. 99C, 46047 Oberhausen
+Tel: 0208 306 60 320
+info@flighthour.de
+
+USt-IdNr.: DE354227080`
 }
 
 /**
@@ -291,15 +297,34 @@ function generateHtmlSignature(options: TicketEmailOptions): string {
   return `<p style="margin-bottom: 5px;">Mit freundlichen Grüßen</p>
 <p style="margin: 0; font-weight: 600; color: #121212;">${options.senderName}</p>
 
-<p style="color: #fbb928; font-weight: 700; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">
-FLIGHTHOUR Flugsimulator
-</p>
+<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+  <p style="color: #fbb928; font-weight: 700; margin: 0 0 16px 0; font-size: 14px;">FLIGHTHOUR</p>
 
-<p style="font-size: 13px; color: #666; line-height: 1.8;">
-<strong style="color: #121212;">Kontakt:</strong><br>
-E-Mail: <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a><br>
-Web: <a href="https://flighthour.de" style="color: #fbb928; text-decoration: none;">flighthour.de</a>
-</p>`
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 12px;">
+    <tr>
+      <td style="width: 50%; vertical-align: top; padding-right: 10px;">
+        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Bürozeiten</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Mo - Fr: 09 - 17 Uhr</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Sa: 09 - 15 Uhr</p>
+      </td>
+      <td style="width: 50%; vertical-align: top;">
+        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Flugtermine</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Mo - So: 10 - 22 Uhr</p>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin: 0 0 4px 0; font-size: 11px; color: #666;">
+    Essener Str. 99C · 46047 Oberhausen · Deutschland
+  </p>
+  <p style="margin: 0 0 12px 0; font-size: 11px; color: #666;">
+    <a href="tel:+4920830660320" style="color: #fbb928; text-decoration: none;">0208 306 60 320</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a>
+  </p>
+
+  <p style="margin: 0; font-size: 10px; color: #999;">USt-IdNr.: DE354227080</p>
+</div>`
 }
 
 /**
@@ -594,12 +619,18 @@ function generateCreationTextSignature(ticketNumber: string): string {
   return `Mit freundlichen Grüßen
 Ihr FLIGHTHOUR Team
 
-FLIGHTHOUR Flugsimulator
+---
+FLIGHTHOUR
 Ticket-Nummer: ${ticketNumber}
 
-Kontakt:
-E-Mail: info@flighthour.de
-Web: https://flighthour.de`
+Bürozeiten: Mo-Fr 09-17 Uhr, Sa 09-15 Uhr
+Flugtermine: Mo-So 10-22 Uhr
+
+Essener Str. 99C, 46047 Oberhausen
+Tel: 0208 306 60 320
+info@flighthour.de
+
+USt-IdNr.: DE354227080`
 }
 
 /**
@@ -609,15 +640,34 @@ function generateCreationHtmlSignature(): string {
   return `<p style="margin-bottom: 5px;">Mit freundlichen Grüßen</p>
 <p style="margin: 0; font-weight: 600; color: #121212;">Ihr FLIGHTHOUR Team</p>
 
-<p style="color: #fbb928; font-weight: 700; margin-top: 20px; margin-bottom: 10px; font-size: 16px;">
-FLIGHTHOUR Flugsimulator
-</p>
+<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+  <p style="color: #fbb928; font-weight: 700; margin: 0 0 16px 0; font-size: 14px;">FLIGHTHOUR</p>
 
-<p style="font-size: 13px; color: #666; line-height: 1.8;">
-<strong style="color: #121212;">Kontakt:</strong><br>
-E-Mail: <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a><br>
-Web: <a href="https://flighthour.de" style="color: #fbb928; text-decoration: none;">flighthour.de</a>
-</p>`
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 12px;">
+    <tr>
+      <td style="width: 50%; vertical-align: top; padding-right: 10px;">
+        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Bürozeiten</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Mo - Fr: 09 - 17 Uhr</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Sa: 09 - 15 Uhr</p>
+      </td>
+      <td style="width: 50%; vertical-align: top;">
+        <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Flugtermine</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Mo - So: 10 - 22 Uhr</p>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin: 0 0 4px 0; font-size: 11px; color: #666;">
+    Essener Str. 99C · 46047 Oberhausen · Deutschland
+  </p>
+  <p style="margin: 0 0 12px 0; font-size: 11px; color: #666;">
+    <a href="tel:+4920830660320" style="color: #fbb928; text-decoration: none;">0208 306 60 320</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a>
+  </p>
+
+  <p style="margin: 0; font-size: 10px; color: #999;">USt-IdNr.: DE354227080</p>
+</div>`
 }
 
 interface TicketAssignmentEmailOptions {

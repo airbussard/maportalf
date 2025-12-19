@@ -66,10 +66,17 @@ ${confirmUrl ? `\nBestätigen Sie den Erhalt dieser Nachricht: ${confirmUrl}` : 
 Herzliche Grüße,
 Ihr FLIGHTHOUR Team
 
---
+---
 FLIGHTHOUR
+
+Bürozeiten: Mo-Fr 09-17 Uhr, Sa 09-15 Uhr
+Flugtermine: Mo-So 10-22 Uhr
+
+Essener Str. 99C, 46047 Oberhausen
+Tel: 0208 306 60 320
 info@flighthour.de
-www.flighthour.de
+
+USt-IdNr.: DE354227080
   `.trim()
 
   const htmlContent = `
@@ -167,13 +174,38 @@ www.flighthour.de
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #ffffff;">
+                    <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #fbb928;">
                       FLIGHTHOUR
                     </p>
-                    <p style="margin: 0; font-size: 12px; color: #999999;">
+
+                    <!-- Zeiten -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 16px;">
+                      <tr>
+                        <td style="width: 50%; text-align: center; vertical-align: top; padding: 0 10px;">
+                          <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Bürozeiten</p>
+                          <p style="margin: 0; font-size: 11px; color: #999999;">Mo - Fr: 09 - 17 Uhr</p>
+                          <p style="margin: 0; font-size: 11px; color: #999999;">Sa: 09 - 15 Uhr</p>
+                        </td>
+                        <td style="width: 50%; text-align: center; vertical-align: top; padding: 0 10px;">
+                          <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #fbb928; text-transform: uppercase;">Flugtermine</p>
+                          <p style="margin: 0; font-size: 11px; color: #999999;">Mo - So: 10 - 22 Uhr</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Adresse & Kontakt -->
+                    <p style="margin: 0 0 4px 0; font-size: 11px; color: #999999;">
+                      Essener Str. 99C · 46047 Oberhausen · Deutschland
+                    </p>
+                    <p style="margin: 0 0 12px 0; font-size: 11px; color: #999999;">
+                      <a href="tel:+4920830660320" style="color: #fbb928; text-decoration: none;">0208 306 60 320</a>
+                      &nbsp;·&nbsp;
                       <a href="mailto:info@flighthour.de" style="color: #fbb928; text-decoration: none;">info@flighthour.de</a>
-                      &nbsp;|&nbsp;
-                      <a href="https://www.flighthour.de" style="color: #fbb928; text-decoration: none;">www.flighthour.de</a>
+                    </p>
+
+                    <!-- USt-ID -->
+                    <p style="margin: 0; font-size: 10px; color: #666666;">
+                      USt-IdNr.: DE354227080
                     </p>
                   </td>
                 </tr>

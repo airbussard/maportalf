@@ -51,8 +51,16 @@ Mit freundlichen Grüßen
 Ihr FLIGHTHOUR Team
 
 ---
-FLIGHTHOUR Flugsimulator
+FLIGHTHOUR
+
+Bürozeiten: Mo-Fr 09-17 Uhr, Sa 09-15 Uhr
+Flugtermine: Mo-So 10-22 Uhr
+
+Essener Str. 99C, 46047 Oberhausen
+Tel: 0208 306 60 320
 info@flighthour.de
+
+USt-IdNr.: DE354227080
 `.trim()
 
   const htmlContent = `<!DOCTYPE html>
@@ -123,12 +131,49 @@ info@flighthour.de
       background-color: #121212;
       color: #ffffff;
       text-align: center;
-      padding: 20px;
-      font-size: 12px;
+      padding: 24px 20px;
+      font-size: 11px;
     }
     .footer a {
       color: #fbb928;
       text-decoration: none;
+    }
+    .footer-title {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fbb928;
+    }
+    .footer-hours {
+      display: inline-block;
+      width: 48%;
+      vertical-align: top;
+      text-align: center;
+    }
+    .footer-hours-title {
+      margin: 0 0 4px 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fbb928;
+      text-transform: uppercase;
+    }
+    .footer-hours-text {
+      margin: 0;
+      font-size: 11px;
+      color: #999999;
+    }
+    .footer-contact {
+      margin: 16px 0 4px 0;
+      color: #999999;
+    }
+    .footer-links {
+      margin: 0 0 12px 0;
+      color: #999999;
+    }
+    .footer-tax {
+      margin: 0;
+      font-size: 10px;
+      color: #666666;
     }
     .pocket-guide-note {
       background: #e8f4fd;
@@ -170,8 +215,25 @@ info@flighthour.de
       <strong>Ihr FLIGHTHOUR Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0 0 5px 0;"><strong>FLIGHTHOUR Flugsimulator</strong></p>
-      <p style="margin: 0;"><a href="mailto:info@flighthour.de">info@flighthour.de</a></p>
+      <p class="footer-title">FLIGHTHOUR</p>
+
+      <div style="margin-bottom: 16px;">
+        <div class="footer-hours">
+          <p class="footer-hours-title">Bürozeiten</p>
+          <p class="footer-hours-text">Mo - Fr: 09 - 17 Uhr</p>
+          <p class="footer-hours-text">Sa: 09 - 15 Uhr</p>
+        </div>
+        <div class="footer-hours">
+          <p class="footer-hours-title">Flugtermine</p>
+          <p class="footer-hours-text">Mo - So: 10 - 22 Uhr</p>
+        </div>
+      </div>
+
+      <p class="footer-contact">Essener Str. 99C · 46047 Oberhausen · Deutschland</p>
+      <p class="footer-links">
+        <a href="tel:+4920830660320">0208 306 60 320</a> · <a href="mailto:info@flighthour.de">info@flighthour.de</a>
+      </p>
+      <p class="footer-tax">USt-IdNr.: DE354227080</p>
     </div>
   </div>
 </body>
