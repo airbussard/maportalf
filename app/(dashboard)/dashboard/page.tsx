@@ -25,6 +25,10 @@ export default async function DashboardPage() {
     ? `${profile.first_name} ${profile.last_name}`
     : user?.email
 
+  // Weihnachtszeitraum: 19.-26. Dezember
+  const now = new Date()
+  const isChristmas = now.getMonth() === 11 && now.getDate() >= 19 && now.getDate() <= 26
+
   const isManagerOrAdmin = profile?.role === 'manager' || profile?.role === 'admin'
 
   // Fetch today's events
@@ -39,7 +43,15 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Willkommen zurück, {fullName}!</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {isChristmas ? (
+            <>
+              <span className="text-red-500">Frohe Weihnachten</span>, {fullName}! 🎅
+            </>
+          ) : (
+            <>Willkommen zurück, {fullName}!</>
+          )}
+        </h1>
         <p className="text-muted-foreground mt-2">
           Hier ist Ihre Übersicht für heute
         </p>
