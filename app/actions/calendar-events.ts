@@ -1021,6 +1021,116 @@ export async function manuallyConfirmCancellation(eventId: string) {
 }
 
 /**
+ * Manually confirm a pending shift (for phone confirmation etc.)
+ * Similar to manuallyConfirmCancellation but also applies the shift
+ */
+export async function manuallyConfirmShift(eventId: string) {
+  const supabase = await createClient()
+
+  // Check user permissions
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { success: false, error: 'Nicht authentifiziert' }
+  }
+
+  // Check if user is manager or admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || !['manager', 'admin'].includes(profile.role)) {
+    return { success: false, error: 'Keine Berechtigung' }
+  }
+
+  const adminSupabase = createAdminClient()
+
+  // Check if event has pending shift
+  const { data: event, error: eventError } = await adminSupabase
+    .from('calendar_events')
+    .select('pending_start_time, pending_end_time')
+    .eq('id', eventId)
+    .single()
+
+  if (eventError || !event) {
+    return { success: false, error: 'Event nicht gefunden' }
+  }
+
+  if (!event.pending_start_time || !event.pending_end_time) {
+    return { success: false, error: 'Keine ausstehende Verschiebung' }
+  }
+
+  // Check if token exists for this event
+  const { data: existingToken } = await adminSupabase
+    .from('mayday_confirmation_tokens')
+    .select('id, confirmed')
+    .eq('event_id', eventId)
+    .eq('action_type', 'shift')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (existingToken) {
+    // Token exists - update it
+    if (existingToken.confirmed) {
+      return { success: false, error: 'Bereits bestätigt' }
+    }
+
+    const { error: updateError } = await adminSupabase
+      .from('mayday_confirmation_tokens')
+      .update({
+        confirmed: true,
+        confirmed_at: new Date().toISOString()
+      })
+      .eq('id', existingToken.id)
+
+    if (updateError) {
+      console.error('Error updating token:', updateError)
+      return { success: false, error: updateError.message }
+    }
+  } else {
+    // No token exists - create one (for cases where no MAYDAY email was sent)
+    const { error: insertError } = await adminSupabase
+      .from('mayday_confirmation_tokens')
+      .insert({
+        token: crypto.randomUUID(),
+        event_id: eventId,
+        action_type: 'shift',
+        confirmed: true,
+        confirmed_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+      })
+
+    if (insertError) {
+      console.error('Error creating token:', insertError)
+      return { success: false, error: insertError.message }
+    }
+  }
+
+  // Now apply the pending shift (import dynamically to avoid circular deps)
+  const { applyPendingShift } = await import('./mayday-actions')
+  const shiftResult = await applyPendingShift(eventId)
+
+  if (!shiftResult.success) {
+    return { success: false, error: shiftResult.error || 'Fehler beim Anwenden der Verschiebung' }
+  }
+
+  // Update token with shift_applied
+  await adminSupabase
+    .from('mayday_confirmation_tokens')
+    .update({
+      shift_applied: true,
+      shift_applied_at: new Date().toISOString()
+    })
+    .eq('event_id', eventId)
+    .eq('action_type', 'shift')
+
+  revalidatePath('/kalender')
+  return { success: true }
+}
+
+/**
  * Reschedule a cancelled event with a new date/time
  * Creates new Google Calendar event and reactivates the booking
  */

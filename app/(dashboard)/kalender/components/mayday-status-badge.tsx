@@ -12,13 +12,14 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip'
-import { Clock, Check, AlertTriangle, CalendarX, RefreshCw } from 'lucide-react'
+import { Clock, Check, AlertTriangle, CalendarX, RefreshCw, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -50,9 +51,11 @@ interface MaydayStatusBadgeProps {
     rebook_token?: RebookToken | null
   }
   compact?: boolean
+  onConfirmShift?: () => void
+  isConfirming?: boolean
 }
 
-export function MaydayStatusBadge({ event, compact = false }: MaydayStatusBadgeProps) {
+export function MaydayStatusBadge({ event, compact = false, onConfirmShift, isConfirming }: MaydayStatusBadgeProps) {
   // Check for pending shift
   const hasPendingShift = !!(event.pending_start_time && event.pending_end_time)
 
@@ -85,56 +88,7 @@ export function MaydayStatusBadge({ event, compact = false }: MaydayStatusBadgeP
       : ''
 
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge
-              variant="secondary"
-              className={cn(
-                'cursor-help whitespace-nowrap',
-                'bg-amber-100 text-amber-800 hover:bg-amber-200',
-                'dark:bg-amber-900 dark:text-amber-100'
-              )}
-            >
-              <Clock className="h-3 w-3 mr-1 animate-pulse" />
-              {compact ? 'Verschiebung' : 'Verschiebung ausstehend'}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
-            <p className="font-semibold">Verschiebung ausstehend</p>
-            <p className="text-sm">Mitgeteilt am {notifiedDate}</p>
-            <p className="text-sm font-medium mt-1">
-              Neue Zeit: {newDate} um {newTime} Uhr
-            </p>
-            {event.shift_reason && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Grund: {event.shift_reason}
-              </p>
-            )}
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-              Warte auf Kundenbestätigung
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  }
-
-  // ============================================
-  // CASE 2: Shift confirmed (recent)
-  // ============================================
-  if (isShiftToken && isConfirmed && latestToken.shift_applied) {
-    const confirmedDate = latestToken.confirmed_at
-      ? format(new Date(latestToken.confirmed_at), 'dd.MM. HH:mm', { locale: de })
-      : ''
-
-    // Only show for recent confirmations (within last 24 hours)
-    const isRecent = latestToken.confirmed_at
-      ? new Date().getTime() - new Date(latestToken.confirmed_at).getTime() < 24 * 60 * 60 * 1000
-      : false
-
-    if (isRecent) {
-      return (
+      <div className="flex items-center gap-1">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -142,21 +96,76 @@ export function MaydayStatusBadge({ event, compact = false }: MaydayStatusBadgeP
                 variant="secondary"
                 className={cn(
                   'cursor-help whitespace-nowrap',
-                  'bg-green-100 text-green-800 hover:bg-green-200',
-                  'dark:bg-green-900 dark:text-green-100'
+                  'bg-amber-100 text-amber-800 hover:bg-amber-200',
+                  'dark:bg-amber-900 dark:text-amber-100'
                 )}
               >
-                <Check className="h-3 w-3 mr-1" />
-                {compact ? 'Bestätigt' : 'Verschiebung bestätigt'}
+                <Clock className="h-3 w-3 mr-1 animate-pulse" />
+                {compact ? 'Verschiebung' : 'Verschiebung ausstehend'}
               </Badge>
             </TooltipTrigger>
-            <TooltipContent>
-              <p>Kunde hat am {confirmedDate} bestätigt</p>
+            <TooltipContent className="max-w-xs">
+              <p className="font-semibold">Verschiebung ausstehend</p>
+              <p className="text-sm">Mitgeteilt am {notifiedDate}</p>
+              <p className="text-sm font-medium mt-1">
+                Neue Zeit: {newDate} um {newTime} Uhr
+              </p>
+              {event.shift_reason && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Grund: {event.shift_reason}
+                </p>
+              )}
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                Warte auf Kundenbestätigung
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      )
-    }
+        {onConfirmShift && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-xs px-2"
+            onClick={(e) => { e.stopPropagation(); onConfirmShift() }}
+            disabled={isConfirming}
+          >
+            {isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Bestätigen'}
+          </Button>
+        )}
+      </div>
+    )
+  }
+
+  // ============================================
+  // CASE 2: Shift confirmed (permanent)
+  // ============================================
+  if (isShiftToken && isConfirmed && latestToken.shift_applied) {
+    const confirmedDate = latestToken.confirmed_at
+      ? format(new Date(latestToken.confirmed_at), 'dd.MM. HH:mm', { locale: de })
+      : ''
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge
+              variant="secondary"
+              className={cn(
+                'cursor-help whitespace-nowrap',
+                'bg-green-100 text-green-800 hover:bg-green-200',
+                'dark:bg-green-900 dark:text-green-100'
+              )}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              {compact ? 'Bestätigt' : 'Verschiebung bestätigt'}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Bestätigt am {confirmedDate}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
   }
 
   // ============================================

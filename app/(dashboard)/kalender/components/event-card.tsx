@@ -5,7 +5,7 @@ import { Calendar, Clock, MapPin, User, Video, Euro, Mail, Loader2 } from 'lucid
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { resendBookingConfirmationEmail } from '@/app/actions/calendar-events'
+import { resendBookingConfirmationEmail, manuallyConfirmShift } from '@/app/actions/calendar-events'
 import { toast } from 'sonner'
 import { MaydayStatusBadge } from './mayday-status-badge'
 
@@ -58,11 +58,13 @@ interface EventCardProps {
 
 export function EventCard({ event, onClick }: EventCardProps) {
   const [isResendingEmail, setIsResendingEmail] = useState(false)
+  const [isConfirmingShift, setIsConfirmingShift] = useState(false)
   const startDate = new Date(event.start_time)
   const endDate = new Date(event.end_time)
   const isFIEvent = event.event_type === 'fi_assignment'
   const isBlocker = event.event_type === 'blocker'
   const isBookingWithEmail = event.event_type === 'booking' && event.customer_email
+  const hasPendingShift = !!(event.pending_start_time && event.pending_end_time)
 
   const handleResendEmail = async (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent opening the dialog
@@ -78,6 +80,22 @@ export function EventCard({ event, onClick }: EventCardProps) {
       toast.error('Fehler beim Senden der E-Mail')
     } finally {
       setIsResendingEmail(false)
+    }
+  }
+
+  const handleConfirmShift = async () => {
+    setIsConfirmingShift(true)
+    try {
+      const result = await manuallyConfirmShift(event.id)
+      if (result.success) {
+        toast.success('Verschiebung bestätigt')
+      } else {
+        toast.error(result.error || 'Fehler bei der Bestätigung')
+      }
+    } catch (error) {
+      toast.error('Fehler bei der Bestätigung')
+    } finally {
+      setIsConfirmingShift(false)
     }
   }
 
@@ -112,12 +130,19 @@ export function EventCard({ event, onClick }: EventCardProps) {
           {!event.is_all_day && !isFIEvent && (
             <div className="flex items-center gap-1 text-xs min-w-[70px]">
               <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="font-medium">
-                {startDate.toLocaleTimeString('de-DE', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </span>
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {startDate.toLocaleTimeString('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+                {hasPendingShift && (
+                  <span className="text-amber-600 dark:text-amber-400 text-[10px] font-medium">
+                    → {new Date(event.pending_start_time!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
             </div>
           )}
           <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -192,7 +217,12 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'error' && '⚠'}
           </Badge>
           {/* MAYDAY Status Badge (Mobile) */}
-          <MaydayStatusBadge event={event} compact />
+          <MaydayStatusBadge
+            event={event}
+            compact
+            onConfirmShift={hasPendingShift ? handleConfirmShift : undefined}
+            isConfirming={isConfirmingShift}
+          />
           {/* Resend Email Button (only for bookings with email) */}
           {isBookingWithEmail && (
             <Button
@@ -217,7 +247,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
       <div className="hidden sm:flex items-center gap-4">
         {/* Time - hide for FI events completely, show for bookings */}
         {!event.is_all_day && !isFIEvent && (
-          <div className="flex items-center gap-2 text-sm min-w-[100px] lg:min-w-[140px]">
+          <div className="flex items-center gap-2 text-sm min-w-[100px] lg:min-w-[180px]">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <div className="flex flex-col">
               <span className="font-medium">
@@ -231,6 +261,13 @@ export function EventCard({ event, onClick }: EventCardProps) {
                   minute: '2-digit'
                 })}
               </span>
+              {hasPendingShift && (
+                <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+                  → {new Date(event.pending_start_time!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                  {' - '}
+                  {new Date(event.pending_end_time!).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -313,7 +350,11 @@ export function EventCard({ event, onClick }: EventCardProps) {
             {event.sync_status === 'error' && '⚠'}
           </Badge>
           {/* MAYDAY Status Badge (Desktop) */}
-          <MaydayStatusBadge event={event} />
+          <MaydayStatusBadge
+            event={event}
+            onConfirmShift={hasPendingShift ? handleConfirmShift : undefined}
+            isConfirming={isConfirmingShift}
+          />
           {/* Resend Email Button (only for bookings with email) */}
           {isBookingWithEmail && (
             <Button
