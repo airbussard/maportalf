@@ -109,6 +109,7 @@ async function CalendarPageContent() {
       lastSync={lastSync}
       userName={`${profile?.first_name} ${profile?.last_name}`}
       syncAction={handleSyncAction}
+      canConfirmShift={isManager || isAdmin}
     />
   )
 }

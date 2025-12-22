@@ -104,9 +104,10 @@ interface CalendarViewProps {
   userName: string
   syncAction?: () => Promise<void>
   isReadOnly?: boolean
+  canConfirmShift?: boolean
 }
 
-export function CalendarView({ events: initialEvents, lastSync, userName, syncAction, isReadOnly = false }: CalendarViewProps) {
+export function CalendarView({ events: initialEvents, lastSync, userName, syncAction, isReadOnly = false, canConfirmShift = false }: CalendarViewProps) {
   const router = useRouter()
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -643,6 +644,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                   key={event.id}
                   event={event}
                   onClick={() => handleEventClick(event)}
+                  canConfirmShift={canConfirmShift}
                 />
               ))}
           </div>

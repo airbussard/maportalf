@@ -54,9 +54,10 @@ interface EventCardProps {
     rebook_token?: RebookToken | null
   }
   onClick?: () => void
+  canConfirmShift?: boolean
 }
 
-export function EventCard({ event, onClick }: EventCardProps) {
+export function EventCard({ event, onClick, canConfirmShift = false }: EventCardProps) {
   const [isResendingEmail, setIsResendingEmail] = useState(false)
   const [isConfirmingShift, setIsConfirmingShift] = useState(false)
   const startDate = new Date(event.start_time)
@@ -220,7 +221,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
           <MaydayStatusBadge
             event={event}
             compact
-            onConfirmShift={hasPendingShift ? handleConfirmShift : undefined}
+            onConfirmShift={hasPendingShift && canConfirmShift ? handleConfirmShift : undefined}
             isConfirming={isConfirmingShift}
           />
           {/* Resend Email Button (only for bookings with email) */}
@@ -352,7 +353,7 @@ export function EventCard({ event, onClick }: EventCardProps) {
           {/* MAYDAY Status Badge (Desktop) */}
           <MaydayStatusBadge
             event={event}
-            onConfirmShift={hasPendingShift ? handleConfirmShift : undefined}
+            onConfirmShift={hasPendingShift && canConfirmShift ? handleConfirmShift : undefined}
             isConfirming={isConfirmingShift}
           />
           {/* Resend Email Button (only for bookings with email) */}
