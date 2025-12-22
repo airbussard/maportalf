@@ -8,6 +8,7 @@ import { Sidebar } from './components/sidebar'
 import Image from 'next/image'
 import { NotificationBell } from '@/components/notification-bell'
 import { FestiveEffects, ChristmasLights, isChristmasPeriod } from '@/components/festive-effects'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function DashboardLayout({
   children,
@@ -124,6 +125,8 @@ export default function DashboardLayout({
             <div className="ml-auto flex items-center gap-2">
               {/* Festive Effects Toggle */}
               <FestiveEffects />
+              {/* Theme Toggle */}
+              <ThemeToggle />
               {/* Notification Bell (Manager/Admin only) */}
               <NotificationBell role={userRole} />
 
