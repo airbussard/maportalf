@@ -20,7 +20,8 @@ import {
   LogOut,
   FileText,
   ScrollText,
-  AlertTriangle
+  AlertTriangle,
+  BookUser
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -130,6 +131,11 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
           href: '/mitarbeiter',
           label: 'Mitarbeiter',
           icon: <Users className="w-5 h-5" />,
+        },
+        {
+          href: '/kontaktbuch',
+          label: 'Kontaktbuch',
+          icon: <BookUser className="w-5 h-5" />,
         },
         {
           href: '/requests/manage',
@@ -272,7 +278,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               </button>
             )}
             <p className="text-xs text-muted-foreground">
-              Version 2.163
+              Version 2.164
             </p>
           </div>
         </div>
