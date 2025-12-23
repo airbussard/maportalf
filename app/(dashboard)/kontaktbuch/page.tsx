@@ -7,8 +7,21 @@ export const metadata = {
   description: 'Kundenkontakte verwalten'
 }
 
-export default async function KontaktbuchPage() {
-  const contacts = await getContacts()
+interface KontaktbuchPageProps {
+  searchParams: Promise<{
+    page?: string
+    pageSize?: string
+    search?: string
+  }>
+}
+
+export default async function KontaktbuchPage({ searchParams }: KontaktbuchPageProps) {
+  const params = await searchParams
+  const page = parseInt(params.page || '1', 10)
+  const pageSize = parseInt(params.pageSize || '25', 10) as 10 | 25 | 50
+  const search = params.search || ''
+
+  const result = await getContacts({ search, page, pageSize })
 
   return (
     <div className="space-y-6">
@@ -22,7 +35,14 @@ export default async function KontaktbuchPage() {
         </div>
       </div>
 
-      <ContactsTable contacts={contacts} />
+      <ContactsTable
+        contacts={result.contacts}
+        totalCount={result.totalCount}
+        page={result.page}
+        pageSize={result.pageSize}
+        totalPages={result.totalPages}
+        currentSearch={search}
+      />
     </div>
   )
 }

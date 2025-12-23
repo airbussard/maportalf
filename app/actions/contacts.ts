@@ -12,6 +12,20 @@ export interface Contact {
   event_count: number
 }
 
+export interface GetContactsParams {
+  search?: string
+  page?: number
+  pageSize?: number  // 10 | 25 | 50
+}
+
+export interface GetContactsResult {
+  contacts: Contact[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 export interface ContactDetail {
   email: string
   first_name: string
@@ -64,11 +78,15 @@ async function checkManagerAccess() {
 /**
  * Get all unique contacts from calendar_events
  * Grouped by email with aggregated data
+ * Supports pagination and server-side search
  */
-export async function getContacts(search?: string): Promise<Contact[]> {
+export async function getContacts(params: GetContactsParams = {}): Promise<GetContactsResult> {
   const supabase = await checkManagerAccess()
 
-  // Get all events with customer email
+  const { search, page = 1, pageSize = 25 } = params
+  const validPageSize = [10, 25, 50].includes(pageSize) ? pageSize : 25
+
+  // Build query with optional search filter in database
   let query = supabase
     .from('calendar_events')
     .select('customer_email, customer_first_name, customer_last_name, customer_phone, start_time')
@@ -76,11 +94,25 @@ export async function getContacts(search?: string): Promise<Contact[]> {
     .neq('customer_email', '')
     .order('start_time', { ascending: false })
 
+  // Apply search filter at database level
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`
+    query = query.or(
+      `customer_email.ilike.${searchTerm},customer_first_name.ilike.${searchTerm},customer_last_name.ilike.${searchTerm},customer_phone.ilike.${searchTerm}`
+    )
+  }
+
   const { data: events, error } = await query
 
   if (error) {
     console.error('Error fetching contacts:', error)
-    return []
+    return {
+      contacts: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: validPageSize,
+      totalPages: 0
+    }
   }
 
   // Group by email and aggregate
@@ -115,23 +147,26 @@ export async function getContacts(search?: string): Promise<Contact[]> {
     }
   }
 
-  let contacts = Array.from(contactMap.values())
-
-  // Apply search filter
-  if (search) {
-    const searchLower = search.toLowerCase()
-    contacts = contacts.filter(c =>
-      c.email.toLowerCase().includes(searchLower) ||
-      c.first_name.toLowerCase().includes(searchLower) ||
-      c.last_name.toLowerCase().includes(searchLower) ||
-      (c.phone && c.phone.includes(search))
-    )
-  }
-
   // Sort by last event date (most recent first)
-  contacts.sort((a, b) => new Date(b.last_event).getTime() - new Date(a.last_event).getTime())
+  const allContacts = Array.from(contactMap.values())
+  allContacts.sort((a, b) => new Date(b.last_event).getTime() - new Date(a.last_event).getTime())
 
-  return contacts
+  // Calculate pagination
+  const totalCount = allContacts.length
+  const totalPages = Math.ceil(totalCount / validPageSize)
+  const validPage = Math.max(1, Math.min(page, totalPages || 1))
+  const offset = (validPage - 1) * validPageSize
+
+  // Slice for current page
+  const contacts = allContacts.slice(offset, offset + validPageSize)
+
+  return {
+    contacts,
+    totalCount,
+    page: validPage,
+    pageSize: validPageSize,
+    totalPages
+  }
 }
 
 /**
