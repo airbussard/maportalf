@@ -15,7 +15,7 @@ import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-
 import { germanTimeToUtc } from '@/lib/timezone'
 
 // Constants
-const BUFFER_MINUTES = 15
+const BUFFER_MINUTES = 14
 
 // Duration labels for titles
 const DURATION_LABELS: Record<number, string> = {

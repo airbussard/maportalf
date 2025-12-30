@@ -16,7 +16,7 @@ import { germanTimeToUtc, getGermanHourMinute, formatGermanTime, periodsOverlap 
 const EARLIEST_START_HOUR = 10  // 10:00 German time
 const LATEST_END_HOUR = 22      // 22:00 German time
 const SLOT_INTERVAL = 15        // 15-minute intervals
-const BUFFER_MINUTES = 15       // Buffer after each booking
+const BUFFER_MINUTES = 14       // Buffer after each booking
 
 export const dynamic = 'force-dynamic'
 
