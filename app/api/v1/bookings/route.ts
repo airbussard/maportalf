@@ -4,12 +4,15 @@
  * GET /api/v1/bookings?id=xxx     - Get single booking
  * GET /api/v1/bookings?date=YYYY-MM-DD - Get bookings for a day
  * POST /api/v1/bookings           - Create new booking
+ *
+ * All times are in German timezone (Europe/Berlin)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
+import { germanTimeToUtc } from '@/lib/timezone'
 
 // Constants
 const BUFFER_MINUTES = 15
@@ -57,21 +60,22 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  // Get bookings for a date
+  // Get bookings for a date (German time)
   if (date) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return errorResponse('Invalid date format. Use YYYY-MM-DD')
     }
 
-    const dayStart = `${date}T00:00:00`
-    const dayEnd = `${date}T23:59:59`
+    // Convert German day boundaries to UTC for database query
+    const dayStartUtc = germanTimeToUtc(date, '00:00')
+    const dayEndUtc = germanTimeToUtc(date, '23:59')
 
     const { data, error } = await supabase
       .from('calendar_events')
       .select('*')
       .eq('event_type', 'booking')
-      .gte('start_time', dayStart)
-      .lte('start_time', dayEnd)
+      .gte('start_time', dayStartUtc.toISOString())
+      .lte('start_time', dayEndUtc.toISOString())
       .order('start_time', { ascending: true })
 
     if (error) {
@@ -158,13 +162,13 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createAdminClient()
 
-    // Calculate start and end time
-    const startTime = new Date(`${date}T${time}:00`)
-    const endTime = new Date(startTime.getTime() + duration * 60 * 1000)
+    // Calculate start and end time (German time → UTC for DB)
+    const startTimeUtc = germanTimeToUtc(date, time)
+    const endTimeUtc = new Date(startTimeUtc.getTime() + duration * 60 * 1000)
 
     // Check for conflicts (including buffer)
-    const checkEndTime = new Date(endTime.getTime() + BUFFER_MINUTES * 60 * 1000)
-    const checkStartTime = new Date(startTime.getTime() - BUFFER_MINUTES * 60 * 1000)
+    const checkEndTime = new Date(endTimeUtc.getTime() + BUFFER_MINUTES * 60 * 1000)
+    const checkStartTime = new Date(startTimeUtc.getTime() - BUFFER_MINUTES * 60 * 1000)
 
     const { data: conflicts } = await supabase
       .from('calendar_events')
@@ -182,7 +186,7 @@ export async function POST(request: NextRequest) {
     const durationLabel = DURATION_LABELS[duration] || `${duration} Min`
     const title = `${durationLabel} - ${customerFirstName} ${customerLastName}`
 
-    // Create booking
+    // Create booking (store in UTC)
     const { data: booking, error } = await supabase
       .from('calendar_events')
       .insert({
@@ -192,8 +196,8 @@ export async function POST(request: NextRequest) {
         customer_last_name: customerLastName,
         customer_email: customerEmail,
         customer_phone: customerPhone || null,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        start_time: startTimeUtc.toISOString(),
+        end_time: endTimeUtc.toISOString(),
         duration,
         is_all_day: false,
         status: 'confirmed',
@@ -218,8 +222,8 @@ export async function POST(request: NextRequest) {
           customer_first_name: customerFirstName,
           customer_last_name: customerLastName,
           customer_email: customerEmail,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          start_time: startTimeUtc.toISOString(),
+          end_time: endTimeUtc.toISOString(),
           duration: duration,
           location: booking.location || 'FLIGHTHOUR Flugsimulator',
           attendee_count: attendeeCount || 1,

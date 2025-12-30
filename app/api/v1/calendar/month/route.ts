@@ -4,11 +4,13 @@
  * GET /api/v1/calendar/month?year=2025&month=1
  *
  * Returns overview of a month with blocked days and booking counts
+ * All times are in German timezone (Europe/Berlin)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { germanTimeToUtc, formatGermanDate } from '@/lib/timezone'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,17 +41,20 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createAdminClient()
 
-    // Calculate month boundaries
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0, 23, 59, 59)
-    const daysInMonth = endDate.getDate()
+    // Calculate month boundaries in German time, convert to UTC for query
+    const daysInMonth = new Date(year, month, 0).getDate()
+    const firstDay = `${year}-${month.toString().padStart(2, '0')}-01`
+    const lastDay = `${year}-${month.toString().padStart(2, '0')}-${daysInMonth.toString().padStart(2, '0')}`
+
+    const startDateUtc = germanTimeToUtc(firstDay, '00:00')
+    const endDateUtc = germanTimeToUtc(lastDay, '23:59')
 
     // Fetch all events for the month
     const { data: events, error } = await supabase
       .from('calendar_events')
       .select('start_time, end_time, event_type, is_all_day, status')
-      .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString())
+      .gte('start_time', startDateUtc.toISOString())
+      .lte('start_time', endDateUtc.toISOString())
       .neq('status', 'cancelled')
 
     if (error) {
@@ -76,9 +81,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Process events
+    // Process events - extract date in German timezone
     for (const event of events || []) {
-      const eventDate = event.start_time.split('T')[0]
+      // Convert UTC event time to German date
+      const eventDate = formatGermanDate(event.start_time)
 
       if (days[eventDate]) {
         if (event.event_type === 'blocker' && event.is_all_day) {
