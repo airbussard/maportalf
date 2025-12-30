@@ -65,7 +65,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update({
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
-        cancelled_by: `shop-api:${auth.client}`,
+        cancelled_by: null,  // UUID field - Shop-API has no user
         cancellation_reason: reason === 'cancelled_by_us' ? 'cancelled_by_us' : 'cancelled_by_customer',
         cancellation_note: note || null,
         sync_status: 'pending',

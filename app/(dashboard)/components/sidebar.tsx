@@ -278,7 +278,7 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
               </button>
             )}
             <p className="text-xs text-muted-foreground">
-              Version 2.173
+              Version 2.174
             </p>
           </div>
         </div>
