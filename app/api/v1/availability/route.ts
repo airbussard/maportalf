@@ -137,9 +137,8 @@ export async function GET(request: NextRequest) {
           const busyStartMin = Math.floor(busy.start.getTime() / 60000)
           const busyEndMin = Math.floor(busy.end.getTime() / 60000)
 
-          // Real overlap: slot starts BEFORE busy ends AND slot ends AFTER busy starts
-          // slotStart == busyEnd (both 20:00) → 20:00 < 20:00 = FALSE → no collision
-          return slotStartMin < busyEndMin && slotEndMin > busyStartMin
+          // Real overlap with 1 minute tolerance for edge cases
+          return slotStartMin < (busyEndMin - 1) && slotEndMin > (busyStartMin + 1)
         })
 
         slots.push({
