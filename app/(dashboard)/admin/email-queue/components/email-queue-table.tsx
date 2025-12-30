@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Mail, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { RefreshCw, Mail, AlertCircle, CheckCircle, Clock, RotateCcw } from 'lucide-react'
+import { retryEmail, retryAllFailedEmails } from '@/app/actions/email-queue'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -134,6 +135,20 @@ export function EmailQueueTable({ emails }: EmailQueueTableProps) {
         >
           Fehlgeschlagen ({stats.failed})
         </Button>
+        {stats.failed > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await retryAllFailedEmails()
+              router.refresh()
+            }}
+            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Alle wiederholen ({stats.failed})
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -159,12 +174,13 @@ export function EmailQueueTable({ emails }: EmailQueueTableProps) {
                   <th className="text-left p-3 text-sm font-medium">Versuche</th>
                   <th className="text-left p-3 text-sm font-medium">Erstellt</th>
                   <th className="text-left p-3 text-sm font-medium">Fehler</th>
+                  <th className="text-left p-3 text-sm font-medium w-20">Aktion</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmails.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                    <td colSpan={8} className="text-center p-8 text-muted-foreground">
                       <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>Keine E-Mails gefunden</p>
                     </td>
@@ -199,6 +215,22 @@ export function EmailQueueTable({ emails }: EmailQueueTableProps) {
                           <span className="text-red-600 truncate block" title={email.error_message}>
                             {email.error_message}
                           </span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {email.status === 'failed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              await retryEmail(email.id)
+                              router.refresh()
+                            }}
+                            title="Erneut versuchen"
+                            className="h-8 w-8 p-0 hover:bg-orange-100"
+                          >
+                            <RotateCcw className="w-4 h-4 text-orange-600" />
+                          </Button>
                         )}
                       </td>
                     </tr>
