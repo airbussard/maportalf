@@ -129,9 +129,18 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if slot conflicts with any busy period (all in UTC)
-        const isAvailable = !busyPeriods.some(busy =>
-          periodsOverlap(slotStartUtc, slotEndUtc, busy.start, busy.end)
-        )
+        // Use minute-based comparison to avoid millisecond precision issues
+        // This allows adjacent appointments (20:00 end → 20:00 start)
+        const isAvailable = !busyPeriods.some(busy => {
+          const slotStartMin = Math.floor(slotStartUtc.getTime() / 60000)
+          const slotEndMin = Math.floor(slotEndUtc.getTime() / 60000)
+          const busyStartMin = Math.floor(busy.start.getTime() / 60000)
+          const busyEndMin = Math.floor(busy.end.getTime() / 60000)
+
+          // Real overlap: slot starts BEFORE busy ends AND slot ends AFTER busy starts
+          // slotStart == busyEnd (both 20:00) → 20:00 < 20:00 = FALSE → no collision
+          return slotStartMin < busyEndMin && slotEndMin > busyStartMin
+        })
 
         slots.push({
           time: timeStr,  // Return as German time (what was requested)
