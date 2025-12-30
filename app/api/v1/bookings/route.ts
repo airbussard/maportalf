@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
@@ -190,6 +191,7 @@ export async function POST(request: NextRequest) {
     const { data: booking, error } = await supabase
       .from('calendar_events')
       .insert({
+        id: randomUUID(),
         event_type: 'booking',
         title,
         customer_first_name: customerFirstName,
