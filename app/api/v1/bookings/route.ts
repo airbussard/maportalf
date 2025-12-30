@@ -9,7 +9,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
@@ -191,7 +190,6 @@ export async function POST(request: NextRequest) {
     const { data: booking, error } = await supabase
       .from('calendar_events')
       .insert({
-        id: randomUUID(),
         event_type: 'booking',
         title,
         customer_first_name: customerFirstName,
@@ -206,8 +204,10 @@ export async function POST(request: NextRequest) {
         sync_status: 'pending',
         attendee_count: attendeeCount || 1,
         location: location || 'FLIGHTHOUR Flugsimulator, Essener Str. 99C, 46047 Oberhausen',
-        remarks: remarks ? `${remarks}${shopOrderNumber ? `\nShop Order: ${shopOrderNumber}` : ''}` : (shopOrderNumber ? `Shop Order: ${shopOrderNumber}` : null),
+        remarks: remarks || null,
         has_video_recording: hasVideoRecording || false,
+        shop_order_number: shopOrderNumber || null,
+        shop_booking_id: shopBookingId || null,
       })
       .select()
       .single()
