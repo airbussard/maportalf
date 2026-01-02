@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams
   const id = searchParams.get('id')
+  const shopOrderNumber = searchParams.get('shopOrderNumber')
   const date = searchParams.get('date')
 
   const supabase = createAdminClient()
@@ -52,6 +53,29 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error || !data) {
+      return errorResponse('Booking not found', 404)
+    }
+
+    return successResponse({
+      booking: formatBookingResponse(data)
+    })
+  }
+
+  // Get single booking by shop order number
+  if (shopOrderNumber) {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('shop_order_number', shopOrderNumber)
+      .eq('event_type', 'booking')
+      .maybeSingle()
+
+    if (error) {
+      console.error('[Bookings API] Error fetching by shopOrderNumber:', error)
+      return errorResponse('Database error', 500)
+    }
+
+    if (!data) {
       return errorResponse('Booking not found', 404)
     }
 
@@ -90,7 +114,7 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  return errorResponse('Missing id or date parameter')
+  return errorResponse('Missing id, shopOrderNumber, or date parameter')
 }
 
 /**
