@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // First check if booking exists and is not already cancelled
     const { data: existing, error: checkError } = await supabase
       .from('calendar_events')
-      .select('id, status, event_type')
+      .select('id, status, event_type, google_event_id')
       .eq('id', id)
       .single()
 
@@ -77,6 +77,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('[Cancel API] Error cancelling booking:', error)
       return errorResponse('Failed to cancel booking', 500)
+    }
+
+    // Delete from Google Calendar (if exists)
+    if (existing.google_event_id) {
+      try {
+        const { deleteGoogleCalendarEvent } = await import('@/lib/google-calendar/service')
+        await deleteGoogleCalendarEvent(existing.google_event_id)
+        console.log(`[Cancel API] Deleted from Google Calendar: ${existing.google_event_id}`)
+
+        // Clear google_event_id in database
+        await supabase
+          .from('calendar_events')
+          .update({ google_event_id: null, sync_status: 'synced' })
+          .eq('id', id)
+      } catch (googleError) {
+        console.error('[Cancel API] Google Calendar delete failed:', googleError)
+        // Continue even if Google fails
+      }
     }
 
     return successResponse({
