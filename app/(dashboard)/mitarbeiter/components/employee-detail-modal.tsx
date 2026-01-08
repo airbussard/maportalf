@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Employee } from '@/app/actions/employees'
 import type { EmployeeSettings } from '@/lib/types/time-tracking'
-import { updateEmployeeRole, toggleEmployeeStatus, deleteEmployee, resendInvitationEmail, setEmployeeExitDate, clearExitDate } from '@/app/actions/employees'
+import { updateEmployeeRole, toggleEmployeeStatus, deleteEmployee, resendInvitationEmail, setEmployeeExitDate, clearExitDate, updateEmployeeEmail } from '@/app/actions/employees'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -35,6 +35,7 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
   const [selectedRole, setSelectedRole] = useState<'employee' | 'manager' | 'admin'>(employee.role)
   const [compensationDialogOpen, setCompensationDialogOpen] = useState(false)
   const [exitDate, setExitDate] = useState(employee.exit_date || '')
+  const [newEmail, setNewEmail] = useState(employee.email)
 
   const getEmployeeName = () => {
     if (employee.first_name || employee.last_name) {
@@ -65,6 +66,25 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
       onClose()
     } else {
       setError(result.error || 'Fehler beim Ändern der Rolle')
+    }
+
+    setLoading(false)
+  }
+
+  const handleEmailChange = async () => {
+    if (newEmail === employee.email) return
+
+    setLoading(true)
+    setError(null)
+
+    const result = await updateEmployeeEmail(employee.id, newEmail)
+
+    if (result.success) {
+      toast.success('E-Mail-Adresse erfolgreich geändert')
+      router.refresh()
+      onClose()
+    } else {
+      setError(result.error || 'Fehler beim Ändern der E-Mail-Adresse')
     }
 
     setLoading(false)
@@ -304,6 +324,30 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
                     className="w-full"
                   >
                     {loading ? 'Wird geändert...' : 'Rolle speichern'}
+                  </Button>
+                )}
+              </div>
+
+              {/* Email Change */}
+              <div className="space-y-2">
+                <Label htmlFor="email">E-Mail-Adresse ändern</Label>
+                <input
+                  type="email"
+                  id="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  disabled={loading}
+                />
+                {newEmail !== employee.email && (
+                  <Button
+                    onClick={handleEmailChange}
+                    disabled={loading}
+                    size="sm"
+                    className="w-full"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    {loading ? 'Wird geändert...' : 'E-Mail speichern'}
                   </Button>
                 )}
               </div>

@@ -587,3 +587,85 @@ export async function clearExitDate(employeeId: string): Promise<ActionResponse>
     return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
   }
 }
+
+/**
+ * Update employee email address
+ * Allowed: Admin can change any email, users can change their own
+ * Updates both Supabase Auth and profile table
+ */
+export async function updateEmployeeEmail(
+  employeeId: string,
+  newEmail: string
+): Promise<ActionResponse> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Check permissions: Admin or own account
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = profile?.role === 'admin'
+    const isOwnAccount = user.id === employeeId
+
+    if (!isAdmin && !isOwnAccount) {
+      return { success: false, error: 'Keine Berechtigung' }
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newEmail)) {
+      return { success: false, error: 'Ungültiges E-Mail-Format' }
+    }
+
+    const adminSupabase = createAdminClient()
+
+    // Check if email is already in use
+    const { data: existingUser } = await adminSupabase
+      .from('profiles')
+      .select('id')
+      .eq('email', newEmail)
+      .neq('id', employeeId)
+      .single()
+
+    if (existingUser) {
+      return { success: false, error: 'Diese E-Mail-Adresse wird bereits verwendet' }
+    }
+
+    // Update Supabase Auth user email
+    const { error: authError } = await adminSupabase.auth.admin.updateUserById(
+      employeeId,
+      { email: newEmail }
+    )
+
+    if (authError) {
+      console.error('Error updating auth email:', authError)
+      return { success: false, error: `Auth-Fehler: ${authError.message}` }
+    }
+
+    // Update profile email
+    const { error: profileError } = await adminSupabase
+      .from('profiles')
+      .update({ email: newEmail, updated_at: new Date().toISOString() })
+      .eq('id', employeeId)
+
+    if (profileError) {
+      console.error('Error updating profile email:', profileError)
+      return { success: false, error: `Profil-Fehler: ${profileError.message}` }
+    }
+
+    revalidatePath('/mitarbeiter')
+    revalidatePath('/einstellungen')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in updateEmployeeEmail:', error)
+    return { success: false, error: error.message || 'Ein unbekannter Fehler ist aufgetreten' }
+  }
+}

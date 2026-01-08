@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { updateProfile } from '@/app/actions/settings'
+import { updateEmployeeEmail } from '@/app/actions/employees'
 import { Save } from 'lucide-react'
 
 interface Profile {
@@ -25,6 +26,7 @@ export function ProfileSection({ profile }: { profile: Profile }) {
   const [formData, setFormData] = useState({
     first_name: profile.first_name || '',
     last_name: profile.last_name || '',
+    email: profile.email || '',
     phone: profile.phone || '',
     department: profile.department || '',
     address: profile.address || '',
@@ -35,7 +37,19 @@ export function ProfileSection({ profile }: { profile: Profile }) {
     setLoading(true)
     setMessage(null)
 
-    const result = await updateProfile(formData)
+    // Update email if changed
+    if (formData.email !== profile.email) {
+      const emailResult = await updateEmployeeEmail(profile.id, formData.email)
+      if (!emailResult.success) {
+        setMessage({ type: 'error', text: emailResult.error || 'Fehler beim Ändern der E-Mail' })
+        setLoading(false)
+        return
+      }
+    }
+
+    // Update other profile fields
+    const { email, ...profileData } = formData
+    const result = await updateProfile(profileData)
 
     if (result.success) {
       setMessage({ type: 'success', text: 'Profil erfolgreich aktualisiert!' })
@@ -93,13 +107,15 @@ export function ProfileSection({ profile }: { profile: Profile }) {
             <Input
               id="email"
               type="email"
-              value={profile.email}
-              disabled
-              className="bg-muted"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={loading}
             />
-            <p className="text-xs text-muted-foreground">
-              E-Mail-Adresse kann nicht geändert werden
-            </p>
+            {formData.email !== profile.email && (
+              <p className="text-xs text-amber-600">
+                E-Mail-Adresse wird geändert. Nach dem Speichern müssen Sie sich neu anmelden.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
