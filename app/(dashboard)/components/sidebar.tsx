@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -26,7 +25,6 @@ import {
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { isChristmasPeriod } from '@/components/festive-effects'
 
 interface SidebarProps {
   role: string
@@ -49,15 +47,6 @@ interface NavGroup {
 export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [showEasterEgg, setShowEasterEgg] = useState(false)
-
-  // Auto-close Easter Egg after 4 seconds
-  useEffect(() => {
-    if (showEasterEgg) {
-      const timer = setTimeout(() => setShowEasterEgg(false), 4000)
-      return () => clearTimeout(timer)
-    }
-  }, [showEasterEgg])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -266,49 +255,12 @@ export function Sidebar({ role, isOpen, onClose }: SidebarProps) {
             <span>Abmelden</span>
           </Button>
 
-          {/* Version + Christmas Tree */}
-          <div className="flex items-center justify-center gap-2">
-            {isChristmasPeriod() && (
-              <button
-                onClick={() => setShowEasterEgg(true)}
-                className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                title="Frohe Feiertage!"
-              >
-                🎄
-              </button>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Version 2.180
-            </p>
-          </div>
+          {/* Version */}
+          <p className="text-xs text-muted-foreground text-center">
+            Version 2.181
+          </p>
         </div>
       </aside>
-
-      {/* Christmas Easter Egg Overlay */}
-      {showEasterEgg && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer"
-          onClick={() => setShowEasterEgg(false)}
-        >
-          <div className="text-center animate-in zoom-in-50 duration-500">
-            <div className="text-8xl mb-6 animate-bounce">🎄</div>
-            <div className="text-5xl mb-8 flex justify-center gap-4">
-              <span className="inline-block animate-bounce" style={{ animationDelay: '0.1s' }}>🎁</span>
-              <span className="inline-block animate-bounce" style={{ animationDelay: '0.2s' }}>⭐</span>
-              <span className="inline-block animate-bounce" style={{ animationDelay: '0.3s' }}>🎁</span>
-              <span className="inline-block animate-bounce" style={{ animationDelay: '0.4s' }}>✨</span>
-              <span className="inline-block animate-bounce" style={{ animationDelay: '0.5s' }}>🎁</span>
-            </div>
-            <h2 className="text-3xl font-bold text-white drop-shadow-lg mb-2">
-              Frohe Feiertage
-            </h2>
-            <p className="text-xl text-white/90 drop-shadow-lg">
-              vom FLIGHTHOUR Team! 🎅
-            </p>
-            <p className="text-white/50 mt-6 text-sm">Klicken zum Schließen</p>
-          </div>
-        </div>
-      )}
     </>
   )
 }
