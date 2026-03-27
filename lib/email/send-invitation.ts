@@ -10,7 +10,7 @@ export async function sendEmployeeInvitationEmail({
   email,
   name,
   tempPassword,
-  loginUrl = 'https://flighthour.getemergence.com/login'
+  loginUrl = 'https://nextflight.knabe-gmbh.de/login'
 }: {
   email: string
   name: string
@@ -170,7 +170,7 @@ function generateHtmlContent(name: string, email: string, tempPassword: string, 
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">

@@ -6,7 +6,7 @@
 
 export function generateAccountActivatedEmail(
   name: string,
-  loginUrl: string = 'https://flighthour.getemergence.com/login'
+  loginUrl: string = 'https://nextflight.knabe-gmbh.de/login'
 ): string {
   return `<!DOCTYPE html>
 <html>
@@ -110,7 +110,7 @@ export function generateAccountActivatedEmail(
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">
@@ -155,7 +155,7 @@ export function generateAccountActivatedEmail(
 
 export function generateAccountActivatedPlainText(
   name: string,
-  loginUrl: string = 'https://flighthour.getemergence.com/login'
+  loginUrl: string = 'https://nextflight.knabe-gmbh.de/login'
 ): string {
   return `Hallo ${name},
 

@@ -327,7 +327,7 @@ export async function GET(request: NextRequest) {
           // Parse body to extract assignee name and ticket URL
           // body format: JSON or plain text with name and URL
           let assigneeName = 'Team-Mitglied'
-          let ticketUrl = `https://flighthour.getemergence.com/tickets/${email.ticket_id}`
+          let ticketUrl = `https://nextflight.knabe-gmbh.de/tickets/${email.ticket_id}`
 
           try {
             // Try to extract name from content field

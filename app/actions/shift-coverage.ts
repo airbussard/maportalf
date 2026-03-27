@@ -115,7 +115,7 @@ export async function createShiftCoverageRequest(
 
       // Queue email if enabled
       if (input.send_email && employee.email) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://flighthour.getemergence.com'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nextflight.knabe-gmbh.de'
         const acceptUrl = `${appUrl}/shift-coverage/${notification.accept_token}`
 
         const emailContent = generateShiftCoverageEmail({

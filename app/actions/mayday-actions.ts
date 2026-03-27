@@ -303,7 +303,7 @@ export async function shiftEvents(params: {
             }
 
             const confirmUrl = tokenData?.token
-              ? `https://flighthour.getemergence.com/api/mayday/confirm/${tokenData.token}`
+              ? `https://nextflight.knabe-gmbh.de/api/mayday/confirm/${tokenData.token}`
               : undefined
 
             const emailContent = generateMaydayShiftEmail({
@@ -469,7 +469,7 @@ export async function cancelEventsWithNotification(params: {
             }
 
             const confirmUrl = tokenData?.token
-              ? `https://flighthour.getemergence.com/api/mayday/confirm/${tokenData.token}`
+              ? `https://nextflight.knabe-gmbh.de/api/mayday/confirm/${tokenData.token}`
               : undefined
 
             // Create rebook token if rebooking is offered
@@ -498,7 +498,7 @@ export async function cancelEventsWithNotification(params: {
               if (rebookTokenError) {
                 console.error('[MAYDAY] Failed to create rebook token:', rebookTokenError)
               } else if (rebookTokenData?.token) {
-                rebookUrl = `https://flighthour.getemergence.com/rebook/${rebookTokenData.token}`
+                rebookUrl = `https://nextflight.knabe-gmbh.de/rebook/${rebookTokenData.token}`
               }
             }
 

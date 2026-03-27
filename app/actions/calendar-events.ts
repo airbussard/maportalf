@@ -612,6 +612,35 @@ export async function getUpcomingEvents(limit: number = 5) {
 }
 
 /**
+ * Get the current user's next upcoming FI assignments
+ */
+export async function getMyUpcomingAssignments(limit: number = 3) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const now = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('calendar_events')
+    .select('*')
+    .eq('assigned_instructor_id', user.id)
+    .eq('event_type', 'fi_assignment')
+    .neq('status', 'cancelled')
+    .gte('start_time', now)
+    .order('start_time', { ascending: true })
+    .limit(limit)
+
+  if (error) {
+    console.error('Failed to fetch my assignments:', error.message)
+    return []
+  }
+
+  return data || []
+}
+
+/**
  * Get today's events (for dashboard widget)
  * Returns all events for the current day
  */

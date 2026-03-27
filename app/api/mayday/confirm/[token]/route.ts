@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { applyPendingShift } from '@/app/actions/mayday-actions'
 
-const BASE_URL = 'https://flighthour.getemergence.com'
+const BASE_URL = 'https://nextflight.knabe-gmbh.de'
 
 export async function GET(
   request: NextRequest,

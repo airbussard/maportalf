@@ -95,7 +95,7 @@ USt-IdNr.: DE354227080
           <!-- Header -->
           <tr>
             <td style="padding: 32px 40px 24px 40px; text-align: center; border-bottom: 1px solid #eee;">
-              <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR" style="height: 40px; width: auto;">
+              <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR" style="height: 40px; width: auto;">
             </td>
           </tr>
 

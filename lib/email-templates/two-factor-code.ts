@@ -33,7 +33,7 @@ export function generateTwoFactorEmailTemplate({
 
     <!-- Header -->
     <div class="header" style="background: linear-gradient(135deg, #fbb928 0%, #f9a825 100%); padding: 40px 30px; text-align: center;">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;">
       <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         Sicherheitscode
       </h1>

@@ -64,7 +64,7 @@ export async function sendWorkRequestEmail(options: WorkRequestEmailOptions): Pr
     })
 
     // Build approve/reject URLs
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://flighthour.getemergence.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nextflight.knabe-gmbh.de'
     const approveUrl = `${baseUrl}/api/work-requests/action/${options.approveToken}`
     const rejectUrl = `${baseUrl}/api/work-requests/action/${options.rejectToken}`
 

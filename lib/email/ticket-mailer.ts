@@ -239,7 +239,7 @@ function generateHtmlContent(options: TicketEmailOptions, ticketNumber: string):
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">
@@ -569,7 +569,7 @@ function generateCreationHtmlContent(options: TicketEmailOptions, ticketNumber: 
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">
@@ -850,7 +850,7 @@ Web: https://flighthour.de`
 <body>
   <div class="email-container">
     <div class="header">
-      <img src="https://flighthour.getemergence.com/logo.png" alt="FLIGHTHOUR Logo">
+      <img src="https://nextflight.knabe-gmbh.de/logo.png" alt="FLIGHTHOUR Logo">
     </div>
 
     <div class="content">
