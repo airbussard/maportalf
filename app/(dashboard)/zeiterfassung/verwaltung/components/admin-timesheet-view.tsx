@@ -51,6 +51,8 @@ export function AdminTimesheetView() {
   async function loadData() {
     setLoading(true)
     try {
+      // Automatisch alle Timesheets aus Kalender generieren/aktualisieren
+      await regenerateAllTimesheets(year, month)
       const result = await getTimesheetSummary(year, month)
       setData(result)
     } catch (err) {

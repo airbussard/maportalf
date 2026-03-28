@@ -50,6 +50,8 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
   async function loadData() {
     setLoading(true)
     try {
+      // Automatisch Kalenderdaten generieren/aktualisieren
+      await generateTimesheetForMonth(userId, year, month)
       const [data, conf] = await Promise.all([
         getTimesheetEntries(year, month),
         getTimesheetConfirmation(year, month),
