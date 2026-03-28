@@ -151,6 +151,6 @@ export async function GET(request: NextRequest) {
 }
 
 // Also allow POST for compatibility with different cron job setups
-export async function POST() {
-  return GET()
+export async function POST(request: NextRequest) {
+  return GET(request)
 }
