@@ -258,7 +258,7 @@ export function DashboardHeader({ role, userEmail }: DashboardHeaderProps) {
               <LogOut className="mr-2 h-4 w-4" />
               Abmelden
             </Button>
-            <p className="text-[10px] text-muted-foreground text-center mt-2">Version 2.181</p>
+            <p className="text-[10px] text-muted-foreground text-center mt-2">Version 2.182</p>
           </div>
         </div>
       </MobileMenu>
