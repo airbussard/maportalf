@@ -1,0 +1,590 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type {
+  TimesheetEntry,
+  TimesheetDaySummary,
+  TimesheetMonthSummary,
+  TimesheetAdminOverview,
+  BookingDetail,
+} from '@/lib/types/timesheet'
+
+// ─── Kernlogik: Kalender → Timesheet ───
+
+/**
+ * Generiert/aktualisiert Timesheet-Einträge für einen Mitarbeiter im Monat
+ * basierend auf Kalenderdaten (FI-Zuweisungen + Kundenbuchungen)
+ */
+export async function generateTimesheetForMonth(
+  employeeId: string,
+  year: number,
+  month: number // 1-12
+) {
+  const supabase = createAdminClient()
+
+  // Monatsgrenzen berechnen
+  const startOfMonth = new Date(year, month - 1, 1)
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59)
+
+  // 1. Alle FI-Zuweisungen des Mitarbeiters im Monat
+  const { data: fiAssignments, error: fiError } = await supabase
+    .from('calendar_events')
+    .select('*')
+    .eq('assigned_instructor_id', employeeId)
+    .eq('event_type', 'fi_assignment')
+    .neq('status', 'cancelled')
+    .gte('start_time', startOfMonth.toISOString())
+    .lte('start_time', endOfMonth.toISOString())
+    .order('start_time', { ascending: true })
+
+  if (fiError) {
+    throw new Error(`FI-Termine laden fehlgeschlagen: ${fiError.message}`)
+  }
+
+  if (!fiAssignments || fiAssignments.length === 0) {
+    return { days: 0, totalMinutes: 0 }
+  }
+
+  // 2. Alle Buchungen im Monat (performance: ein Query statt pro Tag)
+  const { data: allBookings, error: bookError } = await supabase
+    .from('calendar_events')
+    .select('*')
+    .eq('event_type', 'booking')
+    .neq('status', 'cancelled')
+    .gte('start_time', startOfMonth.toISOString())
+    .lte('start_time', endOfMonth.toISOString())
+    .order('start_time', { ascending: true })
+
+  if (bookError) {
+    throw new Error(`Buchungen laden fehlgeschlagen: ${bookError.message}`)
+  }
+
+  // 3. Pro FI-Tag: Zugehörige Buchungen zuordnen
+  const dayMap = new Map<string, {
+    calendarMinutes: number
+    bookingCount: number
+    fiShiftMinutes: number
+    bookingDetails: BookingDetail[]
+  }>()
+
+  for (const fi of fiAssignments) {
+    const fiDate = new Date(fi.start_time).toISOString().split('T')[0]
+
+    // Ist dieser FI-Eintrag ganztägig?
+    const isAllDay = fi.is_all_day === true || isGoogleSyncPlaceholder(fi)
+
+    // FI-Schichtdauer berechnen
+    let fiShiftMinutes = 0
+    if (!isAllDay && fi.actual_work_start_time && fi.actual_work_end_time) {
+      fiShiftMinutes = timeStringToMinutes(fi.actual_work_end_time) -
+        timeStringToMinutes(fi.actual_work_start_time)
+    }
+
+    // Buchungen für diesen Tag filtern
+    const dayBookings = (allBookings || []).filter(booking => {
+      const bookingDate = new Date(booking.start_time).toISOString().split('T')[0]
+      if (bookingDate !== fiDate) return false
+
+      // Ganztägig → alle Buchungen des Tages
+      if (isAllDay) return true
+
+      // Teilzeit → nur Buchungen innerhalb der Arbeitszeit
+      if (fi.actual_work_start_time && fi.actual_work_end_time) {
+        const bookingTime = new Date(booking.start_time)
+        const bookingMinutes = bookingTime.getUTCHours() * 60 + bookingTime.getUTCMinutes()
+        const shiftStart = timeStringToMinutes(fi.actual_work_start_time)
+        const shiftEnd = timeStringToMinutes(fi.actual_work_end_time)
+        return bookingMinutes >= shiftStart && bookingMinutes < shiftEnd
+      }
+
+      // Fallback: alle Buchungen des Tages
+      return true
+    })
+
+    // Buchungsdetails aufbereiten
+    const details: BookingDetail[] = dayBookings.map(b => ({
+      id: b.id,
+      title: b.title || '',
+      start: b.start_time,
+      end: b.end_time,
+      duration_min: b.duration || Math.round(
+        (new Date(b.end_time).getTime() - new Date(b.start_time).getTime()) / 60000
+      ),
+      customer_name: [b.customer_first_name, b.customer_last_name]
+        .filter(Boolean).join(' ') || undefined,
+    }))
+
+    const calendarMinutes = details.reduce((sum, d) => sum + d.duration_min, 0)
+
+    // Merge mit bestehendem Tag (falls mehrere FI-Einträge am selben Tag)
+    const existing = dayMap.get(fiDate)
+    if (existing) {
+      existing.calendarMinutes += calendarMinutes
+      existing.bookingCount += details.length
+      existing.fiShiftMinutes += fiShiftMinutes
+      existing.bookingDetails.push(...details)
+    } else {
+      dayMap.set(fiDate, {
+        calendarMinutes,
+        bookingCount: details.length,
+        fiShiftMinutes,
+        bookingDetails: details,
+      })
+    }
+  }
+
+  // 4. UPSERT in timesheet_entries (nur calendar-Felder, nicht user-Anpassungen überschreiben)
+  let totalMinutes = 0
+  for (const [dateStr, day] of dayMap) {
+    totalMinutes += day.calendarMinutes
+
+    const { error: upsertError } = await supabase
+      .from('timesheet_entries')
+      .upsert({
+        employee_id: employeeId,
+        year,
+        month,
+        date: dateStr,
+        calendar_minutes: day.calendarMinutes,
+        calendar_booking_count: day.bookingCount,
+        fi_shift_minutes: day.fiShiftMinutes,
+        booking_details: day.bookingDetails,
+      }, {
+        onConflict: 'employee_id,date',
+        ignoreDuplicates: false,
+      })
+
+    if (upsertError) {
+      console.error(`Timesheet upsert error for ${dateStr}:`, upsertError)
+    }
+  }
+
+  return { days: dayMap.size, totalMinutes }
+}
+
+// ─── Lesen ───
+
+export async function getTimesheetEntries(
+  year: number,
+  month: number,
+  employeeId?: string
+): Promise<TimesheetDaySummary[]> {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const targetId = employeeId || user.id
+
+  // Prüfe ob Admin (für fremde Einträge)
+  if (targetId !== user.id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (profile?.role !== 'admin') throw new Error('Keine Berechtigung')
+  }
+
+  const client = targetId !== user.id ? createAdminClient() : supabase
+
+  const { data, error } = await client
+    .from('timesheet_entries')
+    .select('*')
+    .eq('employee_id', targetId)
+    .eq('year', year)
+    .eq('month', month)
+    .order('date', { ascending: true })
+
+  if (error) throw new Error(`Timesheet laden fehlgeschlagen: ${error.message}`)
+
+  return (data || []).map(entry => ({
+    ...entry,
+    effective_minutes: (entry.adjusted_minutes ?? entry.calendar_minutes) + (entry.manual_minutes || 0),
+    is_adjusted: entry.adjusted_minutes !== null,
+    has_manual: (entry.manual_minutes || 0) > 0,
+  }))
+}
+
+// ─── User-Anpassungen ───
+
+export async function adjustTimesheetEntry(
+  entryId: string,
+  adjustedMinutes: number,
+  reason: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const { error } = await supabase
+    .from('timesheet_entries')
+    .update({
+      adjusted_minutes: adjustedMinutes,
+      adjustment_reason: reason,
+      adjusted_at: new Date().toISOString(),
+      adjusted_by: user.id,
+    })
+    .eq('id', entryId)
+    .eq('employee_id', user.id)
+
+  if (error) throw new Error(`Anpassung fehlgeschlagen: ${error.message}`)
+}
+
+export async function addManualEntry(
+  date: string,
+  minutes: number,
+  description: string,
+  employeeId?: string // Admin kann für andere eintragen
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const targetId = employeeId || user.id
+  const client = targetId !== user.id ? createAdminClient() : supabase
+
+  const dateObj = new Date(date)
+  const year = dateObj.getFullYear()
+  const month = dateObj.getMonth() + 1
+
+  const { error } = await client
+    .from('timesheet_entries')
+    .upsert({
+      employee_id: targetId,
+      year,
+      month,
+      date,
+      manual_minutes: minutes,
+      manual_description: description,
+      calendar_minutes: 0,
+      calendar_booking_count: 0,
+    }, {
+      onConflict: 'employee_id,date',
+      ignoreDuplicates: false,
+    })
+
+  if (error) throw new Error(`Manueller Eintrag fehlgeschlagen: ${error.message}`)
+}
+
+// ─── Monatsbestätigung ───
+
+export async function confirmMonthlyTimesheet(year: number, month: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  // Prüfe ob Report existiert
+  const adminClient = createAdminClient()
+  const { data: existing } = await adminClient
+    .from('time_reports')
+    .select('id')
+    .eq('employee_id', user.id)
+    .eq('year', year)
+    .eq('month', month)
+    .single()
+
+  if (existing) {
+    await adminClient
+      .from('time_reports')
+      .update({
+        confirmed_by_employee: true,
+        confirmed_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+  } else {
+    // Berechne Gesamtminuten
+    const entries = await getTimesheetEntries(year, month)
+    const totalMinutes = entries.reduce((sum, e) => sum + e.effective_minutes, 0)
+
+    await adminClient
+      .from('time_reports')
+      .insert({
+        employee_id: user.id,
+        year,
+        month,
+        total_minutes: totalMinutes,
+        confirmed_by_employee: true,
+        confirmed_at: new Date().toISOString(),
+        is_closed: false,
+      })
+  }
+}
+
+export async function getTimesheetConfirmation(year: number, month: number, employeeId?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const targetId = employeeId || user.id
+  const client = targetId !== user.id ? createAdminClient() : supabase
+
+  const { data } = await client
+    .from('time_reports')
+    .select('confirmed_by_employee, confirmed_at, is_closed, closed_at, closed_by')
+    .eq('employee_id', targetId)
+    .eq('year', year)
+    .eq('month', month)
+    .single()
+
+  return data
+}
+
+// ─── Admin: Übersicht ───
+
+export async function getTimesheetSummary(
+  year: number,
+  month: number
+): Promise<TimesheetAdminOverview> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  // Admin check
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profile?.role !== 'admin') throw new Error('Keine Berechtigung')
+
+  const adminClient = createAdminClient()
+
+  // Alle aktiven Mitarbeiter
+  const { data: employees } = await adminClient
+    .from('profiles')
+    .select('id, email, first_name, last_name, employee_number, role, is_active, exit_date')
+    .eq('is_active', true)
+    .order('last_name', { ascending: true })
+
+  // Alle Timesheet-Einträge für den Monat
+  const { data: allEntries } = await adminClient
+    .from('timesheet_entries')
+    .select('*')
+    .eq('year', year)
+    .eq('month', month)
+
+  // Alle Reports (Bestätigung/Closed Status)
+  const { data: allReports } = await adminClient
+    .from('time_reports')
+    .select('*')
+    .eq('year', year)
+    .eq('month', month)
+
+  // Alle Employee Settings (Vergütung)
+  const { data: allSettings } = await adminClient
+    .from('employee_settings')
+    .select('*')
+
+  const monthNames = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+  ]
+
+  const summaries: TimesheetMonthSummary[] = (employees || []).map(emp => {
+    const entries = (allEntries || []).filter(e => e.employee_id === emp.id)
+    const report = (allReports || []).find(r => r.employee_id === emp.id)
+    const settings = (allSettings || []).find(s => s.employee_id === emp.id)
+
+    // Minutenberechnung
+    const totalCalendar = entries.reduce((s, e) => s + (e.calendar_minutes || 0), 0)
+    const totalManual = entries.reduce((s, e) => s + (e.manual_minutes || 0), 0)
+    const totalAdjusted = entries.reduce((s, e) => {
+      return s + (e.adjusted_minutes !== null ? (e.adjusted_minutes - e.calendar_minutes) : 0)
+    }, 0)
+    const totalEffective = entries.reduce((s, e) =>
+      s + ((e.adjusted_minutes ?? e.calendar_minutes) + (e.manual_minutes || 0)), 0)
+    const totalShift = entries.reduce((s, e) => s + (e.fi_shift_minutes || 0), 0)
+    const totalBookings = entries.reduce((s, e) => s + (e.calendar_booking_count || 0), 0)
+    const workDays = entries.filter(e =>
+      (e.calendar_minutes > 0) || (e.manual_minutes > 0) || (e.adjusted_minutes !== null && e.adjusted_minutes > 0)
+    ).length
+
+    const totalHours = totalEffective / 60
+    const idleMinutes = Math.max(0, totalShift - totalCalendar)
+
+    // Vergütungsberechnung
+    const compensationType = settings?.compensation_type || null
+    const hourlyRate = settings?.hourly_rate || null
+    const monthlySalary = settings?.monthly_salary || null
+    const effectiveRate = hourlyRate || 20 // Fallback
+    const hasRateFallback = !hourlyRate
+
+    let hourlyPay = 0
+    let fixedPay = 0
+    let totalPay = 0
+    let fictionalHours = 0
+
+    if (compensationType === 'hourly') {
+      hourlyPay = totalHours * effectiveRate
+      totalPay = hourlyPay
+      fictionalHours = totalHours
+    } else if (compensationType === 'combined') {
+      hourlyPay = totalHours * effectiveRate
+      fixedPay = monthlySalary || 0
+      totalPay = hourlyPay + fixedPay
+      fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
+    } else if (compensationType === 'salary') {
+      fixedPay = monthlySalary || 0
+      totalPay = fixedPay
+      fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
+    }
+
+    return {
+      employee_id: emp.id,
+      employee_name: [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.email,
+      employee_email: emp.email,
+      employee_number: emp.employee_number,
+      year,
+      month,
+      total_calendar_minutes: totalCalendar,
+      total_manual_minutes: totalManual,
+      total_adjusted_minutes: totalAdjusted,
+      total_effective_minutes: totalEffective,
+      total_effective_hours: totalHours,
+      work_days: workDays,
+      total_bookings: totalBookings,
+      idle_minutes: idleMinutes,
+      compensation_type: compensationType,
+      hourly_rate: hourlyRate,
+      monthly_salary: monthlySalary,
+      hourly_pay: Math.round(hourlyPay * 100) / 100,
+      fixed_pay: Math.round(fixedPay * 100) / 100,
+      total_pay: Math.round(totalPay * 100) / 100,
+      fictional_hours: Math.round(fictionalHours * 100) / 100,
+      hourly_rate_fallback: hasRateFallback,
+      is_confirmed: report?.confirmed_by_employee || false,
+      confirmed_at: report?.confirmed_at || null,
+      is_closed: report?.is_closed || false,
+      closed_at: report?.closed_at || null,
+    }
+  })
+
+  const totals = {
+    total_hours: summaries.reduce((s, e) => s + e.total_effective_hours, 0),
+    total_days: summaries.reduce((s, e) => s + e.work_days, 0),
+    total_bookings: summaries.reduce((s, e) => s + e.total_bookings, 0),
+    total_hourly_pay: summaries.reduce((s, e) => s + e.hourly_pay, 0),
+    total_fixed_pay: summaries.reduce((s, e) => s + e.fixed_pay, 0),
+    total_pay: summaries.reduce((s, e) => s + e.total_pay, 0),
+  }
+
+  return {
+    year,
+    month,
+    month_name: monthNames[month - 1],
+    employees: summaries,
+    totals,
+  }
+}
+
+// ─── Admin: Monat schließen ───
+
+export async function closeTimesheetMonth(employeeId: string, year: number, month: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (profile?.role !== 'admin') throw new Error('Keine Berechtigung')
+
+  const adminClient = createAdminClient()
+
+  // Aktuelle Daten berechnen
+  const entries = await getTimesheetEntries(year, month, employeeId)
+  const totalMinutes = entries.reduce((s, e) => s + e.effective_minutes, 0)
+  const calendarMinutes = entries.reduce((s, e) => s + e.calendar_minutes, 0)
+  const manualMinutes = entries.reduce((s, e) => s + (e.manual_minutes || 0), 0)
+
+  // Settings Snapshot
+  const { data: settings } = await adminClient
+    .from('employee_settings')
+    .select('*')
+    .eq('employee_id', employeeId)
+    .single()
+
+  const { error } = await adminClient
+    .from('time_reports')
+    .upsert({
+      employee_id: employeeId,
+      year,
+      month,
+      total_minutes: totalMinutes,
+      calendar_total_minutes: calendarMinutes,
+      manual_total_minutes: manualMinutes,
+      is_closed: true,
+      closed_by: user.id,
+      closed_at: new Date().toISOString(),
+      compensation_type: settings?.compensation_type || null,
+      hourly_rate: settings?.hourly_rate || null,
+      monthly_salary: settings?.monthly_salary || null,
+      compensation_snapshot: settings || {},
+    }, {
+      onConflict: 'employee_id,year,month',
+    })
+
+  if (error) throw new Error(`Monat schließen fehlgeschlagen: ${error.message}`)
+}
+
+export async function reopenTimesheetMonth(employeeId: string, year: number, month: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const adminClient = createAdminClient()
+
+  await adminClient
+    .from('time_reports')
+    .update({
+      is_closed: false,
+      closed_by: null,
+      closed_at: null,
+    })
+    .eq('employee_id', employeeId)
+    .eq('year', year)
+    .eq('month', month)
+}
+
+// ─── Admin: Timesheet für alle regenerieren ───
+
+export async function regenerateAllTimesheets(year: number, month: number) {
+  const adminClient = createAdminClient()
+
+  const { data: employees } = await adminClient
+    .from('profiles')
+    .select('id')
+    .eq('is_active', true)
+
+  let total = 0
+  for (const emp of employees || []) {
+    const result = await generateTimesheetForMonth(emp.id, year, month)
+    total += result.days
+  }
+
+  return { employeesProcessed: employees?.length || 0, totalDays: total }
+}
+
+// ─── Hilfsfunktionen ───
+
+function timeStringToMinutes(timeStr: string): number {
+  const parts = timeStr.split(':')
+  return parseInt(parts[0]) * 60 + parseInt(parts[1])
+}
+
+function isGoogleSyncPlaceholder(event: any): boolean {
+  // Ganztägige FI-Einträge werden für Google Calendar als 08:00-09:00 gesetzt
+  const start = new Date(event.start_time)
+  const end = new Date(event.end_time)
+  const startHour = start.getUTCHours()
+  const endHour = end.getUTCHours()
+  const durationMinutes = (end.getTime() - start.getTime()) / 60000
+
+  return (startHour === 6 || startHour === 7 || startHour === 8) &&
+    durationMinutes <= 60 &&
+    !event.actual_work_start_time
+}
