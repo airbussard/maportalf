@@ -141,8 +141,8 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
             </span>
           )}
           {isClosed && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-400">
-              <Check className="h-3 w-3" /> Geschlossen (Admin)
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="h-3 w-3" /> Festgeschrieben - Keine Änderungen möglich
             </span>
           )}
         </div>

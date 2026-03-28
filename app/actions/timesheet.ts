@@ -239,23 +239,40 @@ export async function getTimesheetEntries(
 export async function adjustTimesheetEntry(
   entryId: string,
   adjustedMinutes: number,
-  reason: string
+  reason: string,
+  employeeId?: string // Admin kann für andere anpassen
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nicht authentifiziert')
 
-  const { error } = await supabase
-    .from('timesheet_entries')
-    .update({
-      adjusted_minutes: adjustedMinutes,
-      adjustment_reason: reason,
-      adjusted_at: new Date().toISOString(),
-      adjusted_by: user.id,
-    })
-    .eq('id', entryId)
-    .eq('employee_id', user.id)
+  const isAdmin = await checkIsAdmin(supabase, user.id)
+  const targetId = employeeId || user.id
 
+  // Employees: Prüfe ob Monat geschlossen
+  if (!isAdmin) {
+    const entry = await getEntryById(supabase, entryId)
+    if (entry) {
+      const closed = await isMonthClosed(entry.employee_id, entry.year, entry.month)
+      if (closed) throw new Error('Monat ist festgeschrieben. Änderungen nicht möglich.')
+    }
+  }
+
+  const client = isAdmin ? createAdminClient() : supabase
+
+  const updateData: any = {
+    adjusted_minutes: adjustedMinutes,
+    adjustment_reason: reason,
+    adjusted_at: new Date().toISOString(),
+    adjusted_by: user.id,
+  }
+
+  const query = client.from('timesheet_entries').update(updateData).eq('id', entryId)
+
+  // Employee darf nur eigene bearbeiten
+  if (!isAdmin) query.eq('employee_id', user.id)
+
+  const { error } = await query
   if (error) throw new Error(`Anpassung fehlgeschlagen: ${error.message}`)
 }
 
@@ -269,12 +286,20 @@ export async function addManualEntry(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nicht authentifiziert')
 
+  const isAdmin = await checkIsAdmin(supabase, user.id)
   const targetId = employeeId || user.id
-  const client = targetId !== user.id ? createAdminClient() : supabase
 
   const dateObj = new Date(date)
   const year = dateObj.getFullYear()
   const month = dateObj.getMonth() + 1
+
+  // Employees: Prüfe ob Monat geschlossen
+  if (!isAdmin && targetId === user.id) {
+    const closed = await isMonthClosed(user.id, year, month)
+    if (closed) throw new Error('Monat ist festgeschrieben. Änderungen nicht möglich.')
+  }
+
+  const client = isAdmin ? createAdminClient() : supabase
 
   const { error } = await client
     .from('timesheet_entries')
@@ -295,6 +320,50 @@ export async function addManualEntry(
   if (error) throw new Error(`Manueller Eintrag fehlgeschlagen: ${error.message}`)
 }
 
+// ─── Admin: Bonus ───
+
+export async function addBonusToMonth(
+  employeeId: string,
+  year: number,
+  month: number,
+  amount: number,
+  notes?: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht authentifiziert')
+
+  const isAdmin = await checkIsAdmin(supabase, user.id)
+  if (!isAdmin) throw new Error('Keine Berechtigung')
+
+  const adminClient = createAdminClient()
+
+  const { data: existing } = await adminClient
+    .from('time_reports')
+    .select('id')
+    .eq('employee_id', employeeId)
+    .eq('year', year)
+    .eq('month', month)
+    .single()
+
+  if (existing) {
+    await adminClient.from('time_reports').update({
+      bonus_amount: amount,
+      notes: notes || null,
+    }).eq('id', existing.id)
+  } else {
+    await adminClient.from('time_reports').insert({
+      employee_id: employeeId,
+      year,
+      month,
+      total_minutes: 0,
+      bonus_amount: amount,
+      notes: notes || null,
+      is_closed: false,
+    })
+  }
+}
+
 // ─── Monatsbestätigung ───
 
 export async function confirmMonthlyTimesheet(year: number, month: number) {
@@ -302,7 +371,10 @@ export async function confirmMonthlyTimesheet(year: number, month: number) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nicht authentifiziert')
 
-  // Prüfe ob Report existiert
+  // Prüfe ob Monat geschlossen
+  const closed = await isMonthClosed(user.id, year, month)
+  if (closed) throw new Error('Monat ist bereits festgeschrieben.')
+
   const adminClient = createAdminClient()
   const { data: existing } = await adminClient
     .from('time_reports')
@@ -321,7 +393,6 @@ export async function confirmMonthlyTimesheet(year: number, month: number) {
       })
       .eq('id', existing.id)
   } else {
-    // Berechne Gesamtminuten
     const entries = await getTimesheetEntries(year, month)
     const totalMinutes = entries.reduce((sum, e) => sum + e.effective_minutes, 0)
 
@@ -432,9 +503,19 @@ export async function getTimesheetSummary(
     const idleMinutes = Math.max(0, totalShift - totalCalendar)
 
     // Vergütungsberechnung
-    const compensationType = settings?.compensation_type || null
-    const hourlyRate = settings?.hourly_rate || null
-    const monthlySalary = settings?.monthly_salary || null
+    // Bei geschlossenen Monaten: Snapshot-Daten verwenden (unveränderlich)
+    const isClosed = report?.is_closed === true
+    const compensationType = isClosed
+      ? (report?.compensation_type || settings?.compensation_type || null)
+      : (settings?.compensation_type || null)
+    const hourlyRate = isClosed
+      ? (report?.hourly_rate || settings?.hourly_rate || null)
+      : (settings?.hourly_rate || null)
+    const monthlySalary = isClosed
+      ? (report?.monthly_salary || settings?.monthly_salary || null)
+      : (settings?.monthly_salary || null)
+    const bonusAmount = report?.bonus_amount || 0
+
     const effectiveRate = hourlyRate || 20 // Fallback
     const hasRateFallback = !hourlyRate
 
@@ -444,18 +525,21 @@ export async function getTimesheetSummary(
     let fictionalHours = 0
 
     if (compensationType === 'hourly' || (!compensationType && totalHours > 0)) {
-      // hourly ODER kein Typ gesetzt aber Stunden vorhanden → Fallback hourly
       hourlyPay = totalHours * effectiveRate
-      totalPay = hourlyPay
+      totalPay = hourlyPay + bonusAmount
       fictionalHours = totalHours
     } else if (compensationType === 'combined') {
       hourlyPay = totalHours * effectiveRate
       fixedPay = monthlySalary || 0
-      totalPay = hourlyPay + fixedPay
+      totalPay = hourlyPay + fixedPay + bonusAmount
       fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
     } else if (compensationType === 'salary') {
       fixedPay = monthlySalary || 0
-      totalPay = fixedPay
+      totalPay = fixedPay + bonusAmount
+      fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
+    } else if (bonusAmount > 0) {
+      // Kein Typ aber Bonus vorhanden
+      totalPay = bonusAmount
       fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
     }
 
@@ -485,6 +569,7 @@ export async function getTimesheetSummary(
       monthly_salary: monthlySalary,
       hourly_pay: Math.round(hourlyPay * 100) / 100,
       fixed_pay: Math.round(fixedPay * 100) / 100,
+      bonus_amount: Math.round(bonusAmount * 100) / 100,
       total_pay: Math.round(totalPay * 100) / 100,
       fictional_hours: Math.round(fictionalHours * 100) / 100,
       hourly_rate_fallback: hasRateFallback,
@@ -515,7 +600,7 @@ export async function getTimesheetSummary(
 
 // ─── Admin: Monat schließen ───
 
-export async function closeTimesheetMonth(employeeId: string, year: number, month: number) {
+export async function closeTimesheetMonth(employeeId: string, year: number, month: number, bonusAmount?: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nicht authentifiziert')
@@ -558,6 +643,7 @@ export async function closeTimesheetMonth(employeeId: string, year: number, mont
       hourly_rate: settings?.hourly_rate || null,
       monthly_salary: settings?.monthly_salary || null,
       compensation_snapshot: settings || {},
+      bonus_amount: bonusAmount || 0,
     }, {
       onConflict: 'employee_id,year,month',
     })
@@ -604,6 +690,32 @@ export async function regenerateAllTimesheets(year: number, month: number) {
 }
 
 // ─── Hilfsfunktionen ───
+
+async function checkIsAdmin(supabase: any, userId: string): Promise<boolean> {
+  const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  return data?.role === 'admin'
+}
+
+async function isMonthClosed(employeeId: string, year: number, month: number): Promise<boolean> {
+  const adminClient = createAdminClient()
+  const { data } = await adminClient
+    .from('time_reports')
+    .select('is_closed')
+    .eq('employee_id', employeeId)
+    .eq('year', year)
+    .eq('month', month)
+    .single()
+  return data?.is_closed === true
+}
+
+async function getEntryById(supabase: any, entryId: string) {
+  const { data } = await supabase
+    .from('timesheet_entries')
+    .select('employee_id, year, month')
+    .eq('id', entryId)
+    .single()
+  return data
+}
 
 function timeStringToMinutes(timeStr: string): number {
   const parts = timeStr.split(':')

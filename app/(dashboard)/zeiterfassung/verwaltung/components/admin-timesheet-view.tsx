@@ -16,9 +16,11 @@ import {
   Check, Lock, Unlock, AlertTriangle, Eye, Euro,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
 import {
   getTimesheetSummary, regenerateAllTimesheets,
   closeTimesheetMonth, reopenTimesheetMonth, getTimesheetEntries,
+  addBonusToMonth,
 } from '@/app/actions/timesheet'
 import type { TimesheetAdminOverview, TimesheetMonthSummary, TimesheetDaySummary } from '@/lib/types/timesheet'
 import { toast } from 'sonner'
@@ -33,6 +35,11 @@ export function AdminTimesheetView() {
   const [onlyWithData, setOnlyWithData] = useState(false)
   const [detailEmployee, setDetailEmployee] = useState<TimesheetMonthSummary | null>(null)
   const [detailEntries, setDetailEntries] = useState<TimesheetDaySummary[]>([])
+  const [closeDialog, setCloseDialog] = useState<TimesheetMonthSummary | null>(null)
+  const [bonusInput, setBonusInput] = useState('')
+  const [bonusDialog, setBonusDialog] = useState<TimesheetMonthSummary | null>(null)
+  const [bonusAmount, setBonusAmount] = useState('')
+  const [bonusNotes, setBonusNotes] = useState('')
 
   const monthNames = [
     'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
@@ -66,14 +73,35 @@ export function AdminTimesheetView() {
     })
   }
 
-  async function handleCloseMonth(empId: string) {
+  async function handleCloseMonth(emp: TimesheetMonthSummary) {
+    setCloseDialog(emp)
+    setBonusInput(String(emp.bonus_amount || 0))
+  }
+
+  async function confirmCloseMonth() {
+    if (!closeDialog) return
     startTransition(async () => {
       try {
-        await closeTimesheetMonth(empId, year, month)
-        toast.success('Monat geschlossen')
+        await closeTimesheetMonth(closeDialog.employee_id, year, month, parseFloat(bonusInput) || 0)
+        toast.success('Monat festgeschrieben')
+        setCloseDialog(null)
         await loadData()
       } catch (err) {
-        toast.error('Fehler beim Schließen')
+        toast.error('Fehler beim Festschreiben')
+      }
+    })
+  }
+
+  async function handleSaveBonus() {
+    if (!bonusDialog) return
+    startTransition(async () => {
+      try {
+        await addBonusToMonth(bonusDialog.employee_id, year, month, parseFloat(bonusAmount) || 0, bonusNotes)
+        toast.success('Bonus gespeichert')
+        setBonusDialog(null)
+        await loadData()
+      } catch (err) {
+        toast.error('Fehler beim Speichern')
       }
     })
   }
@@ -249,12 +277,15 @@ export function AdminTimesheetView() {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(emp)} title="Details">
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setBonusDialog(emp); setBonusAmount(String(emp.bonus_amount || 0)); setBonusNotes('') }} title="Bonus">
+                            <Euro className="h-3.5 w-3.5" />
+                          </Button>
                           {emp.is_closed ? (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleReopenMonth(emp.employee_id)} title="Wieder öffnen">
                               <Unlock className="h-3.5 w-3.5" />
                             </Button>
                           ) : (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCloseMonth(emp.employee_id)} title="Monat schließen">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCloseMonth(emp)} title="Festschreiben">
                               <Lock className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -344,6 +375,67 @@ export function AdminTimesheetView() {
                 )
               })}
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Close Month Dialog */}
+      {closeDialog && (
+        <Dialog open onOpenChange={() => setCloseDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Monat festschreiben - {closeDialog.employee_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Nach dem Festschreiben werden die aktuellen Vergütungsdaten eingefroren.
+                Spätere Änderungen am Stundenlohn wirken sich nicht mehr auf diesen Monat aus.
+              </p>
+              <div className="space-y-2">
+                <Label>Einmaliger Bonus (EUR)</Label>
+                <Input type="number" step="0.01" value={bonusInput} onChange={e => setBonusInput(e.target.value)} placeholder="0.00" />
+              </div>
+              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                <div className="flex justify-between"><span>Stundengehalt:</span><span>{formatCurrency(closeDialog.hourly_pay)}</span></div>
+                <div className="flex justify-between"><span>Fixgehalt:</span><span>{formatCurrency(closeDialog.fixed_pay)}</span></div>
+                {(parseFloat(bonusInput) || 0) > 0 && <div className="flex justify-between text-[#fbb928]"><span>Bonus:</span><span>{formatCurrency(parseFloat(bonusInput) || 0)}</span></div>}
+                <div className="flex justify-between font-bold border-t pt-1">
+                  <span>Gesamt:</span>
+                  <span>{formatCurrency(closeDialog.hourly_pay + closeDialog.fixed_pay + (parseFloat(bonusInput) || 0))}</span>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCloseDialog(null)}>Abbrechen</Button>
+              <Button onClick={confirmCloseMonth} disabled={isPending}>
+                <Lock className="h-4 w-4 mr-2" /> Festschreiben
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Bonus Dialog */}
+      {bonusDialog && (
+        <Dialog open onOpenChange={() => setBonusDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Bonus - {bonusDialog.employee_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Betrag (EUR)</Label>
+                <Input type="number" step="0.01" value={bonusAmount} onChange={e => setBonusAmount(e.target.value)} placeholder="0.00" />
+              </div>
+              <div className="space-y-2">
+                <Label>Notiz (optional)</Label>
+                <Input value={bonusNotes} onChange={e => setBonusNotes(e.target.value)} placeholder="z.B. Sonderzahlung, Prämie" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBonusDialog(null)}>Abbrechen</Button>
+              <Button onClick={handleSaveBonus} disabled={isPending}>Speichern</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

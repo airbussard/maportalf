@@ -65,7 +65,8 @@ export interface TimesheetMonthSummary {
   monthly_salary: number | null
   hourly_pay: number        // Stunden × Stundenlohn
   fixed_pay: number         // Fixgehalt
-  total_pay: number         // hourly_pay + fixed_pay
+  bonus_amount: number      // Einmaliger Zusatzbetrag
+  total_pay: number         // hourly_pay + fixed_pay + bonus
   fictional_hours: number   // total_pay / hourly_rate
   hourly_rate_fallback: boolean // true wenn 20€ Fallback
 
