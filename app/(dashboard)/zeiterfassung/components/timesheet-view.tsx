@@ -99,8 +99,6 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
 
   // Stats
   const totalMinutes = entries.reduce((s, e) => s + e.effective_minutes, 0)
-  const totalHours = Math.floor(totalMinutes / 60)
-  const totalMins = totalMinutes % 60
   const workDays = entries.filter(e => e.effective_minutes > 0).length
   const totalBookings = entries.reduce((s, e) => s + e.calendar_booking_count, 0)
   const totalShift = entries.reduce((s, e) => s + (e.fi_shift_minutes || 0), 0)
@@ -159,7 +157,7 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{totalHours}:{String(totalMins).padStart(2, '0')}</p>
+            <p className="text-2xl font-bold">{formatMinutes(totalMinutes)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -190,7 +188,7 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-muted-foreground">
-              {Math.floor(idleMinutes / 60)}:{String(idleMinutes % 60).padStart(2, '0')}
+              {formatMinutes(idleMinutes)}
             </p>
           </CardContent>
         </Card>
@@ -456,6 +454,5 @@ function ManualEntryDialog({ year, month, onClose, onSave }: {
 function formatMinutes(min: number): string {
   const h = Math.floor(min / 60)
   const m = min % 60
-  if (h === 0) return `${m}m`
-  return m > 0 ? `${h}h ${m}m` : `${h}h`
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }

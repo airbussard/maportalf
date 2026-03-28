@@ -27,11 +27,17 @@ export async function generateTimesheetForMonth(
   const startOfMonth = new Date(year, month - 1, 1)
   const endOfMonth = new Date(year, month, 0, 23, 59, 59)
 
-  // 1. Alle FI-Zuweisungen des Mitarbeiters im Monat
-  const { data: fiAssignments, error: fiError } = await supabase
+  // 1. Mitarbeiter-Profil laden (für Name + Nummer Matching)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, employee_number')
+    .eq('id', employeeId)
+    .single()
+
+  // 1b. Alle FI-Zuweisungen im Monat laden (breitere Suche)
+  const { data: allFiAssignments, error: fiError } = await supabase
     .from('calendar_events')
     .select('*')
-    .eq('assigned_instructor_id', employeeId)
     .eq('event_type', 'fi_assignment')
     .neq('status', 'cancelled')
     .gte('start_time', startOfMonth.toISOString())
@@ -42,7 +48,21 @@ export async function generateTimesheetForMonth(
     throw new Error(`FI-Termine laden fehlgeschlagen: ${fiError.message}`)
   }
 
-  if (!fiAssignments || fiAssignments.length === 0) {
+  // Zuordnung: per ID ODER per Name/Nummer im assigned_instructor_name
+  const empNumber = profile?.employee_number || ''
+  const empName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
+
+  const fiAssignments = (allFiAssignments || []).filter(fi => {
+    // Direkte ID-Zuordnung
+    if (fi.assigned_instructor_id === employeeId) return true
+    // Mitarbeiternummer im Namen (z.B. "David Bente (FH021)")
+    if (empNumber && fi.assigned_instructor_name?.includes(empNumber)) return true
+    // Name-Match als Fallback
+    if (empName && fi.assigned_instructor_name?.startsWith(empName)) return true
+    return false
+  })
+
+  if (fiAssignments.length === 0) {
     return { days: 0, totalMinutes: 0 }
   }
 

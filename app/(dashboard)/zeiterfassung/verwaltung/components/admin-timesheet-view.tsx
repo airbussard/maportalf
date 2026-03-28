@@ -155,7 +155,7 @@ export function AdminTimesheetView() {
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs text-muted-foreground">Gesamtstunden</p>
-              <p className="text-xl font-bold">{data.totals.total_hours.toFixed(1)}h</p>
+              <p className="text-xl font-bold">{formatMinutes(Math.round(data.totals.total_hours * 60))}</p>
             </CardContent>
           </Card>
           <Card>
@@ -221,7 +221,7 @@ export function AdminTimesheetView() {
                       <td className="p-3 text-muted-foreground">{emp.employee_number || '-'}</td>
                       <td className="p-3 font-medium">{emp.employee_name}</td>
                       <td className="p-3 text-right">{emp.work_days}</td>
-                      <td className="p-3 text-right">{emp.total_effective_hours.toFixed(1)}</td>
+                      <td className="p-3 text-right">{formatMinutes(emp.total_effective_minutes)}</td>
                       <td className="p-3 text-right">
                         {emp.hourly_rate ? `${emp.hourly_rate.toFixed(2)}€` : (
                           <span className="text-orange-500 flex items-center justify-end gap-1">
@@ -271,7 +271,7 @@ export function AdminTimesheetView() {
                   <tr className="border-t-2 bg-muted/30 font-bold">
                     <td className="p-3" colSpan={2}>Gesamt</td>
                     <td className="p-3 text-right">{data.totals.total_days}</td>
-                    <td className="p-3 text-right">{data.totals.total_hours.toFixed(1)}</td>
+                    <td className="p-3 text-right">{formatMinutes(Math.round(data.totals.total_hours * 60))}</td>
                     <td className="p-3" />
                     <td className="p-3 text-right">{formatCurrency(data.totals.total_hourly_pay)}</td>
                     <td className="p-3 text-right">{formatCurrency(data.totals.total_fixed_pay)}</td>
@@ -299,7 +299,7 @@ export function AdminTimesheetView() {
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Stunden</p>
-                <p className="text-lg font-bold">{detailEmployee.total_effective_hours.toFixed(1)}h</p>
+                <p className="text-lg font-bold">{formatMinutes(detailEmployee.total_effective_minutes)}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Stundenlohn</p>
@@ -355,6 +355,5 @@ function formatCurrency(amount: number): string {
 function formatMinutes(min: number): string {
   const h = Math.floor(min / 60)
   const m = min % 60
-  if (h === 0) return `${m}m`
-  return m > 0 ? `${h}h ${m}m` : `${h}h`
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
