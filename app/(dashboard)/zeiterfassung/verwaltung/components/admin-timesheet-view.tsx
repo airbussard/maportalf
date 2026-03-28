@@ -320,13 +320,18 @@ export function AdminTimesheetView() {
             <div className="space-y-1 max-h-[400px] overflow-y-auto">
               {detailEntries.map(entry => {
                 const dateObj = new Date(entry.date + 'T00:00:00')
+                const calendarUrl = `/kalender?date=${entry.date}`
                 return (
-                  <div key={entry.id} className={cn(
-                    'flex items-center justify-between p-2 rounded text-sm',
-                    entry.is_adjusted && 'bg-orange-50 dark:bg-orange-950/20',
-                    entry.has_manual && 'bg-blue-50 dark:bg-blue-950/20',
-                  )}>
-                    <span className="w-24">
+                  <a
+                    key={entry.id}
+                    href={calendarUrl}
+                    className={cn(
+                      'flex items-center justify-between p-2 rounded text-sm cursor-pointer transition-colors hover:bg-accent',
+                      entry.is_adjusted && 'bg-orange-50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-950/40',
+                      entry.has_manual && 'bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/40',
+                    )}
+                  >
+                    <span className="w-24 text-[#fbb928] font-medium underline underline-offset-2">
                       {dateObj.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                     </span>
                     <span className="text-muted-foreground">{entry.calendar_booking_count} Termine</span>
@@ -335,7 +340,7 @@ export function AdminTimesheetView() {
                       {entry.is_adjusted && <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" title="Angepasst" />}
                       {entry.has_manual && <span className="w-2 h-2 rounded-full bg-blue-400 inline-block ml-1" title="Manuell" />}
                     </span>
-                  </div>
+                  </a>
                 )
               })}
             </div>
