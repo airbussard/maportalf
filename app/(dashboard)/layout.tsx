@@ -69,8 +69,11 @@ export default function DashboardLayout({
       </main>
 
       <footer className="border-t py-4 mt-auto">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-muted-foreground">
-          Made with <span className="text-red-500">&#10084;</span> by getemergence.com / Oscar Knabe
+        <div className="mx-auto max-w-7xl px-4 text-center text-xs text-muted-foreground tracking-wide uppercase">
+          Konzept &amp; Umsetzung{' '}
+          <a href="https://knabe-gmbh.de" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground hover:text-[#fbb928] transition-colors">
+            Knabe GmbH
+          </a>
         </div>
       </footer>
     </div>
