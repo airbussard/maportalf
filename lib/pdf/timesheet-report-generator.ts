@@ -50,15 +50,14 @@ export async function generateTimesheetPdf(data: TimesheetAdminOverview): Promis
 
   // ─── Tabelle ───
   const cols = [
-    { header: 'MA-Nr.', width: 45, align: 'left' as const },
-    { header: 'Name', width: 120, align: 'left' as const },
-    { header: 'Tage', width: 35, align: 'right' as const },
-    { header: 'Stunden', width: 50, align: 'right' as const },
-    { header: '€/Std.', width: 45, align: 'right' as const },
-    { header: 'Stundengeh.', width: 70, align: 'right' as const },
-    { header: 'Fixgehalt', width: 65, align: 'right' as const },
-    { header: 'Gesamt', width: 75, align: 'right' as const },
-    { header: 'Fikt. Std.', width: 50, align: 'right' as const },
+    { header: 'MA-Nr.', width: 50, align: 'left' as const },
+    { header: 'Name', width: 140, align: 'left' as const },
+    { header: 'Tage', width: 40, align: 'right' as const },
+    { header: 'Stunden', width: 55, align: 'right' as const },
+    { header: 'EUR/Std.', width: 55, align: 'right' as const },
+    { header: 'Stundengeh.', width: 75, align: 'right' as const },
+    { header: 'Fixgehalt', width: 75, align: 'right' as const },
+    { header: 'Gesamt', width: 85, align: 'right' as const },
     { header: 'Status', width: 55, align: 'center' as const },
     { header: 'Bestätigt', width: 55, align: 'center' as const },
   ]
@@ -83,8 +82,10 @@ export async function generateTimesheetPdf(data: TimesheetAdminOverview): Promis
   })
   y -= rowH
 
-  // Daten-Zeilen (nur mit Daten)
-  const activeEmployees = data.employees.filter(e => e.total_effective_minutes > 0 || e.is_confirmed || e.is_closed)
+  // Daten-Zeilen (mit Daten ODER Gesamtgehalt > 0 für Fixgehälter)
+  const activeEmployees = data.employees.filter(e =>
+    e.total_effective_minutes > 0 || e.total_pay > 0 || e.is_confirmed || e.is_closed
+  )
 
   activeEmployees.forEach((emp, idx) => {
     if (y - rowH < 60) return // Seitenende
@@ -95,22 +96,21 @@ export async function generateTimesheetPdf(data: TimesheetAdminOverview): Promis
     }
 
     const rateDisplay = emp.hourly_rate
-      ? `${emp.hourly_rate.toFixed(2)}€`
-      : '20€ *'
+      ? `${emp.hourly_rate.toFixed(2)} EUR`
+      : '20 EUR *'
 
     const statusText = emp.is_closed ? 'Geschl.' : emp.is_confirmed ? 'Best.' : 'Offen'
     const confirmedText = emp.is_confirmed ? 'Ja' : '-'
 
     const row = [
       emp.employee_number || '-',
-      emp.employee_name.substring(0, 18),
+      emp.employee_name.substring(0, 20),
       String(emp.work_days),
-      emp.total_effective_hours.toFixed(1),
+      fmtHHMM(emp.total_effective_minutes),
       rateDisplay,
       formatEUR(emp.hourly_pay),
       emp.fixed_pay > 0 ? formatEUR(emp.fixed_pay) : '-',
       formatEUR(emp.total_pay),
-      emp.fictional_hours.toFixed(1),
       statusText,
       confirmedText,
     ]
@@ -130,12 +130,12 @@ export async function generateTimesheetPdf(data: TimesheetAdminOverview): Promis
   const totals = [
     '', 'Gesamt',
     String(data.totals.total_days),
-    data.totals.total_hours.toFixed(1),
+    fmtHHMM(Math.round(data.totals.total_hours * 60)),
     '',
     formatEUR(data.totals.total_hourly_pay),
     formatEUR(data.totals.total_fixed_pay),
     formatEUR(data.totals.total_pay),
-    '', '', '',
+    '', '',
   ]
   totals.forEach((text, i) => {
     if (!text) return
@@ -178,6 +178,12 @@ function drawCell(
   if (align === 'center') tx = x + (width - textWidth) / 2
 
   page.drawText(text, { x: tx, y: y - height + 5, size, font, color })
+}
+
+function fmtHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 function formatEUR(amount: number): string {

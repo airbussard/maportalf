@@ -110,7 +110,7 @@ export function AdminTimesheetView() {
   }
 
   const employees = data?.employees || []
-  const filtered = onlyWithData ? employees.filter(e => e.total_effective_minutes > 0) : employees
+  const filtered = onlyWithData ? employees.filter(e => e.total_effective_minutes > 0 || e.total_pay > 0) : employees
 
   return (
     <div className="space-y-6">
@@ -194,7 +194,6 @@ export function AdminTimesheetView() {
                   <th className="text-right p-3 font-medium">Stundengeh.</th>
                   <th className="text-right p-3 font-medium">Fixgehalt</th>
                   <th className="text-right p-3 font-medium font-bold">Gesamt</th>
-                  <th className="text-right p-3 font-medium">Fikt. Std.</th>
                   <th className="text-center p-3 font-medium">Status</th>
                   <th className="text-center p-3 font-medium">Aktionen</th>
                 </tr>
@@ -203,14 +202,14 @@ export function AdminTimesheetView() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b">
-                      {Array.from({ length: 11 }).map((_, j) => (
+                      {Array.from({ length: 10 }).map((_, j) => (
                         <td key={j} className="p-3"><div className="h-4 bg-muted rounded animate-pulse" /></td>
                       ))}
                     </tr>
                   ))
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
                       <Users className="h-10 w-10 mx-auto mb-2 opacity-40" />
                       Keine Mitarbeiter mit Daten
                     </td>
@@ -232,7 +231,6 @@ export function AdminTimesheetView() {
                       <td className="p-3 text-right">{formatCurrency(emp.hourly_pay)}</td>
                       <td className="p-3 text-right">{emp.fixed_pay > 0 ? formatCurrency(emp.fixed_pay) : '-'}</td>
                       <td className="p-3 text-right font-bold">{formatCurrency(emp.total_pay)}</td>
-                      <td className="p-3 text-right text-muted-foreground">{emp.fictional_hours.toFixed(1)}</td>
                       <td className="p-3 text-center">
                         {emp.is_closed ? (
                           <span className="inline-flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full px-2 py-0.5">
@@ -276,7 +274,7 @@ export function AdminTimesheetView() {
                     <td className="p-3 text-right">{formatCurrency(data.totals.total_hourly_pay)}</td>
                     <td className="p-3 text-right">{formatCurrency(data.totals.total_fixed_pay)}</td>
                     <td className="p-3 text-right">{formatCurrency(data.totals.total_pay)}</td>
-                    <td className="p-3" colSpan={3} />
+                    <td className="p-3" colSpan={2} />
                   </tr>
                 </tfoot>
               )}
