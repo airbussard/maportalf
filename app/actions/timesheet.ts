@@ -451,6 +451,12 @@ export async function getTimesheetSummary(
       fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
     }
 
+    // Angezeigte Stunden: tatsächliche ODER fiktive (bei reinem Fixgehalt)
+    const displayMinutes = totalEffective > 0
+      ? totalEffective
+      : Math.round(fictionalHours * 60)
+    const displayHours = displayMinutes / 60
+
     return {
       employee_id: emp.id,
       employee_name: [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.email,
@@ -461,8 +467,8 @@ export async function getTimesheetSummary(
       total_calendar_minutes: totalCalendar,
       total_manual_minutes: totalManual,
       total_adjusted_minutes: totalAdjusted,
-      total_effective_minutes: totalEffective,
-      total_effective_hours: totalHours,
+      total_effective_minutes: displayMinutes,
+      total_effective_hours: displayHours,
       work_days: workDays,
       total_bookings: totalBookings,
       idle_minutes: idleMinutes,
