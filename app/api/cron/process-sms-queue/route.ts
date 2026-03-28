@@ -7,14 +7,20 @@
  * Endpoint: POST /api/cron/process-sms-queue
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendSMS, isTwilioConfigured } from '@/lib/sms/twilio-client'
 
 const MAX_ATTEMPTS = 3
 const BATCH_SIZE = 10
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth check
+  const key = request.nextUrl.searchParams.get('key')
+  if (key !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   // Check if Twilio is configured
   if (!isTwilioConfigured()) {
     console.log('[SMS Cron] Twilio not configured, skipping')
