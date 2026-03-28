@@ -89,7 +89,8 @@ export async function generateTimesheetForMonth(
   }>()
 
   for (const fi of fiAssignments) {
-    const fiDate = new Date(fi.start_time).toISOString().split('T')[0]
+    const fiBerlin = utcToBerlinTime(new Date(fi.start_time))
+    const fiDate = `${fiBerlin.getFullYear()}-${String(fiBerlin.getMonth() + 1).padStart(2, '0')}-${String(fiBerlin.getDate()).padStart(2, '0')}`
 
     // Ist dieser FI-Eintrag ganztägig?
     const isAllDay = fi.is_all_day === true || isGoogleSyncPlaceholder(fi)
@@ -102,17 +103,23 @@ export async function generateTimesheetForMonth(
     }
 
     // Buchungen für diesen Tag filtern
+    // WICHTIG: actual_work_start/end sind in deutscher Ortszeit (Europe/Berlin),
+    // booking.start_time ist UTC → muss konvertiert werden
     const dayBookings = (allBookings || []).filter(booking => {
-      const bookingDate = new Date(booking.start_time).toISOString().split('T')[0]
-      if (bookingDate !== fiDate) return false
+      // Datum-Vergleich in Europe/Berlin Timezone
+      const bookingBerlin = utcToBerlinTime(new Date(booking.start_time))
+      const fiBerlin = utcToBerlinTime(new Date(fi.start_time))
+      const bookingDateStr = `${bookingBerlin.getFullYear()}-${String(bookingBerlin.getMonth() + 1).padStart(2, '0')}-${String(bookingBerlin.getDate()).padStart(2, '0')}`
+      const fiDateStr = `${fiBerlin.getFullYear()}-${String(fiBerlin.getMonth() + 1).padStart(2, '0')}-${String(fiBerlin.getDate()).padStart(2, '0')}`
+
+      if (bookingDateStr !== fiDateStr) return false
 
       // Ganztägig → alle Buchungen des Tages
       if (isAllDay) return true
 
-      // Teilzeit → nur Buchungen innerhalb der Arbeitszeit
+      // Teilzeit → Buchung-Startzeit in Berliner Ortszeit mit FI-Arbeitszeit vergleichen
       if (fi.actual_work_start_time && fi.actual_work_end_time) {
-        const bookingTime = new Date(booking.start_time)
-        const bookingMinutes = bookingTime.getUTCHours() * 60 + bookingTime.getUTCMinutes()
+        const bookingMinutes = bookingBerlin.getHours() * 60 + bookingBerlin.getMinutes()
         const shiftStart = timeStringToMinutes(fi.actual_work_start_time)
         const shiftEnd = timeStringToMinutes(fi.actual_work_end_time)
         return bookingMinutes >= shiftStart && bookingMinutes < shiftEnd
@@ -601,6 +608,12 @@ export async function regenerateAllTimesheets(year: number, month: number) {
 function timeStringToMinutes(timeStr: string): number {
   const parts = timeStr.split(':')
   return parseInt(parts[0]) * 60 + parseInt(parts[1])
+}
+
+function utcToBerlinTime(date: Date): Date {
+  // Konvertiert UTC Date zu Europe/Berlin Ortszeit
+  const berlinStr = date.toLocaleString('en-US', { timeZone: 'Europe/Berlin' })
+  return new Date(berlinStr)
 }
 
 function isGoogleSyncPlaceholder(event: any): boolean {
