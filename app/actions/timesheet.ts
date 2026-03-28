@@ -436,7 +436,8 @@ export async function getTimesheetSummary(
     let totalPay = 0
     let fictionalHours = 0
 
-    if (compensationType === 'hourly') {
+    if (compensationType === 'hourly' || (!compensationType && totalHours > 0)) {
+      // hourly ODER kein Typ gesetzt aber Stunden vorhanden → Fallback hourly
       hourlyPay = totalHours * effectiveRate
       totalPay = hourlyPay
       fictionalHours = totalHours
