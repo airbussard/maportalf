@@ -39,7 +39,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
   const refreshBookingStats = async (groupBy: GroupBy, compare: boolean) => {
     setLoadingBookingStats(true)
     try {
-      const limit = groupBy === 'year' ? 100 : 12
+      const limit = groupBy === 'year' ? 100 : groupBy === 'month' ? 24 : 24
       const newStats = await getBookingStats(groupBy, limit, compare)
       setBookingStats(newStats)
     } catch (error) {
@@ -301,8 +301,8 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="month">12 Monate</SelectItem>
-                  <SelectItem value="week">12 Wochen</SelectItem>
+                  <SelectItem value="month">Alle Monate</SelectItem>
+                  <SelectItem value="week">24 Wochen</SelectItem>
                   <SelectItem value="year">Alle Jahre</SelectItem>
                 </SelectContent>
               </Select>
