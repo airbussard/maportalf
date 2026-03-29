@@ -16,6 +16,7 @@ import { StatusDistributionChart } from './components/status-distribution-chart'
 import { WeekdayDistributionChart } from './components/weekday-distribution-chart'
 import { TeamWorkloadTable } from './components/team-workload-table'
 import { BookingVolumeChart } from './components/booking-volume-chart'
+import { StatsExportDialog } from './components/stats-export-dialog'
 
 interface StatsContentProps {
   stats: TicketStats | null
@@ -119,19 +120,27 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
           </p>
         </div>
 
-        {/* Time Range Filter */}
-        <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="4weeks">Letzte 4 Wochen</SelectItem>
-            <SelectItem value="week">Letzte Woche</SelectItem>
-            <SelectItem value="month">Letzter Monat</SelectItem>
-            <SelectItem value="year">Letztes Jahr</SelectItem>
-            <SelectItem value="day">Letzter Tag</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {/* Time Range Filter */}
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4weeks">Letzte 4 Wochen</SelectItem>
+              <SelectItem value="week">Letzte Woche</SelectItem>
+              <SelectItem value="month">Letzter Monat</SelectItem>
+              <SelectItem value="year">Letztes Jahr</SelectItem>
+              <SelectItem value="day">Letzter Tag</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <StatsExportDialog
+            availableYears={bookingStats?.availableYears || []}
+            currentFilter={bookingFilter}
+            currentCompare={compareYear}
+          />
+        </div>
       </div>
 
       {/* KPI Cards */}
