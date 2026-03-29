@@ -181,30 +181,22 @@ export async function getBookingStats(
     let yearOverYearChange: number | null | undefined
 
     if (compareWithPreviousYear && groupBy === 'month') {
-      // Vorjahresdaten aus den bereits geladenen Events gruppieren
-      const currentYear = new Date().getFullYear()
-      const prevYear = currentYear - 1
-
-      // Vorjahres-Gruppierung erstellen
-      const prevGrouped = new Map<string, number>()
+      // Alle Events nach YYYY-MM gruppieren (für Vorjahres-Lookup)
+      const allMonthly = new Map<string, number>()
       events.forEach(event => {
         const date = new Date(event.start_time)
-        if (date.getFullYear() === prevYear) {
-          const month = date.getMonth() + 1
-          const key = `${prevYear}-${String(month).padStart(2, '0')}`
-          prevGrouped.set(key, (prevGrouped.get(key) || 0) + 1)
-        }
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+        allMonthly.set(key, (allMonthly.get(key) || 0) + 1)
       })
-
-      previousYearTotal = Array.from(prevGrouped.values()).reduce((s, c) => s + c, 0)
 
       // Vorjahresdaten in aktuelle Datenpunkte mappen
       dataArray = dataArray.map(item => {
         const [yearStr, monthStr] = item.period.split('-')
         if (!monthStr) return item
 
+        // Vorjahr = gleicher Monat, ein Jahr zurück
         const prevKey = `${parseInt(yearStr) - 1}-${monthStr}`
-        const prevCount = prevGrouped.get(prevKey) || 0
+        const prevCount = allMonthly.get(prevKey) || 0
         const change = prevCount > 0
           ? Math.round(((item.count - prevCount) / prevCount) * 100 * 10) / 10
           : null
@@ -216,8 +208,10 @@ export async function getBookingStats(
         }
       })
 
-      // Gesamt-Vergleich aktuelles Jahr vs. Vorjahr (gleicher Zeitraum)
+      // Gesamt-Vergleich: aktuelles Kalenderjahr vs. Vorjahr
+      const currentYear = new Date().getFullYear()
       const currentYearTotal = events.filter(e => new Date(e.start_time).getFullYear() === currentYear).length
+      previousYearTotal = events.filter(e => new Date(e.start_time).getFullYear() === currentYear - 1).length
       yearOverYearChange = previousYearTotal > 0
         ? Math.round(((currentYearTotal - previousYearTotal) / previousYearTotal) * 100 * 10) / 10
         : null
