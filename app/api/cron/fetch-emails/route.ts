@@ -46,6 +46,12 @@ interface ProcessingStats {
  * Fetches unread emails from IMAP and creates/updates tickets
  */
 export async function GET(request: NextRequest) {
+  // Auth check
+  const key = request.nextUrl.searchParams.get('key')
+  if (key !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const startTime = Date.now()
 
   try {
