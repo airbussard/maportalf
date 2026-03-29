@@ -220,17 +220,19 @@ export async function getBookingStats(
         }
       })
 
-      // Gesamt-Vergleich: aktuelles Kalenderjahr vs. Vorjahr
-      const currentYear = new Date().getFullYear()
-      const currentYearTotal = events.filter(e => new Date(e.start_time).getFullYear() === currentYear).length
-      previousYearTotal = events.filter(e => new Date(e.start_time).getFullYear() === currentYear - 1).length
+      // Gesamt aus gefilterten Daten berechnen (nicht aus allen Events)
+      const filteredTotal = dataArray.reduce((s, d) => s + d.count, 0)
+      previousYearTotal = dataArray.reduce((s, d) => s + (d.previousCount || 0), 0)
       yearOverYearChange = previousYearTotal > 0
-        ? Math.round(((currentYearTotal - previousYearTotal) / previousYearTotal) * 100 * 10) / 10
+        ? Math.round(((filteredTotal - previousYearTotal) / previousYearTotal) * 100 * 10) / 10
         : null
     }
 
+    // totalBookings = Summe der gefilterten/sichtbaren Daten
+    const filteredTotalBookings = dataArray.reduce((s, d) => s + d.count, 0)
+
     return {
-      totalBookings: events.length,
+      totalBookings: filteredTotalBookings,
       data: dataArray,
       availableYears,
       previousYearTotal,
