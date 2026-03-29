@@ -11,14 +11,20 @@ import { createClient } from '@/lib/supabase/server'
 
 export type GroupBy = 'month' | 'week' | 'year'
 
+export interface BookingDataPoint {
+  period: string
+  count: number
+  displayLabel: string
+  previousCount?: number
+  changePercent?: number | null
+}
+
 export interface BookingStats {
   totalBookings: number
-  data: {
-    period: string
-    count: number
-    displayLabel: string
-  }[]
+  data: BookingDataPoint[]
   availableYears: number[]
+  previousYearTotal?: number
+  yearOverYearChange?: number | null
 }
 
 /**
@@ -27,7 +33,8 @@ export interface BookingStats {
  */
 export async function getBookingStats(
   groupBy: GroupBy = 'month',
-  limit: number = 12
+  limit: number = 12,
+  compareWithPreviousYear: boolean = false
 ): Promise<BookingStats | null> {
   try {
     const supabase = await createClient()
@@ -169,10 +176,59 @@ export async function getBookingStats(
 
     const availableYears = Array.from(yearsSet).sort((a, b) => b - a)
 
+    // Vorjahresvergleich
+    let previousYearTotal: number | undefined
+    let yearOverYearChange: number | null | undefined
+
+    if (compareWithPreviousYear && groupBy === 'month') {
+      // Vorjahresdaten aus den bereits geladenen Events gruppieren
+      const currentYear = new Date().getFullYear()
+      const prevYear = currentYear - 1
+
+      // Vorjahres-Gruppierung erstellen
+      const prevGrouped = new Map<string, number>()
+      events.forEach(event => {
+        const date = new Date(event.start_time)
+        if (date.getFullYear() === prevYear) {
+          const month = date.getMonth() + 1
+          const key = `${prevYear}-${String(month).padStart(2, '0')}`
+          prevGrouped.set(key, (prevGrouped.get(key) || 0) + 1)
+        }
+      })
+
+      previousYearTotal = Array.from(prevGrouped.values()).reduce((s, c) => s + c, 0)
+
+      // Vorjahresdaten in aktuelle Datenpunkte mappen
+      dataArray = dataArray.map(item => {
+        const [yearStr, monthStr] = item.period.split('-')
+        if (!monthStr) return item
+
+        const prevKey = `${parseInt(yearStr) - 1}-${monthStr}`
+        const prevCount = prevGrouped.get(prevKey) || 0
+        const change = prevCount > 0
+          ? Math.round(((item.count - prevCount) / prevCount) * 100 * 10) / 10
+          : null
+
+        return {
+          ...item,
+          previousCount: prevCount,
+          changePercent: change,
+        }
+      })
+
+      // Gesamt-Vergleich aktuelles Jahr vs. Vorjahr (gleicher Zeitraum)
+      const currentYearTotal = events.filter(e => new Date(e.start_time).getFullYear() === currentYear).length
+      yearOverYearChange = previousYearTotal > 0
+        ? Math.round(((currentYearTotal - previousYearTotal) / previousYearTotal) * 100 * 10) / 10
+        : null
+    }
+
     return {
       totalBookings: events.length,
       data: dataArray,
-      availableYears
+      availableYears,
+      previousYearTotal,
+      yearOverYearChange,
     }
 
   } catch (error) {

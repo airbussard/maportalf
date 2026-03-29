@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, TrendingUp, Clock, Users, AlertCircle, Shield, Calendar } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, Clock, Users, AlertCircle, Shield, Calendar } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TicketStats, TimeRange } from '@/app/actions/ticket-stats'
 import type { BookingStats, GroupBy } from '@/app/actions/calendar-stats'
@@ -27,26 +29,35 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
   const [bookingStats, setBookingStats] = useState<BookingStats | null>(initialBookingStats)
   const [bookingGroupBy, setBookingGroupBy] = useState<GroupBy>('month')
   const [loadingBookingStats, setLoadingBookingStats] = useState(false)
+  const [compareYear, setCompareYear] = useState(false)
 
   const handleTimeRangeChange = (value: string) => {
     setTimeRange(value as TimeRange)
     router.push(`/tickets/stats?range=${value}`)
   }
 
-  const handleBookingGroupByChange = async (value: string) => {
-    const newGroupBy = value as GroupBy
-    setBookingGroupBy(newGroupBy)
+  const refreshBookingStats = async (groupBy: GroupBy, compare: boolean) => {
     setLoadingBookingStats(true)
-
     try {
-      const limit = newGroupBy === 'year' ? 100 : 12
-      const newStats = await getBookingStats(newGroupBy, limit)
+      const limit = groupBy === 'year' ? 100 : 12
+      const newStats = await getBookingStats(groupBy, limit, compare)
       setBookingStats(newStats)
     } catch (error) {
       console.error('Error loading booking stats:', error)
     } finally {
       setLoadingBookingStats(false)
     }
+  }
+
+  const handleBookingGroupByChange = async (value: string) => {
+    const newGroupBy = value as GroupBy
+    setBookingGroupBy(newGroupBy)
+    await refreshBookingStats(newGroupBy, compareYear)
+  }
+
+  const handleCompareToggle = async (checked: boolean) => {
+    setCompareYear(checked)
+    await refreshBookingStats(bookingGroupBy, checked)
   }
 
   // Load initial booking stats on mount
@@ -278,16 +289,24 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
               <h2 className="text-xl font-semibold">Buchungs-Statistiken</h2>
               <p className="text-sm text-muted-foreground">Nur Buchungs-Events (keine Blocker, keine FI-Zuweisungen)</p>
             </div>
-            <Select value={bookingGroupBy} onValueChange={handleBookingGroupByChange} disabled={loadingBookingStats}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="month">12 Monate</SelectItem>
-                <SelectItem value="week">12 Wochen</SelectItem>
-                <SelectItem value="year">Alle Jahre</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-4">
+              {bookingGroupBy === 'month' && (
+                <div className="flex items-center gap-2">
+                  <Switch id="compare-year" checked={compareYear} onCheckedChange={handleCompareToggle} disabled={loadingBookingStats} />
+                  <Label htmlFor="compare-year" className="text-sm whitespace-nowrap">Vorjahr</Label>
+                </div>
+              )}
+              <Select value={bookingGroupBy} onValueChange={handleBookingGroupByChange} disabled={loadingBookingStats}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">12 Monate</SelectItem>
+                  <SelectItem value="week">12 Wochen</SelectItem>
+                  <SelectItem value="year">Alle Jahre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {loadingBookingStats ? (
@@ -298,7 +317,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
             </Card>
           ) : bookingStats ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className={`grid grid-cols-1 ${compareYear && bookingStats.yearOverYearChange !== undefined ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4 mb-4`}>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Gesamt Buchungen</CardTitle>
@@ -328,6 +347,26 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
                     </CardContent>
                   </Card>
                 )}
+
+                {compareYear && bookingStats.yearOverYearChange !== undefined && bookingStats.yearOverYearChange !== null && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">vs. Vorjahr</CardTitle>
+                      {bookingStats.yearOverYearChange >= 0
+                        ? <TrendingUp className="h-4 w-4 text-green-600" />
+                        : <TrendingDown className="h-4 w-4 text-red-500" />
+                      }
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-2xl font-bold ${bookingStats.yearOverYearChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {bookingStats.yearOverYearChange >= 0 ? '+' : ''}{bookingStats.yearOverYearChange}%
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Vorjahr: {bookingStats.previousYearTotal} Buchungen
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               <Card>
@@ -342,7 +381,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BookingVolumeChart data={bookingStats.data} groupBy={bookingGroupBy} />
+                  <BookingVolumeChart data={bookingStats.data} groupBy={bookingGroupBy} showComparison={compareYear} />
                 </CardContent>
               </Card>
             </>
