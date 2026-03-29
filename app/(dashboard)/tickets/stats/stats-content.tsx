@@ -28,6 +28,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const [bookingStats, setBookingStats] = useState<BookingStats | null>(initialBookingStats)
   const [bookingGroupBy, setBookingGroupBy] = useState<GroupBy>('month')
+  const [bookingFilter, setBookingFilter] = useState('last12')
   const [loadingBookingStats, setLoadingBookingStats] = useState(false)
   const [compareYear, setCompareYear] = useState(false)
 
@@ -36,11 +37,33 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
     router.push(`/tickets/stats?range=${value}`)
   }
 
-  const refreshBookingStats = async (groupBy: GroupBy, compare: boolean) => {
+  const refreshBookingStats = async (filter: string, compare: boolean) => {
     setLoadingBookingStats(true)
     try {
-      const limit = groupBy === 'year' ? 100 : groupBy === 'month' ? 24 : 24
-      const newStats = await getBookingStats(groupBy, limit, compare)
+      let groupBy: GroupBy = 'month'
+      let limit = 100
+      let filterYear: number | undefined
+
+      if (filter === 'last12') {
+        groupBy = 'month'
+        limit = 12
+      } else if (filter === 'allMonths') {
+        groupBy = 'month'
+        limit = 100
+      } else if (filter === 'weeks') {
+        groupBy = 'week'
+        limit = 24
+      } else if (filter === 'allYears') {
+        groupBy = 'year'
+        limit = 100
+      } else if (filter.startsWith('year-')) {
+        groupBy = 'month'
+        filterYear = parseInt(filter.replace('year-', ''))
+        limit = 12
+      }
+
+      setBookingGroupBy(groupBy)
+      const newStats = await getBookingStats(groupBy, limit, compare, filterYear)
       setBookingStats(newStats)
     } catch (error) {
       console.error('Error loading booking stats:', error)
@@ -49,21 +72,20 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
     }
   }
 
-  const handleBookingGroupByChange = async (value: string) => {
-    const newGroupBy = value as GroupBy
-    setBookingGroupBy(newGroupBy)
-    await refreshBookingStats(newGroupBy, compareYear)
+  const handleFilterChange = async (value: string) => {
+    setBookingFilter(value)
+    await refreshBookingStats(value, compareYear)
   }
 
   const handleCompareToggle = async (checked: boolean) => {
     setCompareYear(checked)
-    await refreshBookingStats(bookingGroupBy, checked)
+    await refreshBookingStats(bookingFilter, checked)
   }
 
   // Load initial booking stats on mount
   useEffect(() => {
     if (!initialBookingStats) {
-      handleBookingGroupByChange('month')
+      refreshBookingStats('last12', false)
     }
   }, [])
 
@@ -296,14 +318,18 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
                   <Label htmlFor="compare-year" className="text-sm whitespace-nowrap">Vorjahr</Label>
                 </div>
               )}
-              <Select value={bookingGroupBy} onValueChange={handleBookingGroupByChange} disabled={loadingBookingStats}>
-                <SelectTrigger className="w-[160px]">
+              <Select value={bookingFilter} onValueChange={handleFilterChange} disabled={loadingBookingStats}>
+                <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="month">Alle Monate</SelectItem>
-                  <SelectItem value="week">24 Wochen</SelectItem>
-                  <SelectItem value="year">Alle Jahre</SelectItem>
+                  <SelectItem value="last12">Letzte 12 Monate</SelectItem>
+                  <SelectItem value="allMonths">Alle Monate</SelectItem>
+                  <SelectItem value="weeks">24 Wochen</SelectItem>
+                  <SelectItem value="allYears">Alle Jahre</SelectItem>
+                  {bookingStats?.availableYears?.map(y => (
+                    <SelectItem key={y} value={`year-${y}`}>{y}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
