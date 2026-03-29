@@ -37,14 +37,20 @@ export async function GET(request: NextRequest) {
     if (includeBookings) {
       let limit = 100
       let filterYear: number | undefined
+      let limitToMonth: number | undefined
 
       if (range === 'last12') limit = 12
-      else if (range.startsWith('year-')) {
+      else if (range === 'ytd') {
+        filterYear = new Date().getFullYear()
+        limitToMonth = new Date().getMonth()
+        if (limitToMonth === 0) { filterYear--; limitToMonth = 12 }
+        limit = 12
+      } else if (range.startsWith('year-')) {
         filterYear = parseInt(range.replace('year-', ''))
         limit = 12
       }
 
-      bookingStats = await getBookingStats('month', limit, compare, filterYear)
+      bookingStats = await getBookingStats('month', limit, compare, filterYear, limitToMonth)
     }
 
     // Ticket Stats
@@ -56,6 +62,7 @@ export async function GET(request: NextRequest) {
     // Range Label
     const rangeLabels: Record<string, string> = {
       last12: 'Letzte 12 Monate',
+      ytd: `Jahr bis heute ${new Date().getFullYear()} (Jan-${['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'][new Date().getMonth() - 1] || 'Dez'})`,
       allMonths: 'Alle Monate',
       weeks: '24 Wochen',
       allYears: 'Alle Jahre',

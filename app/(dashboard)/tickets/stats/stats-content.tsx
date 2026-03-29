@@ -45,8 +45,16 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
       let limit = 100
       let filterYear: number | undefined
 
+      let limitToMonth: number | undefined
+
       if (filter === 'last12') {
         groupBy = 'month'
+        limit = 12
+      } else if (filter === 'ytd') {
+        groupBy = 'month'
+        filterYear = new Date().getFullYear()
+        limitToMonth = new Date().getMonth() // Monat 0-basiert = letzter abgeschlossener Monat
+        if (limitToMonth === 0) { filterYear--; limitToMonth = 12 } // Jan → zeige Dez Vorjahr
         limit = 12
       } else if (filter === 'allMonths') {
         groupBy = 'month'
@@ -64,7 +72,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
       }
 
       setBookingGroupBy(groupBy)
-      const newStats = await getBookingStats(groupBy, limit, compare, filterYear)
+      const newStats = await getBookingStats(groupBy, limit, compare, filterYear, limitToMonth)
       setBookingStats(newStats)
     } catch (error) {
       console.error('Error loading booking stats:', error)
@@ -321,7 +329,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
               <p className="text-sm text-muted-foreground">Nur Buchungs-Events (keine Blocker, keine FI-Zuweisungen)</p>
             </div>
             <div className="flex items-center gap-4">
-              {bookingGroupBy === 'month' && (
+              {(bookingGroupBy === 'month') && (
                 <div className="flex items-center gap-2">
                   <Switch id="compare-year" checked={compareYear} onCheckedChange={handleCompareToggle} disabled={loadingBookingStats} />
                   <Label htmlFor="compare-year" className="text-sm whitespace-nowrap">Vorjahr</Label>
@@ -333,6 +341,7 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="last12">Letzte 12 Monate</SelectItem>
+                  <SelectItem value="ytd">Jahr bis heute (YTD)</SelectItem>
                   <SelectItem value="allMonths">Alle Monate</SelectItem>
                   <SelectItem value="weeks">24 Wochen</SelectItem>
                   <SelectItem value="allYears">Alle Jahre</SelectItem>

@@ -99,6 +99,7 @@ export function StatsExportDialog({ availableYears, currentFilter, currentCompar
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="last12">Letzte 12 Monate</SelectItem>
+                  <SelectItem value="ytd">Jahr bis heute (YTD)</SelectItem>
                   <SelectItem value="allMonths">Alle Monate</SelectItem>
                   {availableYears.map(y => (
                     <SelectItem key={y} value={`year-${y}`}>Jahr {y}</SelectItem>

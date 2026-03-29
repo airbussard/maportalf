@@ -35,7 +35,8 @@ export async function getBookingStats(
   groupBy: GroupBy = 'month',
   limit: number = 12,
   compareWithPreviousYear: boolean = false,
-  filterYear?: number // null = alle, sonst nur dieses Jahr
+  filterYear?: number,
+  limitToMonth?: number // 1-12: nur Monate bis einschließlich diesen Monat (für YTD)
 ): Promise<BookingStats | null> {
   try {
     const supabase = await createClient()
@@ -170,9 +171,16 @@ export async function getBookingStats(
       })
       .sort((a, b) => a.period.localeCompare(b.period))
 
-    // Filter by specific year if requested
+    // Filter by specific year and/or month limit (YTD)
     if (filterYear && groupBy === 'month') {
-      dataArray = dataArray.filter(d => d.period.startsWith(String(filterYear)))
+      dataArray = dataArray.filter(d => {
+        if (!d.period.startsWith(String(filterYear))) return false
+        if (limitToMonth) {
+          const m = parseInt(d.period.split('-')[1])
+          return m <= limitToMonth
+        }
+        return true
+      })
     } else if (groupBy !== 'year' && dataArray.length > limit) {
       // Limit to most recent periods (except for years and year filter)
       dataArray = dataArray.slice(-limit)
