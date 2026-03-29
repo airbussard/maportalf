@@ -148,7 +148,7 @@ export async function getBookingStats(
     })
 
     // Convert to array and sort
-    let dataArray = Array.from(groupedData.entries())
+    let dataArray: BookingDataPoint[] = Array.from(groupedData.entries())
       .map(([period, count]) => {
         // Reconstruct displayLabel from period key
         let displayLabel: string
