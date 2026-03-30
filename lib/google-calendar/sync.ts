@@ -158,11 +158,11 @@ export async function syncGoogleCalendarToDatabase(
         try {
           const { error: insertError } = await supabase
             .from('calendar_events')
-            .insert(insertData)
+            .upsert(insertData, { onConflict: 'google_event_id', ignoreDuplicates: false })
 
           if (insertError) {
-            console.error(`[Sync] Batch INSERT error:`, insertError)
-            result.errors.push(`Batch ${i}-${i + BATCH_SIZE} (INSERT): ${insertError.message}`)
+            console.error(`[Sync] Batch UPSERT error:`, insertError)
+            result.errors.push(`Batch ${i}-${i + BATCH_SIZE} (UPSERT): ${insertError.message}`)
           } else {
             result.imported += insertData.length
           }
