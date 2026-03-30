@@ -527,7 +527,10 @@ export async function getTimesheetSummary(
     if (compensationType === 'hourly' || (!compensationType && totalHours > 0)) {
       hourlyPay = totalHours * effectiveRate
       totalPay = hourlyPay + bonusAmount
-      fictionalHours = totalHours
+      // Fiktive Stunden: Bei Bonus → Gesamtgehalt / Stundenlohn, sonst tatsächliche
+      fictionalHours = bonusAmount > 0 && effectiveRate > 0
+        ? totalPay / effectiveRate
+        : totalHours
     } else if (compensationType === 'combined') {
       hourlyPay = totalHours * effectiveRate
       fixedPay = monthlySalary || 0
@@ -543,10 +546,10 @@ export async function getTimesheetSummary(
       fictionalHours = effectiveRate > 0 ? totalPay / effectiveRate : 0
     }
 
-    // Angezeigte Stunden: tatsächliche ODER fiktive (bei reinem Fixgehalt)
-    const displayMinutes = totalEffective > 0
-      ? totalEffective
-      : Math.round(fictionalHours * 60)
+    // Angezeigte Stunden: fiktive wenn Bonus/Fixgehalt vorhanden, sonst tatsächliche
+    const displayMinutes = (bonusAmount > 0 || compensationType === 'salary' || compensationType === 'combined')
+      ? Math.round(fictionalHours * 60)
+      : (totalEffective > 0 ? totalEffective : Math.round(fictionalHours * 60))
     const displayHours = displayMinutes / 60
 
     return {
