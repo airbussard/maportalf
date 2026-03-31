@@ -8,20 +8,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Check, X, Eye, MoreVertical, Trash2, AlertTriangle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Avatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '../../components/status-badge'
+import { Check, X, Eye, Trash2, AlertTriangle, ArrowUpDown } from 'lucide-react'
+import { StatusBadge as NextAdminStatusBadge } from '@/components/nextadmin'
 import {
   type WorkRequestWithRelations,
+  type WorkRequestStatus,
   formatRequestDateShort,
   formatRequestTime,
   getEmployeeName
@@ -41,6 +32,20 @@ interface RequestsTableProps {
 
 type SortField = 'date' | 'employee' | 'status'
 type SortDirection = 'asc' | 'desc'
+
+const statusVariantMap: Record<WorkRequestStatus, 'warning' | 'success' | 'error' | 'neutral'> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+  withdrawn: 'neutral',
+}
+
+const statusLabelMap: Record<WorkRequestStatus, string> = {
+  pending: 'Ausstehend',
+  approved: 'Genehmigt',
+  rejected: 'Abgelehnt',
+  withdrawn: 'Zuruckgezogen',
+}
 
 export function RequestsTable({
   requests,
@@ -116,7 +121,7 @@ export function RequestsTable({
 
   const allSelected = sortedRequests.length > 0 && selectedIds.length === sortedRequests.length
 
-  // Helper to check if a request has conflicts (regardless of status)
+  // Helper to check if a request has conflicts
   const hasConflict = (request: WorkRequestWithRelations) => {
     return conflictDates.has(request.request_date)
   }
@@ -136,253 +141,201 @@ export function RequestsTable({
     }
   }
 
+  const getInitials = (request: WorkRequestWithRelations) => {
+    if (!request.employee) return '?'
+    const first = request.employee.first_name?.[0]?.toUpperCase() || ''
+    const last = request.employee.last_name?.[0]?.toUpperCase() || ''
+    if (first || last) return `${first}${last}`
+    return request.employee.email?.[0]?.toUpperCase() || '?'
+  }
+
+  const formatCreatedDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleDateString('de-DE')
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Requests</CardTitle>
-            <CardDescription>
-              {sortedRequests.length} Request{sortedRequests.length !== 1 ? 's' : ''}
-              {selectedIds.length > 0 && ` (${selectedIds.length} ausgewählt)`}
-            </CardDescription>
-          </div>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      {/* Header */}
+      <div className="flex items-center justify-between px-7.5 pt-7.5 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Anfragen</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {sortedRequests.length} Request{sortedRequests.length !== 1 ? 's' : ''}
+            {selectedIds.length > 0 && ` (${selectedIds.length} ausgewahlt)`}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {sortedRequests.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Keine Requests gefunden
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <div className="min-w-full">
-                {/* Header */}
-                <div className="grid grid-cols-12 gap-4 pb-3 border-b font-medium text-sm">
-                  {onSelectionChange && (
-                    <div className="col-span-1 flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={toggleAll}
-                        className="h-4 w-4"
-                      />
-                    </div>
-                  )}
-                  <div
-                    className="col-span-2 cursor-pointer hover:text-primary"
-                    onClick={() => handleSort('employee')}
-                  >
-                    Mitarbeiter {sortField === 'employee' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </div>
-                  <div
-                    className="col-span-2 cursor-pointer hover:text-primary"
-                    onClick={() => handleSort('date')}
-                  >
-                    Datum {sortField === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </div>
-                  <div className="col-span-2">Zeit</div>
-                  <div
-                    className="col-span-1 cursor-pointer hover:text-primary"
-                    onClick={() => handleSort('status')}
-                  >
-                    Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
-                  </div>
-                  <div className="col-span-3">Grund</div>
-                  <div className="col-span-1 text-right">Aktionen</div>
-                </div>
+      </div>
 
-                {/* Rows */}
-                {sortedRequests.map((request) => {
-                  const conflictInfo = getConflictInfo(request)
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-t border-border bg-[#F7F9FC] dark:bg-dark-2 [&>th]:py-4 [&>th]:text-sm [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-muted-foreground">
+              {onSelectionChange && (
+                <th className="pl-7.5 w-[48px]">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    className="size-4 rounded border-border"
+                  />
+                </th>
+              )}
+              <th
+                className={`${onSelectionChange ? '' : 'pl-7.5'} text-left min-w-[200px] cursor-pointer hover:text-foreground`}
+                onClick={() => handleSort('employee')}
+              >
+                <span className="inline-flex items-center gap-1">
+                  Mitarbeiter
+                  {sortField === 'employee' && <ArrowUpDown className="size-3.5" />}
+                </span>
+              </th>
+              <th
+                className="text-left min-w-[130px] cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('date')}
+              >
+                <span className="inline-flex items-center gap-1">
+                  Datum
+                  {sortField === 'date' && <ArrowUpDown className="size-3.5" />}
+                </span>
+              </th>
+              <th className="text-left min-w-[120px]">Schicht</th>
+              <th
+                className="text-left min-w-[120px] cursor-pointer hover:text-foreground"
+                onClick={() => handleSort('status')}
+              >
+                <span className="inline-flex items-center gap-1">
+                  Status
+                  {sortField === 'status' && <ArrowUpDown className="size-3.5" />}
+                </span>
+              </th>
+              <th className="text-left min-w-[110px]">Erstellt</th>
+              <th className="pr-7.5 text-right min-w-[120px]">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRequests.length === 0 ? (
+              <tr>
+                <td colSpan={onSelectionChange ? 7 : 6} className="py-12 text-center text-muted-foreground">
+                  Keine Requests gefunden
+                </td>
+              </tr>
+            ) : (
+              sortedRequests.map((request) => {
+                const conflictInfo = getConflictInfo(request)
 
-                  return (
-                    <div
-                      key={request.id}
-                      className={`grid grid-cols-12 gap-4 py-3 border-b items-center text-sm hover:bg-muted/50 ${
-                        isSelected(request.id) ? 'bg-muted' : ''
-                      } ${hasConflict(request) ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
-                    >
-                      {onSelectionChange && (
-                        <div className="col-span-1">
-                          <input
-                            type="checkbox"
-                            checked={isSelected(request.id)}
-                            onChange={() => toggleSelection(request.id)}
-                            className="h-4 w-4"
-                          />
+                return (
+                  <tr
+                    key={request.id}
+                    className={`border-b border-border transition-colors hover:bg-accent/30 ${
+                      isSelected(request.id) ? 'bg-accent/20' : ''
+                    } ${hasConflict(request) ? 'bg-yellow-50/50 dark:bg-yellow-950/10' : ''}`}
+                  >
+                    {/* Checkbox */}
+                    {onSelectionChange && (
+                      <td className="py-4 pl-7.5 w-[48px]">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(request.id)}
+                          onChange={() => toggleSelection(request.id)}
+                          className="size-4 rounded border-border"
+                        />
+                      </td>
+                    )}
+
+                    {/* Employee avatar + name */}
+                    <td className={`py-4 ${onSelectionChange ? '' : 'pl-7.5'}`}>
+                      <div className="flex items-center gap-3.5">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#fbb928] text-sm font-bold text-zinc-900">
+                          {getInitials(request)}
                         </div>
-                      )}
-                      <div className="col-span-2 font-medium">
-                        {getEmployeeName(request)}
+                        <h5 className="font-medium text-foreground leading-tight">
+                          {getEmployeeName(request)}
+                        </h5>
                       </div>
-                      <div className="col-span-2 flex items-center gap-2">
-                        <span>{formatRequestDateShort(request.request_date)}</span>
+                    </td>
+
+                    {/* Date + conflict indicator */}
+                    <td className="py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-foreground">{formatRequestDateShort(request.request_date)}</span>
                         {conflictInfo && (
                           <div
                             className="flex items-center gap-1"
                             title={`Konflikt mit: ${conflictInfo.employees.join(', ')}`}
                           >
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                            <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            <AlertTriangle className="size-3.5 text-yellow-600" />
+                            <span className="inline-flex items-center rounded-full bg-[#FFA70B]/[0.08] px-2 py-0.5 text-[10px] font-medium text-[#FFA70B]">
                               {conflictInfo.count}
-                            </Badge>
+                            </span>
                           </div>
                         )}
                       </div>
-                    <div className="col-span-2 text-muted-foreground">
+                    </td>
+
+                    {/* Shift time */}
+                    <td className="py-4 text-sm text-muted-foreground">
                       {formatRequestTime(request)}
-                    </div>
-                    <div className="col-span-1">
-                      <StatusBadge status={request.status} />
-                    </div>
-                    <div className="col-span-3 text-muted-foreground truncate">
-                      {request.reason || '-'}
-                    </div>
-                    <div className="col-span-1 flex justify-end gap-1">
-                      {request.status === 'pending' && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onApprove(request)}
-                            className="h-8 w-8 p-0"
-                            title="Genehmigen"
-                          >
-                            <Check className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onReject(request)}
-                            className="h-8 w-8 p-0"
-                            title="Ablehnen"
-                          >
-                            <X className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onViewDetails(request)}
-                        className="h-8 w-8 p-0"
-                        title="Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {isAdmin && onDelete && request.status !== 'pending' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(request)}
-                          className="h-8 w-8 p-0"
-                          title="Löschen"
+                    </td>
+
+                    {/* Status badge */}
+                    <td className="py-4">
+                      <NextAdminStatusBadge variant={statusVariantMap[request.status]}>
+                        {statusLabelMap[request.status]}
+                      </NextAdminStatusBadge>
+                    </td>
+
+                    {/* Created date */}
+                    <td className="py-4 text-sm text-muted-foreground">
+                      {formatCreatedDate(request.created_at)}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-4 pr-7.5">
+                      <div className="flex items-center justify-end gap-1">
+                        {request.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => onApprove(request)}
+                              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#219653]/10 hover:text-[#219653]"
+                              title="Genehmigen"
+                            >
+                              <Check className="size-[18px]" />
+                            </button>
+                            <button
+                              onClick={() => onReject(request)}
+                              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#F23030]/10 hover:text-[#F23030]"
+                              title="Ablehnen"
+                            >
+                              <X className="size-[18px]" />
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => onViewDetails(request)}
+                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#fbb928]"
+                          title="Details"
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )})}
-
-              </div>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="lg:hidden space-y-3">
-              {sortedRequests.map((request) => {
-                const conflictInfo = getConflictInfo(request)
-
-                return (
-                  <Card
-                    key={request.id}
-                    className={`${isSelected(request.id) ? 'bg-muted' : ''} ${
-                      hasConflict(request) ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' : ''
-                    }`}
-                  >
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          {onSelectionChange && (
-                            <input
-                              type="checkbox"
-                              checked={isSelected(request.id)}
-                              onChange={() => toggleSelection(request.id)}
-                              className="h-4 w-4"
-                            />
-                          )}
-                          <div>
-                            <div className="font-medium">{getEmployeeName(request)}</div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              <span>{formatRequestDateShort(request.request_date)}</span>
-                              {conflictInfo && (
-                                <div className="flex items-center gap-1">
-                                  <AlertTriangle className="h-3 w-3 text-yellow-600" />
-                                  <span className="text-xs text-yellow-800 dark:text-yellow-200">
-                                    {conflictInfo.count} Mitarbeiter
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <StatusBadge status={request.status} />
-                      </div>
-
-                    <div className="space-y-1 text-sm mb-3">
-                      <div className="text-muted-foreground">
-                        Zeit: {formatRequestTime(request)}
-                      </div>
-                      {request.reason && (
-                        <div className="text-muted-foreground">
-                          Grund: {request.reason}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      {request.status === 'pending' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onApprove(request)}
-                            className="flex-1"
+                          <Eye className="size-[18px]" />
+                        </button>
+                        {isAdmin && onDelete && request.status !== 'pending' && (
+                          <button
+                            onClick={() => onDelete(request)}
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#F23030]/10 hover:text-[#F23030]"
+                            title="Loschen"
                           >
-                            <Check className="h-4 w-4 mr-2" />
-                            Genehmigen
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onReject(request)}
-                            className="flex-1"
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Ablehnen
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onViewDetails(request)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Details
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )})}
-
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                            <Trash2 className="size-[18px]" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }

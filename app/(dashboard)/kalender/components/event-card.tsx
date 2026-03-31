@@ -101,9 +101,9 @@ export function EventCard({ event, onClick, canConfirmShift = false }: EventCard
   }
 
   const statusColors = {
-    confirmed: 'bg-green-500/10 text-green-700 dark:text-green-400',
-    tentative: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
-    cancelled: 'bg-red-500/10 text-red-700 dark:text-red-400'
+    confirmed: 'rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#219653]/[0.08] text-[#219653]',
+    tentative: 'rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#FFA70B]/[0.08] text-[#FFA70B]',
+    cancelled: 'rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#F23030]/[0.08] text-[#F23030]'
   }
 
   const syncStatusColors = {
@@ -114,12 +114,12 @@ export function EventCard({ event, onClick, canConfirmShift = false }: EventCard
 
   return (
     <Card
-      className={`p-2 sm:p-3 hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''} ${
+      className={`p-2 sm:p-3 rounded-[10px] shadow-1 dark:shadow-card hover:shadow-card-2 transition-all ${onClick ? 'cursor-pointer' : ''} ${
         isFIEvent
-          ? 'bg-[#FCD34D]/20 border-[#FCD34D]/50 hover:border-[#FCD34D]'
+          ? 'bg-[#FFA70B]/[0.06] border-l-4 border-[#FFA70B]'
           : isBlocker
-          ? 'bg-red-500/20 border-red-500/50 hover:border-red-500'
-          : 'hover:border-primary/50'
+          ? 'bg-[#F23030]/[0.06] border-l-4 border-[#F23030]'
+          : 'border-l-4 border-[#3C50E0]'
       }`}
       onClick={onClick}
     >
@@ -175,22 +175,21 @@ export function EventCard({ event, onClick, canConfirmShift = false }: EventCard
         {/* Row 2: Badges */}
         <div className="flex items-center gap-2">
           {isFIEvent ? (
-            <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#FFA70B]/[0.08] text-[#FFA70B]">
               Geplanter MA
-            </Badge>
+            </span>
           ) : isBlocker ? (
-            <Badge className="text-xs bg-red-500 text-white hover:bg-red-500/90">
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#F23030]/[0.08] text-[#F23030]">
               Blocker
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant="secondary"
-              className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
+            <span
+              className={statusColors[event.status as keyof typeof statusColors] || ''}
             >
               {event.status === 'confirmed' && 'Bestätigt'}
               {event.status === 'tentative' && 'Vorläufig'}
               {event.status === 'cancelled' && 'Abgesagt'}
-            </Badge>
+            </span>
           )}
           {/* Video & Payment Icons (only for booking events) */}
           {!isFIEvent && !isBlocker && (
@@ -308,22 +307,21 @@ export function EventCard({ event, onClick, canConfirmShift = false }: EventCard
         {/* Badges */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {isFIEvent ? (
-            <Badge className="text-xs bg-[#FCD34D] text-gray-900 hover:bg-[#FCD34D]/90">
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#FFA70B]/[0.08] text-[#FFA70B]">
               Geplanter Mitarbeiter
-            </Badge>
+            </span>
           ) : isBlocker ? (
-            <Badge className="text-xs bg-red-500 text-white hover:bg-red-500/90">
+            <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[#F23030]/[0.08] text-[#F23030]">
               Blocker
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant="secondary"
-              className={`text-xs ${statusColors[event.status as keyof typeof statusColors] || ''}`}
+            <span
+              className={statusColors[event.status as keyof typeof statusColors] || ''}
             >
               {event.status === 'confirmed' && 'Bestätigt'}
               {event.status === 'tentative' && 'Vorläufig'}
               {event.status === 'cancelled' && 'Abgesagt'}
-            </Badge>
+            </span>
           )}
           {/* Video & Payment Icons (only for booking events) */}
           {!isFIEvent && !isBlocker && (

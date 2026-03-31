@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCalendarEvents, syncGoogleCalendar } from '@/app/actions/calendar-events'
 import { CalendarView } from './components/calendar-view'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export const metadata = {
   title: 'Kalender | Flighthour',
@@ -116,7 +117,8 @@ async function CalendarPageContent() {
 
 export default function CalendarPage() {
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-7.5">
+      <Breadcrumb pageName="Kalender" />
       <Suspense fallback={<CalendarSkeleton />}>
         <CalendarPageContent />
       </Suspense>

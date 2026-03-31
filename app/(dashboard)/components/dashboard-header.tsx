@@ -96,7 +96,7 @@ export function DashboardHeader({ role, userEmail }: DashboardHeaderProps) {
         'bg-background border-border': !scrolled,
       })}
     >
-      <nav className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4">
+      <nav className="mx-auto flex h-14 w-full max-w-screen-2xl items-center justify-between px-4 md:px-6 2xl:px-10">
         {/* Left: Logo + Nav */}
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="hover:opacity-80 transition-opacity shrink-0">
@@ -258,7 +258,7 @@ export function DashboardHeader({ role, userEmail }: DashboardHeaderProps) {
               <LogOut className="mr-2 h-4 w-4" />
               Abmelden
             </Button>
-            <p className="text-[10px] text-muted-foreground text-center mt-2">Version 2.182</p>
+            <p className="text-[10px] text-muted-foreground text-center mt-2">Version 2.234</p>
           </div>
         </div>
       </MobileMenu>

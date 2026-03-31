@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminTimesheetView } from './components/admin-timesheet-view'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export default async function ZeiterfassungVerwaltungPage() {
   const supabase = await createClient()
@@ -17,5 +18,10 @@ export default async function ZeiterfassungVerwaltungPage() {
 
   if (profile?.role !== 'admin') redirect('/zeiterfassung')
 
-  return <AdminTimesheetView />
+  return (
+    <div className="space-y-6">
+      <Breadcrumb pageName="ZE Verwaltung" items={[{ label: "Zeiterfassung", href: "/zeiterfassung" }]} />
+      <AdminTimesheetView />
+    </div>
+  )
 }

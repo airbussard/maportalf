@@ -43,7 +43,7 @@ export default async function TicketStatsPage({
   const bookingStats = await getBookingStats('month', 12)
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="mx-auto max-w-screen-2xl py-8 px-4 md:px-6 2xl:px-10">
       <StatsContent stats={stats} initialTimeRange={timeRange} bookingStats={bookingStats} />
     </div>
   )

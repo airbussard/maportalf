@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getEmployees } from '@/app/actions/employees'
 import { getAllEmployeeSettings } from '@/app/actions/employee-settings'
 import { EmployeesTable } from './components/employees-table'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export default async function MitarbeiterPage() {
   const supabase = await createClient()
@@ -35,8 +36,8 @@ export default async function MitarbeiterPage() {
 
   if (!employeesResult.success) {
     return (
-      <div className="container mx-auto py-8 px-4">
-        <div className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md">
+      <div className="mx-auto max-w-screen-2xl py-8 px-4 md:px-6 2xl:px-10">
+        <div className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-[10px]">
           {employeesResult.error}
         </div>
       </div>
@@ -44,15 +45,8 @@ export default async function MitarbeiterPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Mitarbeiter</h1>
-          <p className="text-muted-foreground mt-1">
-            Übersicht aller Mitarbeiter und deren Rollen
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-screen-2xl space-y-7.5 py-8 px-4 md:px-6 2xl:px-10">
+      <Breadcrumb pageName="Mitarbeiter" />
 
       <EmployeesTable
         employees={employeesResult.data || []}

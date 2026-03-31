@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { InputGroup, ShowcaseSection } from '@/components/nextadmin'
 import { addToBlacklist, removeFromBlacklist, type BlacklistEntry } from '@/app/actions/tags'
 import { useRouter } from 'next/navigation'
 import { Ban, Trash2, Plus } from 'lucide-react'
@@ -64,61 +62,46 @@ export function BlacklistSection({ initialBlacklist }: BlacklistSectionProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Ban className="w-5 h-5" />
-              E-Mail Blacklist
-            </CardTitle>
-            <CardDescription className="mt-1.5">
-              Blockierte E-Mail-Adressen werden automatisch gefiltert und als Spam markiert
-            </CardDescription>
-          </div>
-          <Button
-            variant={showAddForm ? "outline" : "default"}
-            size="sm"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            {showAddForm ? 'Abbrechen' : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                E-Mail blockieren
-              </>
-            )}
-          </Button>
-        </div>
-      </CardHeader>
+    <ShowcaseSection title="E-Mail Blacklist">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-muted-foreground">
+          Blockierte E-Mail-Adressen werden automatisch gefiltert und als Spam markiert
+        </p>
+        <Button
+          variant={showAddForm ? "outline" : "default"}
+          size="sm"
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
+          {showAddForm ? 'Abbrechen' : (
+            <>
+              <Plus className="w-4 h-4 mr-2" />
+              E-Mail blockieren
+            </>
+          )}
+        </Button>
+      </div>
 
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         {/* Add Form */}
         {showAddForm && (
           <form onSubmit={handleAdd} className="space-y-4 p-4 border rounded-lg bg-muted/50">
-            <div className="space-y-2">
-              <Label htmlFor="blacklist-email">E-Mail-Adresse *</Label>
-              <Input
-                id="blacklist-email"
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="spam@example.com"
-                disabled={loading}
-                required
-              />
-            </div>
+            <InputGroup
+              label="E-Mail-Adresse"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="spam@example.com"
+              disabled={loading}
+              required
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="blacklist-reason">Grund (optional)</Label>
-              <Input
-                id="blacklist-reason"
-                value={newReason}
-                onChange={(e) => setNewReason(e.target.value)}
-                placeholder="z.B. Spam, Belästigung..."
-                disabled={loading}
-                maxLength={200}
-              />
-            </div>
+            <InputGroup
+              label="Grund (optional)"
+              value={newReason}
+              onChange={(e) => setNewReason(e.target.value)}
+              placeholder="z.B. Spam, Belästigung..."
+              disabled={loading}
+            />
 
             <Button type="submit" disabled={loading}>
               {loading ? 'Wird hinzugefügt...' : 'Zur Blacklist hinzufügen'}
@@ -160,7 +143,7 @@ export function BlacklistSection({ initialBlacklist }: BlacklistSectionProps) {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ShowcaseSection>
   )
 }

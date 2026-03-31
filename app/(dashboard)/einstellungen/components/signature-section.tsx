@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { NextAlert } from '@/components/nextadmin'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { updateSignature } from '@/app/actions/settings'
-import { Save } from 'lucide-react'
 
 interface Profile {
   first_name?: string
@@ -77,83 +75,84 @@ export function SignatureSection({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>E-Mail Signatur</CardTitle>
-        <CardDescription>
-          Passen Sie Ihre E-Mail-Signatur für Ticket-Antworten an
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      <h2 className="border-b border-border px-4 py-4 text-base font-medium text-foreground sm:px-6 xl:px-7.5">
+        E-Mail Signatur
+      </h2>
+
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 xl:p-7.5">
         {message && (
-          <div className={`mb-4 p-3 rounded-md text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {message.text}
-          </div>
+          <NextAlert
+            variant={message.type === 'success' ? 'success' : 'error'}
+            title={message.type === 'success' ? 'Erfolg' : 'Fehler'}
+            description={message.text}
+            className="mb-5.5"
+          />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="use_custom"
-              checked={useCustom}
-              onChange={(e) => setUseCustom(e.target.checked)}
-              className="w-4 h-4 rounded border-border"
-            />
-            <Label htmlFor="use_custom" className="cursor-pointer">
-              Eigene E-Mail-Signatur verwenden
-            </Label>
-          </div>
+        <div className="mb-5.5 flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="use_custom"
+            checked={useCustom}
+            onChange={(e) => setUseCustom(e.target.checked)}
+            className="w-4 h-4 rounded border-border accent-[#fbb928]"
+          />
+          <Label htmlFor="use_custom" className="cursor-pointer">
+            Eigene E-Mail-Signatur verwenden
+          </Label>
+        </div>
 
-          {useCustom && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="signature">E-Mail Signatur bearbeiten</Label>
-                <Textarea
-                  id="signature"
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  disabled={loading}
-                  rows={10}
-                  className="font-mono text-sm"
-                  placeholder={DEFAULT_SIGNATURE}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Verfügbare Platzhalter: {'{'}
-                  {'{'} first_name {'}'}
-                  {'}'}, {'{'}
-                  {'{'} last_name {'}'}
-                  {'}'}, {'{'}
-                  {'{'} department {'}'}
-                  {'}'}, {'{'}
-                  {'{'} email {'}'}
-                  {'}'}, {'{'}
-                  {'{'} ticket_number {'}'}
-                  {'}'}, {'{'}
-                  {'{'} logo {'}'}
-                  {'}'}
-                </p>
+        {useCustom && (
+          <>
+            <div className="mb-5.5 space-y-2">
+              <Label htmlFor="signature">E-Mail Signatur bearbeiten</Label>
+              <Textarea
+                id="signature"
+                value={signature}
+                onChange={(e) => setSignature(e.target.value)}
+                disabled={loading}
+                rows={10}
+                className="font-mono text-sm"
+                placeholder={DEFAULT_SIGNATURE}
+              />
+              <p className="text-xs text-muted-foreground">
+                Verfügbare Platzhalter: {'{'}
+                {'{'} first_name {'}'}
+                {'}'}, {'{'}
+                {'{'} last_name {'}'}
+                {'}'}, {'{'}
+                {'{'} department {'}'}
+                {'}'}, {'{'}
+                {'{'} email {'}'}
+                {'}'}, {'{'}
+                {'{'} ticket_number {'}'}
+                {'}'}, {'{'}
+                {'{'} logo {'}'}
+                {'}'}
+              </p>
+            </div>
+
+            <div className="mb-5.5 space-y-2">
+              <Label>Vorschau:</Label>
+              <div className="p-4 bg-muted rounded-lg border border-border">
+                <pre className="text-sm whitespace-pre-wrap font-mono">{preview}</pre>
               </div>
+            </div>
+          </>
+        )}
 
-              <div className="space-y-2">
-                <Label>Vorschau:</Label>
-                <div className="p-4 bg-muted rounded-lg border border-border">
-                  <pre className="text-sm whitespace-pre-wrap font-mono">{preview}</pre>
-                </div>
-              </div>
-            </>
-          )}
-
-          <Button type="submit" disabled={loading} className="w-full md:w-auto">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Wird gespeichert...' : 'Änderungen speichern'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Action buttons - NextAdmin style */}
+        <div className="flex justify-end gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-[#fbb928] px-6 py-2.5 font-medium text-zinc-900 hover:bg-[#e5a820] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Wird gespeichert...' : 'Speichern'}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }

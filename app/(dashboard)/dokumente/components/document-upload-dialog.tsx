@@ -10,17 +10,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { InputGroup, TextAreaGroup, SelectGroup } from '@/components/nextadmin'
 import { Loader2, Upload } from 'lucide-react'
 import { uploadDocument } from '@/app/actions/documents'
 import { toast } from 'sonner'
@@ -185,7 +177,10 @@ export function DocumentUploadDialog({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* File Upload */}
           <div>
-            <Label>Datei auswählen *</Label>
+            <label className="mb-3 block text-sm font-medium text-foreground">
+              Datei auswählen
+              <span className="ml-1 select-none text-destructive">*</span>
+            </label>
             <div
               className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                 dragActive
@@ -244,21 +239,20 @@ export function DocumentUploadDialog({
           </div>
 
           {/* Title */}
-          <div>
-            <Label htmlFor="title">Titel *</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="z.B. Arbeitsvertrag, Zeitnachweis..."
-              required
-              className="mt-2"
-            />
-          </div>
+          <InputGroup
+            label="Titel"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="z.B. Arbeitsvertrag, Zeitnachweis..."
+            required
+          />
 
           {/* Document Type */}
           <div>
-            <Label>Dokumenttyp *</Label>
+            <label className="mb-3 block text-sm font-medium text-foreground">
+              Dokumenttyp
+              <span className="ml-1 select-none text-destructive">*</span>
+            </label>
             <RadioGroup
               value={docType}
               onValueChange={(value) => {
@@ -286,35 +280,26 @@ export function DocumentUploadDialog({
 
           {/* Employee Select (only for personal documents) */}
           {docType === 'personal' && (
-            <div>
-              <Label htmlFor="assigned_to">Mitarbeiter auswählen *</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Mitarbeiter wählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {getEmployeeName(emp)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <SelectGroup
+              label="Mitarbeiter auswählen"
+              placeholder="Mitarbeiter wählen..."
+              defaultValue={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              items={employees.map((emp) => ({
+                value: emp.id,
+                label: getEmployeeName(emp),
+              }))}
+            />
           )}
 
           {/* Description */}
-          <div>
-            <Label htmlFor="description">Beschreibung (optional)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Zusätzliche Informationen zum Dokument..."
-              rows={3}
-              className="mt-2"
-            />
-          </div>
+          <TextAreaGroup
+            label="Beschreibung (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Zusätzliche Informationen zum Dokument..."
+            rows={3}
+          />
 
           <DialogFooter>
             <Button

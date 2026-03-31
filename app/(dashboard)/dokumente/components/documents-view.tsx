@@ -143,22 +143,16 @@ export function DocumentsView({ userRole, employees }: DocumentsViewProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dokumente</h1>
-          <p className="text-muted-foreground mt-2">
-            Verwaltung von Dokumenten und Dateien
-          </p>
-        </div>
-        {isAdmin && (
+    <div className="space-y-7.5">
+      {/* Header Actions */}
+      {isAdmin && (
+        <div className="flex justify-end">
           <Button onClick={() => setUploadDialogOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Dokument hochladen
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -193,9 +187,9 @@ export function DocumentsView({ userRole, employees }: DocumentsViewProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 2xl:gap-7.5 md:grid-cols-2 lg:grid-cols-3">
               {personalDocuments.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                <Card key={doc.id} className="rounded-[10px] border-0 shadow-1 dark:shadow-card hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -255,9 +249,9 @@ export function DocumentsView({ userRole, employees }: DocumentsViewProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 2xl:gap-7.5 md:grid-cols-2 lg:grid-cols-3">
               {generalDocuments.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                <Card key={doc.id} className="rounded-[10px] border-0 shadow-1 dark:shadow-card hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

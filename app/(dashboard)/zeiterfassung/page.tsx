@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TimesheetView } from './components/timesheet-view'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export default async function ZeiterfassungPage() {
   const supabase = await createClient()
@@ -11,10 +12,13 @@ export default async function ZeiterfassungPage() {
   const now = new Date()
 
   return (
-    <TimesheetView
-      userId={user.id}
-      initialYear={now.getFullYear()}
-      initialMonth={now.getMonth() + 1}
-    />
+    <div className="space-y-6">
+      <Breadcrumb pageName="Zeiterfassung" />
+      <TimesheetView
+        userId={user.id}
+        initialYear={now.getFullYear()}
+        initialMonth={now.getMonth() + 1}
+      />
+    </div>
   )
 }

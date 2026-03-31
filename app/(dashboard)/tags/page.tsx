@@ -5,6 +5,7 @@ import { TagCard } from './components/tag-card'
 import { TagFormDialog } from './components/tag-form-dialog'
 import { BlacklistSection } from './components/blacklist-section'
 import { Button } from '@/components/ui/button'
+import { Breadcrumb } from '@/components/nextadmin'
 import { Plus } from 'lucide-react'
 
 export default async function TagsPage() {
@@ -31,13 +32,8 @@ export default async function TagsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Tag-Verwaltung</h1>
-          <p className="text-muted-foreground mt-1">
-            Verwalten Sie Tags für Tickets und E-Mail-Routing
-          </p>
-        </div>
+      <div className="flex items-center justify-between">
+        <Breadcrumb pageName="Tags" />
         <TagFormDialog>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -57,7 +53,7 @@ export default async function TagsPage() {
           </TagFormDialog>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 2xl:gap-7.5 mb-12">
           {tagsResult.data.map((tag) => (
             <TagCard key={tag.id} tag={tag} />
           ))}

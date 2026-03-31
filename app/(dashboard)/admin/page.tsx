@@ -1,13 +1,16 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Clock, Mail, Phone, Settings, Shield } from 'lucide-react'
+import { Clock, Mail, Phone, Settings } from 'lucide-react'
+import { Breadcrumb } from '@/components/nextadmin'
 
 interface AdminTile {
   href: string
   title: string
   description: string
   icon: React.ReactNode
+  iconBg: string
+  iconColor: string
 }
 
 const adminTiles: AdminTile[] = [
@@ -15,25 +18,33 @@ const adminTiles: AdminTile[] = [
     href: '/zeiterfassung/verwaltung',
     title: 'Zeiterfassung Verwaltung',
     description: 'Kategorien verwalten, Berichte erstellen und Zeiten genehmigen',
-    icon: <Clock className="w-8 h-8" />,
+    icon: <Clock className="size-7" />,
+    iconBg: 'bg-blue-500/10',
+    iconColor: 'text-blue-500',
   },
   {
     href: '/admin/email-queue',
     title: 'E-Mail Warteschlange',
     description: 'E-Mail-Versand überwachen und fehlgeschlagene E-Mails verwalten',
-    icon: <Mail className="w-8 h-8" />,
+    icon: <Mail className="size-7" />,
+    iconBg: 'bg-amber-500/10',
+    iconColor: 'text-amber-500',
   },
   {
     href: '/admin/sms-queue',
     title: 'SMS Warteschlange',
     description: 'SMS-Versand überwachen und fehlgeschlagene SMS verwalten',
-    icon: <Phone className="w-8 h-8" />,
+    icon: <Phone className="size-7" />,
+    iconBg: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-500',
   },
   {
     href: '/admin/cron-jobs',
     title: 'Cron Jobs',
     description: 'Hintergrund-Jobs manuell ausführen und überwachen',
-    icon: <Settings className="w-8 h-8" />,
+    icon: <Settings className="size-7" />,
+    iconBg: 'bg-purple-500/10',
+    iconColor: 'text-purple-500',
   },
 ]
 
@@ -58,32 +69,24 @@ export default async function AdminPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
-          <Shield className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">Administration</h1>
-        </div>
-        <p className="text-muted-foreground mt-2">
-          System-Verwaltung und Überwachung
-        </p>
-      </div>
+      <Breadcrumb pageName="Administration" />
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:gap-7.5">
         {adminTiles.map((tile) => (
           <Link
             key={tile.href}
             href={tile.href}
-            className="group block p-6 bg-card border border-border rounded-lg hover:border-primary hover:shadow-lg transition-all duration-200"
+            className="group rounded-[10px] bg-card p-6 shadow-1 transition-all duration-200 hover:shadow-card-2 dark:shadow-card"
           >
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <div className={`flex size-14 shrink-0 items-center justify-center rounded-full ${tile.iconBg} ${tile.iconColor}`}>
                 {tile.icon}
               </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold group-hover:text-primary transition-colors">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                   {tile.title}
                 </h2>
-                <p className="text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {tile.description}
                 </p>
               </div>

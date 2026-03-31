@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Clock, CalendarX2, Bell, ArrowRight, AlertTriangle, Loader2 } from 'lucide-react'
+import { ShowcaseSection } from '@/components/nextadmin'
 import { EventList } from './event-list'
 import { ShiftDialog } from './shift-dialog'
 import { CancelDialog } from './cancel-dialog'
@@ -87,90 +87,78 @@ export function MaydayDashboard() {
   return (
     <div className="space-y-6">
       {/* Action Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
-              <Clock className="h-5 w-5" />
-              Termine verschieben
-            </CardTitle>
-            <CardDescription>
-              Verschiebe ausgewählte Termine um eine bestimmte Zeit
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={selectedEvents.length === 0}
-              onClick={() => setShiftDialogOpen(true)}
-            >
-              {selectedEvents.length > 0
-                ? `${selectedEvents.length} Termine verschieben`
-                : 'Termine auswählen'
-              }
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-3 2xl:gap-7.5">
+        <div className="rounded-[10px] bg-orange-50 px-7.5 py-6 shadow-1 dark:bg-orange-950/20 dark:shadow-card">
+          <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 mb-1">
+            <Clock className="h-5 w-5" />
+            <h3 className="font-semibold">Termine verschieben</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Verschiebe ausgewählte Termine um eine bestimmte Zeit
+          </p>
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled={selectedEvents.length === 0}
+            onClick={() => setShiftDialogOpen(true)}
+          >
+            {selectedEvents.length > 0
+              ? `${selectedEvents.length} Termine verschieben`
+              : 'Termine auswählen'
+            }
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
 
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-              <CalendarX2 className="h-5 w-5" />
-              Termine absagen
-            </CardTitle>
-            <CardDescription>
-              Sage ausgewählte Termine ab und benachrichtige Kunden
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={selectedEvents.length === 0}
-              onClick={() => setCancelDialogOpen(true)}
-            >
-              {selectedEvents.length > 0
-                ? `${selectedEvents.length} Termine absagen`
-                : 'Termine auswählen'
-              }
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-red-50 px-7.5 py-6 shadow-1 dark:bg-red-950/20 dark:shadow-card">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-400 mb-1">
+            <CalendarX2 className="h-5 w-5" />
+            <h3 className="font-semibold">Termine absagen</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Sage ausgewählte Termine ab und benachrichtige Kunden
+          </p>
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled={selectedEvents.length === 0}
+            onClick={() => setCancelDialogOpen(true)}
+          >
+            {selectedEvents.length > 0
+              ? `${selectedEvents.length} Termine absagen`
+              : 'Termine auswählen'
+            }
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Status
-            </CardTitle>
-            <CardDescription>
-              Übersicht der ausgewählten Termine
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Gesamt:</span>
-                <span className="font-medium">{stats.total} Termine</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mit E-Mail:</span>
-                <span className="font-medium">{stats.withEmail}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mit Telefon:</span>
-                <span className="font-medium">{stats.withPhone}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <span className="text-muted-foreground">Ausgewählt:</span>
-                <span className="font-bold text-primary">{stats.selected}</span>
-              </div>
+        <div className="rounded-[10px] bg-card px-7.5 py-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-2 mb-1">
+            <Bell className="h-5 w-5" />
+            <h3 className="font-semibold">Status</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Übersicht der ausgewählten Termine
+          </p>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Gesamt:</span>
+              <span className="font-medium">{stats.total} Termine</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Mit E-Mail:</span>
+              <span className="font-medium">{stats.withEmail}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Mit Telefon:</span>
+              <span className="font-medium">{stats.withPhone}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
+              <span className="text-muted-foreground">Ausgewählt:</span>
+              <span className="font-bold text-primary">{stats.selected}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Warning Banner */}
@@ -185,34 +173,29 @@ export function MaydayDashboard() {
       )}
 
       {/* Event List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Termine</CardTitle>
-          <CardDescription>
-            Wähle die Termine aus, die du verschieben oder absagen möchtest
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <EventList
-              events={events}
-              selectedEvents={selectedEvents}
-              onSelectEvent={handleSelectEvent}
-              onSelectAll={handleSelectAll}
-              filterDate={filterDate}
-              onFilterDateChange={setFilterDate}
-              filterFromTime={filterFromTime}
-              onFilterFromTimeChange={setFilterFromTime}
-              customDate={customDate}
-              onCustomDateChange={setCustomDate}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <ShowcaseSection title="Termine">
+        <p className="text-sm text-muted-foreground -mt-2 mb-4">
+          Wähle die Termine aus, die du verschieben oder absagen möchtest
+        </p>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <EventList
+            events={events}
+            selectedEvents={selectedEvents}
+            onSelectEvent={handleSelectEvent}
+            onSelectAll={handleSelectAll}
+            filterDate={filterDate}
+            onFilterDateChange={setFilterDate}
+            filterFromTime={filterFromTime}
+            onFilterFromTimeChange={setFilterFromTime}
+            customDate={customDate}
+            onCustomDateChange={setCustomDate}
+          />
+        )}
+      </ShowcaseSection>
 
       {/* Dialogs */}
       <ShiftDialog

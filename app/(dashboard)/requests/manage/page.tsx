@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAllWorkRequests, getWorkRequestStats } from '@/app/actions/work-requests'
 import { ManageContent } from './manage-content'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export const metadata = {
   title: 'Requests verwalten | Flighthour',
@@ -66,9 +67,12 @@ async function ManagePageContent() {
 
 export default function ManagePage() {
   return (
-    <Suspense fallback={<ManagePageSkeleton />}>
-      <ManagePageContent />
-    </Suspense>
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-7.5">
+      <Breadcrumb pageName="Requests verwalten" items={[{ label: "Requests", href: "/requests" }]} />
+      <Suspense fallback={<ManagePageSkeleton />}>
+        <ManagePageContent />
+      </Suspense>
+    </div>
   )
 }
 

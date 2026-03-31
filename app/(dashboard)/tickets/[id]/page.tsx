@@ -2,12 +2,12 @@ import { getTicket, getManagers, getTags } from '@/app/actions/tickets'
 import { getTicketDirectAttachments } from '@/app/actions/attachments'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { Breadcrumb } from '@/components/nextadmin'
 import { TicketHeader } from './components/ticket-header'
 import { TicketInfoBar } from './components/ticket-info-bar'
 import { TicketTimeline } from './components/ticket-timeline'
 import { TicketReplyForm } from './components/ticket-reply-form'
 import { FormattedContent } from '@/components/shared/formatted-content'
-import { Card, CardContent } from '@/components/ui/card'
 import { AttachmentList } from '@/components/tickets/attachment-list'
 
 export default async function TicketDetailPage({
@@ -63,7 +63,9 @@ export default async function TicketDetailPage({
   }, {} as Record<string, typeof allAttachments>)
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-5xl">
+    <div className="mx-auto max-w-screen-2xl space-y-7.5 py-8 px-4 md:px-6 2xl:px-10">
+      <Breadcrumb pageName="Ticket Detail" items={[{ label: "Tickets", href: "/tickets" }]} />
+
       <TicketHeader ticket={ticket} />
 
       <div className="space-y-6 mt-6">
@@ -74,27 +76,25 @@ export default async function TicketDetailPage({
           isManagerOrAdmin={isManagerOrAdmin}
         />
 
-        <Card>
-          <CardContent className="pt-6">
-            {ticket.created_from_email ? (
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <span className="text-muted-foreground">Von:</span>
-                <span className="text-primary">{ticket.created_from_email}</span>
-              </h3>
-            ) : ticket.creator ? (
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <span className="text-muted-foreground">Erstellt von:</span>
-                <span className="text-primary">
-                  {ticket.creator.first_name} {ticket.creator.last_name}
-                </span>
-              </h3>
-            ) : (
-              <h3 className="font-semibold mb-2">Beschreibung</h3>
-            )}
-            <FormattedContent content={ticket.description} className="text-sm" />
-            <AttachmentList attachments={ticketAttachments} title="Anhänge" />
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card px-7.5 py-6 shadow-1 dark:shadow-card">
+          {ticket.created_from_email ? (
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <span className="text-muted-foreground">Von:</span>
+              <span className="text-primary">{ticket.created_from_email}</span>
+            </h3>
+          ) : ticket.creator ? (
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <span className="text-muted-foreground">Erstellt von:</span>
+              <span className="text-primary">
+                {ticket.creator.first_name} {ticket.creator.last_name}
+              </span>
+            </h3>
+          ) : (
+            <h3 className="font-semibold mb-2">Beschreibung</h3>
+          )}
+          <FormattedContent content={ticket.description} className="text-sm" />
+          <AttachmentList attachments={ticketAttachments} title="Anhänge" />
+        </div>
 
         <TicketTimeline
           messages={ticket.messages || []}

@@ -12,10 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { UserCircle, Mail, Calendar, Shield, ToggleLeft, ToggleRight, Euro, Trash2, Send, CalendarX } from 'lucide-react'
+import { UserCircle, Mail, Calendar, ToggleLeft, ToggleRight, Euro, Trash2, Send, CalendarX } from 'lucide-react'
+import { StatusBadge, ShowcaseSection } from '@/components/nextadmin'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { CompensationConfigDialog } from '@/app/(dashboard)/zeiterfassung/verwaltung/components/compensation-config-dialog'
@@ -44,13 +44,22 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
     return employee.email
   }
 
-  const getRoleBadge = (role: string) => {
-    const badges = {
-      employee: { variant: 'secondary' as const, label: 'Mitarbeiter' },
-      manager: { variant: 'default' as const, label: 'Manager' },
-      admin: { variant: 'destructive' as const, label: 'Administrator' }
+  const getRoleBadgeVariant = (role: string): 'neutral' | 'info' | 'error' => {
+    const variants: Record<string, 'neutral' | 'info' | 'error'> = {
+      employee: 'neutral',
+      manager: 'info',
+      admin: 'error',
     }
-    return badges[role as keyof typeof badges] || badges.employee
+    return variants[role] || 'neutral'
+  }
+
+  const getRoleBadgeLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      employee: 'Mitarbeiter',
+      manager: 'Manager',
+      admin: 'Administrator',
+    }
+    return labels[role] || 'Mitarbeiter'
   }
 
   const handleRoleChange = async () => {
@@ -152,8 +161,6 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
     setLoading(false)
   }
 
-  const roleBadge = getRoleBadge(employee.role)
-
   const getCompensationDisplay = () => {
     if (!employeeSettings) return 'Nicht konfiguriert'
 
@@ -243,9 +250,9 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
               <div>
                 <Label className="text-xs text-muted-foreground">Rolle</Label>
                 <div className="mt-1">
-                  <Badge variant={roleBadge.variant}>
-                    {roleBadge.label}
-                  </Badge>
+                  <StatusBadge variant={getRoleBadgeVariant(employee.role)}>
+                    {getRoleBadgeLabel(employee.role)}
+                  </StatusBadge>
                 </div>
               </div>
 
@@ -253,25 +260,13 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <div className="mt-1">
                   {!employee.is_active ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-gray-500 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                      Inaktiv
-                    </span>
+                    <StatusBadge variant="neutral">Inaktiv</StatusBadge>
                   ) : employee.exit_date && new Date(employee.exit_date) <= new Date() ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-orange-600 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-orange-600"></span>
-                      Ausgetreten am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
-                    </span>
+                    <StatusBadge variant="orange">Ausgetreten am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}</StatusBadge>
                   ) : employee.exit_date ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-yellow-600 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-yellow-600"></span>
-                      Austritt am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}
-                    </span>
+                    <StatusBadge variant="warning">Austritt am {format(new Date(employee.exit_date), 'dd.MM.yyyy', { locale: de })}</StatusBadge>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-green-600"></span>
-                      Aktiv
-                    </span>
+                    <StatusBadge variant="success">Aktiv</StatusBadge>
                   )}
                 </div>
               </div>
@@ -296,12 +291,8 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
 
           {/* Admin Actions */}
           {isAdmin && (
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="font-medium text-sm flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Administrator-Aktionen
-              </h4>
-
+            <ShowcaseSection title="Administrator-Aktionen">
+              <div className="space-y-4">
               {/* Role Change */}
               <div className="space-y-2">
                 <Label htmlFor="role">Rolle ändern</Label>
@@ -462,7 +453,8 @@ export function EmployeeDetailModal({ employee, employeeSettings, isAdmin, isMan
                   Mitarbeiter löschen
                 </Button>
               </div>
-            </div>
+              </div>
+            </ShowcaseSection>
           )}
 
           {/* Close Button */}

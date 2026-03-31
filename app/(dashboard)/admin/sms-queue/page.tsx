@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { Breadcrumb } from '@/components/nextadmin'
 import { SMSQueueTable } from './components/sms-queue-table'
 
 export default async function SMSQueuePage() {
@@ -33,12 +34,7 @@ export default async function SMSQueuePage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">SMS Warteschlange</h1>
-        <p className="text-muted-foreground mt-1">
-          Überwachung und Verwaltung der SMS-Versand-Queue (Twilio)
-        </p>
-      </div>
+      <Breadcrumb pageName="SMS Queue" items={[{ label: "Admin", href: "/admin" }]} />
 
       <SMSQueueTable smsItems={smsQueue || []} />
     </div>

@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import { Calendar, Plus, RefreshCw, Clock, Users } from 'lucide-react'
+import { Calendar, Plus, RefreshCw, Clock, Users, Video, Euro } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { EventDialog } from './event-dialog'
-import { EventCard } from './event-card'
+import { cn } from '@/lib/utils'
 import { ShiftCoverageDialog } from './shift-coverage-dialog'
 import { ShiftCoverageList } from './shift-coverage-list'
 import { getCalendarEventsByMonth } from '@/app/actions/calendar-events'
@@ -85,6 +85,9 @@ interface CalendarEvent {
   // Rebook tracking
   rebooked_at?: string | null
   rebooked_event_id?: string | null
+  // Video & Payment
+  has_video_recording?: boolean
+  on_site_payment_amount?: number | null
   // MAYDAY tokens (joined data)
   mayday_tokens?: MaydayToken[]
   rebook_token?: RebookToken | null
@@ -114,7 +117,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const [isLoadingMonth, setIsLoadingMonth] = useState(false)
   const [loadProgress, setLoadProgress] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(new Date())
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [showFINames, setShowFINames] = useState(true)
   const [showBlockers, setShowBlockers] = useState(true)
@@ -250,7 +253,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   const firstDayOfWeek = firstDayOfMonth.getDay()
   const daysInMonth = lastDayOfMonth.getDate()
 
-  const calendarDays = []
+  const calendarDays: (number | null)[] = []
   // Add empty cells for days before month starts
   for (let i = 0; i < firstDayOfWeek; i++) {
     calendarDays.push(null)
@@ -261,11 +264,8 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   }
 
   const handleEventClick = (event: CalendarEvent) => {
-    // In read-only mode, don't open the dialog
     if (isReadOnly) return
-
-    setSelectedEvent(event)
-    setIsEventDialogOpen(true)
+    router.push(`/kalender/${event.id}`)
   }
 
   const handleNewEvent = () => {
@@ -287,7 +287,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   }
 
   const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
-  const weekDays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
   const loadMonth = async (year: number, month: number) => {
     setIsLoadingMonth(true)
@@ -335,18 +334,12 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-7.5">
+      {/* Action Bar */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Calendar className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-            {isReadOnly ? 'Mein Kalender' : 'Kalender'}
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            {isReadOnly ? 'Übersicht aller Termine (nur lesend)' : 'Google Calendar Events verwalten'}
-          </p>
-        </div>
+        <p className="text-sm font-medium text-muted-foreground">
+          {isReadOnly ? 'Übersicht aller Termine (nur lesend)' : 'Google Calendar Events verwalten'}
+        </p>
 
         <div className="flex flex-col gap-2 w-full md:w-auto">
           {!isReadOnly && syncAction && (
@@ -415,7 +408,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
 
       {/* Last Sync Info */}
       {!isReadOnly && lastSync && (
-        <Card className="p-3 md:p-4">
+        <Card className="p-3 md:p-4 rounded-[10px] border-0 shadow-1 dark:shadow-card">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 flex-shrink-0" />
@@ -446,13 +439,12 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         </Card>
       )}
 
-      {/* Calendar Grid */}
-      <Card className="p-3 sm:p-4 md:p-6 relative">
+      {/* Calendar Grid - NextAdmin CalendarBox pattern */}
+      <div className="w-full max-w-full rounded-[10px] bg-card shadow-1 dark:shadow-card relative">
         {/* Loading Overlay */}
         {isLoadingMonth && (
-          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-[10px]">
             <div className="flex flex-col items-center gap-4">
-              {/* Flighthour Logo */}
               <Image
                 src="/logo.png"
                 alt="FLIGHTHOUR"
@@ -461,8 +453,6 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 className="object-contain"
                 priority
               />
-
-              {/* Gelber Fortschrittsbalken */}
               <div className="w-64 h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#EAB308] transition-all duration-300 ease-out"
@@ -474,139 +464,132 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
         )}
 
         {/* Month Navigation */}
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <Button
-            variant="outline"
-            size="sm"
+        <div className="flex items-center justify-between px-4 sm:px-7.5 py-5">
+          <button
             onClick={previousMonth}
-            className="h-9 w-9 p-0"
             disabled={isLoadingMonth}
+            className="flex size-9 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors disabled:opacity-50"
           >
             ←
-          </Button>
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold">
-            <span className="hidden sm:inline">{monthNames[currentMonth]} {currentYear}</span>
-            <span className="sm:hidden">{monthNames[currentMonth].slice(0, 3)} {currentYear}</span>
+          </button>
+          <h2 className="text-lg font-bold text-foreground">
+            {monthNames[currentMonth]} {currentYear}
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={nextMonth}
-            className="h-9 w-9 p-0"
             disabled={isLoadingMonth}
+            className="flex size-9 items-center justify-center rounded-lg border border-border hover:bg-accent transition-colors disabled:opacity-50"
           >
             →
-          </Button>
+          </button>
         </div>
 
-        {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
-          {weekDays.map(day => (
-            <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground p-1 sm:p-2">
-              {day}
-            </div>
-          ))}
-        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="grid grid-cols-7 bg-foreground text-background dark:bg-dark-2 dark:text-foreground">
+              {['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((day, i) => (
+                <th key={day} className="flex h-12 items-center justify-center p-1 text-sm font-medium sm:h-15 sm:text-base">
+                  <span className="hidden sm:block">
+                    {['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'][i]}
+                  </span>
+                  <span className="sm:hidden">{day}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: Math.ceil(calendarDays.length / 7) }, (_, weekIndex) => (
+              <tr key={weekIndex} className="grid grid-cols-7">
+                {calendarDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day, dayIndex) => {
+                  if (day === null) {
+                    return (
+                      <td
+                        key={`empty-${weekIndex}-${dayIndex}`}
+                        className="ease h-24 border border-stroke p-2 dark:border-dark-3 md:h-32 md:p-3 xl:h-36"
+                      />
+                    )
+                  }
 
-        {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
-          {calendarDays.map((day, index) => {
-            if (day === null) {
-              return <div key={`empty-${index}`} className="aspect-square" />
-            }
+                  const dayDate = new Date(currentYear, currentMonth, day)
+                  const dateStr = dayDate.toDateString()
+                  const dayEvents = eventsByDate[dateStr] || []
+                  const isToday = dateStr === new Date().toDateString()
+                  const isSelected = selectedDay && dateStr === selectedDay.toDateString()
+                  const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
+                  const hasPendingShift = dayEvents.some(e => e.pending_start_time)
 
-            const dayDate = new Date(currentYear, currentMonth, day)
-            const dateStr = dayDate.toDateString()
-            const dayEvents = eventsByDate[dateStr] || []
-            const isToday = dateStr === new Date().toDateString()
-            const isSelected = selectedDay && dateStr === selectedDay.toDateString()
-            // Only count booking events (exclude FI events and blockers from count)
-            const bookingEvents = dayEvents.filter(e => e.event_type !== 'fi_assignment' && e.event_type !== 'blocker')
-            // Check if any events have pending shifts awaiting customer confirmation
-            const hasPendingShift = dayEvents.some(e => e.pending_start_time)
+                  return (
+                    <td
+                      key={day}
+                      onClick={() => setSelectedDay(dayDate)}
+                      className={cn(
+                        "ease relative h-24 cursor-pointer border border-stroke p-2 transition duration-300 dark:border-dark-3 md:h-32 md:p-3 xl:h-36",
+                        isSelected
+                          ? "bg-[#fbb928]/10 ring-2 ring-[#fbb928] ring-inset"
+                          : isToday
+                            ? "bg-[#fbb928]/5"
+                            : "hover:bg-accent/50"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <span className={cn(
+                          "text-sm font-medium",
+                          (isSelected || isToday) ? "text-[#fbb928]" : "text-foreground"
+                        )}>
+                          {day}
+                        </span>
+                        {hasPendingShift && (
+                          <span className="size-2 rounded-full bg-[#FFA70B] animate-pulse" title="Verschiebung ausstehend" />
+                        )}
+                      </div>
 
-            return (
-              <div
-                key={day}
-                onClick={() => setSelectedDay(dayDate)}
-                className={`aspect-square border rounded-md sm:rounded-lg p-1 sm:p-2 ${
-                  isSelected
-                    ? 'border-primary bg-primary/20 ring-1 sm:ring-2 ring-primary'
-                    : isToday
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border'
-                } hover:bg-accent transition-colors cursor-pointer`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${isSelected || isToday ? 'text-primary' : ''}`}>
-                    {day}
-                  </div>
-                  {/* Pending Shift Indicator - pulsing amber dot */}
-                  {hasPendingShift && (
-                    <div
-                      className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"
-                      title="Verschiebung ausstehend"
-                    />
-                  )}
-                </div>
-                {/* FI Names when checkbox is enabled - always show if present */}
-                {showFINames && dayEvents.some(e => e.event_type === 'fi_assignment') && (
-                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                    {dayEvents
-                      .filter(e => e.event_type === 'fi_assignment')
-                      .map(e => (
+                      {/* FI Names */}
+                      {showFINames && dayEvents.filter(e => e.event_type === 'fi_assignment').map(e => (
                         <div
                           key={e.id}
-                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#FCD34D]/30 border border-[#FCD34D]/50 rounded truncate leading-tight"
-                          title={`${e.assigned_instructor_name} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
+                          className="mt-0.5 text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#B87308]/[0.12] text-[#8B5700] dark:bg-[#FFA70B]/[0.15] dark:text-[#FFB84D] rounded truncate leading-tight font-semibold"
+                          title={`${e.assigned_instructor_name || ''} ${e.assigned_instructor_number ? `(${e.assigned_instructor_number})` : ''}`}
                         >
                           {e.assigned_instructor_name}
                           {e.assigned_instructor_number && ` (${e.assigned_instructor_number})`}
                         </div>
-                      ))
-                    }
-                  </div>
-                )}
-                {/* Blocker when checkbox is enabled - always show if present */}
-                {showBlockers && dayEvents.some(e => e.event_type === 'blocker') && (
-                  <div className="mt-1 space-y-0.5 max-h-16 overflow-y-auto">
-                    {dayEvents
-                      .filter(e => e.event_type === 'blocker')
-                      .map(e => (
+                      ))}
+
+                      {/* Blockers */}
+                      {showBlockers && dayEvents.filter(e => e.event_type === 'blocker').map(e => (
                         <div
                           key={e.id}
-                          className="text-[9px] sm:text-[10px] px-1 py-0.5 bg-red-500/30 border border-red-500/50 rounded truncate leading-tight"
+                          className="mt-0.5 text-[9px] sm:text-[10px] px-1 py-0.5 bg-[#B91C1C]/[0.12] text-[#991B1B] dark:bg-[#F23030]/[0.15] dark:text-[#FCA5A5] rounded truncate leading-tight font-semibold"
                           title={e.title || e.customer_first_name || 'Blocker'}
                         >
                           {e.title || e.customer_first_name || 'Blocker'}
                         </div>
-                      ))
-                    }
-                  </div>
-                )}
-                {/* Event count displayed last - after FI names and blockers */}
-                {bookingEvents.length > 0 && (
-                  <>
-                    {/* Mobile: Show dot indicator */}
-                    <div className="sm:hidden flex justify-center mt-1">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    </div>
-                    {/* Desktop: Show event count */}
-                    <div className="hidden sm:block text-xs text-muted-foreground mt-1">
-                      {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </Card>
+                      ))}
 
-      {/* Upcoming Events List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold truncate">
+                      {/* Booking count */}
+                      {bookingEvents.length > 0 && (
+                        <>
+                          <div className="sm:hidden flex justify-center mt-1">
+                            <span className="size-1.5 rounded-full bg-[#fbb928]" />
+                          </div>
+                          <div className="hidden sm:block text-[10px] text-foreground/60 font-medium mt-0.5">
+                            {bookingEvents.length} {bookingEvents.length === 1 ? 'Event' : 'Events'}
+                          </div>
+                        </>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Events List - NextAdmin chat card style */}
+      <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+        <div className="flex items-center justify-between px-4 sm:px-7.5 pt-6 pb-4">
+          <h2 className="text-lg font-bold text-foreground truncate">
             {selectedDay ? (
               <>
                 <span className="hidden md:inline">
@@ -617,37 +600,113 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                 </span>
               </>
             ) : (
-              <>
-                <span className="hidden sm:inline">Events diesen Monat ({eventsThisMonth.length})</span>
-                <span className="sm:hidden">Events ({eventsThisMonth.length})</span>
-              </>
+              <>Events diesen Monat ({eventsThisMonth.length})</>
             )}
           </h2>
           {selectedDay && (
-            <Button variant="outline" size="sm" onClick={() => setSelectedDay(null)} className="flex-shrink-0">
+            <button
+              onClick={() => setSelectedDay(null)}
+              className="shrink-0 rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+            >
               <span className="hidden sm:inline">Alle anzeigen</span>
               <span className="sm:hidden">Alle</span>
-            </Button>
+            </button>
           )}
         </div>
+
         {displayedEvents.length === 0 ? (
-          <Card className="p-6 sm:p-8 text-center text-muted-foreground">
-            <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
-            <p className="text-sm sm:text-base">{selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}</p>
-          </Card>
+          <div className="px-7.5 pb-8 text-center">
+            <Calendar className="size-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              {selectedDay ? 'Keine Events an diesem Tag' : 'Keine Events in diesem Monat'}
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <ul className="pb-2">
             {displayedEvents
               .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-              .map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onClick={() => handleEventClick(event)}
-                  canConfirmShift={canConfirmShift}
-                />
-              ))}
-          </div>
+              .map(event => {
+                const startTime = new Date(event.start_time)
+                const endTime = new Date(event.end_time)
+                const timeStr = event.is_all_day
+                  ? 'Ganztägig'
+                  : `${startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+
+                const iconColor =
+                  event.event_type === 'fi_assignment' ? '#FFA70B' :
+                  event.event_type === 'blocker' ? '#F23030' : '#3C50E0'
+
+                const customerName = [event.customer_first_name, event.customer_last_name].filter(Boolean).join(' ')
+                const displayName =
+                  event.event_type === 'fi_assignment'
+                    ? (event.assigned_instructor_name || event.title || 'FI Einsatz')
+                    : event.event_type === 'blocker'
+                      ? (event.title || 'Blocker')
+                      : (customerName || event.title || 'Buchung')
+
+                return (
+                  <li key={event.id}>
+                    <button
+                      onClick={() => handleEventClick(event)}
+                      className="flex w-full items-center gap-4 px-4 sm:px-7.5 py-3.5 text-left outline-none hover:bg-accent/50 transition-colors"
+                    >
+                      {/* Event type icon */}
+                      <div
+                        className="flex size-11 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: `${iconColor}15` }}
+                      >
+                        <Calendar className="size-5" style={{ color: iconColor }} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-foreground truncate">{displayName}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-sm text-muted-foreground">{timeStr}</span>
+                          {event.location && (
+                            <>
+                              <span className="text-muted-foreground hidden sm:inline">·</span>
+                              <span className="text-sm text-muted-foreground truncate hidden sm:inline">{event.location}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Video & Payment indicators */}
+                      {event.event_type === 'booking' && (
+                        <div className="hidden sm:flex items-center gap-2 shrink-0">
+                          {event.has_video_recording && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#8155FF]/[0.08] px-2.5 py-0.5 text-xs font-medium text-[#8155FF]">
+                              <Video className="size-3.5" />
+                              Video
+                            </span>
+                          )}
+                          {(event.on_site_payment_amount ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#219653]/[0.08] px-2.5 py-0.5 text-xs font-medium text-[#219653]">
+                              <Euro className="size-3.5" />
+                              €{Number(event.on_site_payment_amount).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Status badge */}
+                      <div className={cn(
+                        "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium hidden sm:block",
+                        event.status === 'confirmed' ? 'bg-[#219653]/[0.08] text-[#219653]' :
+                        event.status === 'tentative' ? 'bg-[#FFA70B]/[0.08] text-[#FFA70B]' :
+                        event.status === 'cancelled' ? 'bg-[#F23030]/[0.08] text-[#F23030]' :
+                        'bg-[#3C50E0]/[0.08] text-[#3C50E0]'
+                      )}>
+                        {event.status === 'confirmed' ? 'Bestätigt' :
+                         event.status === 'tentative' ? 'Vorläufig' :
+                         event.status === 'cancelled' ? 'Abgesagt' : event.status}
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+          </ul>
         )}
       </div>
 
@@ -655,8 +714,9 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
       <EventDialog
         open={isEventDialogOpen}
         onOpenChange={setIsEventDialogOpen}
-        event={selectedEvent}
+        event={null}
         onRefresh={handleRefresh}
+        defaultDate={selectedDay}
       />
 
       {/* Shift Coverage Dialog */}
@@ -671,6 +731,7 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
             }
           }}
           employees={coverageEmployees}
+          defaultDate={selectedDay}
         />
       )}
 

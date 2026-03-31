@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   CalendarClock, Clock, CalendarDays, BarChart3, RefreshCw,
-  ChevronLeft, ChevronRight, Check, Pencil, Plus, AlertTriangle,
+  ChevronLeft, ChevronRight, Check, CheckCircle, Pencil, PencilLine, Plus, AlertTriangle,
   ChevronDown, ChevronUp, Timer,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -114,8 +114,8 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Zeiterfassung</h1>
-          <p className="text-sm text-muted-foreground">Kalenderbasierte Arbeitszeitübersicht</p>
+          <h1 className="text-[26px] font-bold leading-[30px] text-foreground">Zeiterfassung</h1>
+          <p className="text-sm font-medium text-muted-foreground mt-1.5">Kalenderbasierte Arbeitszeitübersicht</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={prevMonth}>
@@ -138,12 +138,12 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
       {(isConfirmed || isClosed) && (
         <div className="flex gap-2">
           {isConfirmed && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/30 px-3 py-1 text-xs font-medium text-green-700 dark:text-green-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#219653]/[0.08] px-3 py-1 text-xs font-medium text-[#219653] dark:bg-[#219653]/[0.15] dark:text-[#34D399]">
               <Check className="h-3 w-3" /> Bestätigt
             </span>
           )}
           {isClosed && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFA70B]/[0.08] px-3 py-1 text-xs font-medium text-[#FFA70B] dark:bg-[#FFA70B]/[0.15] dark:text-[#FFD06B]">
               <AlertTriangle className="h-3 w-3" /> Festgeschrieben - Keine Änderungen möglich
             </span>
           )}
@@ -151,49 +151,51 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Gesamtstunden
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{formatMinutes(totalMinutes)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" /> Arbeitstage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{workDays}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CalendarClock className="h-4 w-4" /> Termine
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalBookings}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Timer className="h-4 w-4" /> Leerlauf
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-muted-foreground">
-              {formatMinutes(idleMinutes)}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 2xl:gap-7.5">
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#3C50E0]/10">
+              <CalendarClock className="size-6 text-[#3C50E0]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{formatMinutes(totalMinutes)}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Gesamtstunden</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#FF9C55]/10">
+              <Clock className="size-6 text-[#FF9C55]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{workDays}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Arbeitstage</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#8155FF]/10">
+              <PencilLine className="size-6 text-[#8155FF]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{totalBookings}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Termine</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#219653]/10">
+              <CheckCircle className="size-6 text-[#219653]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{formatMinutes(idleMinutes)}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Leerlauf</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Entries Table */}
@@ -242,8 +244,8 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
                     <div
                       className={cn(
                         'grid grid-cols-[1fr_80px_80px_80px_80px_80px_40px] gap-2 px-3 py-2.5 rounded-md text-sm cursor-pointer hover:bg-muted/50 transition-colors',
-                        entry.is_adjusted && 'bg-orange-50 dark:bg-orange-950/20',
-                        entry.has_manual && 'bg-blue-50 dark:bg-blue-950/20',
+                        entry.is_adjusted && 'bg-[#FF9C55]/[0.04] dark:bg-[#FF9C55]/[0.08]',
+                        entry.has_manual && 'bg-[#3C50E0]/[0.04] dark:bg-[#3C50E0]/[0.08]',
                       )}
                       onClick={() => setExpandedDay(isExpanded ? null : entry.id)}
                     >
@@ -252,11 +254,11 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
                       </span>
                       <span className="text-right">{entry.calendar_booking_count}</span>
                       <span className="text-right">{formatMinutes(effectiveCal)}</span>
-                      <span className="text-right text-blue-600">{entry.manual_minutes > 0 ? formatMinutes(entry.manual_minutes) : '-'}</span>
+                      <span className="text-right text-[#3C50E0]">{entry.manual_minutes > 0 ? formatMinutes(entry.manual_minutes) : '-'}</span>
                       <span className="text-right font-semibold">{formatMinutes(entry.effective_minutes)}</span>
                       <span className="flex justify-center">
-                        {entry.is_adjusted && <span className="w-2 h-2 rounded-full bg-orange-400" title="Angepasst" />}
-                        {entry.has_manual && <span className="w-2 h-2 rounded-full bg-blue-400 ml-1" title="Manuell" />}
+                        {entry.is_adjusted && <span className="w-2 h-2 rounded-full bg-[#FF9C55]" title="Angepasst" />}
+                        {entry.has_manual && <span className="w-2 h-2 rounded-full bg-[#3C50E0] ml-1" title="Manuell" />}
                       </span>
                       <span className="flex justify-center">
                         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -282,12 +284,12 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
                           <p className="text-sm text-muted-foreground">Keine Buchungsdetails</p>
                         )}
                         {entry.manual_description && (
-                          <div className="text-sm text-blue-600 border-t pt-2">
+                          <div className="text-sm text-[#3C50E0] border-t pt-2">
                             Manuell: {entry.manual_description} ({formatMinutes(entry.manual_minutes)})
                           </div>
                         )}
                         {entry.adjustment_reason && (
-                          <div className="text-sm text-orange-600 border-t pt-2">
+                          <div className="text-sm text-[#FF9C55] border-t pt-2">
                             Anpassung: {entry.adjustment_reason}
                           </div>
                         )}
@@ -310,9 +312,9 @@ export function TimesheetView({ userId, initialYear, initialMonth }: TimesheetVi
 
       {/* Legende */}
       <div className="flex gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> Automatisch (Kalender)</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Angepasst</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Manuell</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#219653]" /> Automatisch (Kalender)</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FF9C55]" /> Angepasst</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#3C50E0]" /> Manuell</span>
       </div>
 
       {/* Bestätigung */}
@@ -412,9 +414,33 @@ function ManualEntryDialog({ year, month, onClose, onSave }: {
   onSave: (date: string, minutes: number, description: string) => Promise<void>
 }) {
   const [date, setDate] = useState('')
+  const [dateDisplay, setDateDisplay] = useState('')
   const [minutes, setMinutes] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const handleDateInput = (value: string) => {
+    const digits = value.replace(/\D/g, '')
+    let formatted = ''
+    for (let i = 0; i < digits.length && i < 8; i++) {
+      if (i === 2 || i === 4) formatted += '.'
+      formatted += digits[i]
+    }
+    setDateDisplay(formatted)
+
+    if (formatted.length === 10) {
+      const [dd, mm, yyyy] = formatted.split('.')
+      const isoDate = `${yyyy}-${mm}-${dd}`
+      const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd))
+      if (d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === parseInt(dd)) {
+        setDate(isoDate)
+      } else {
+        setDate('')
+      }
+    } else {
+      setDate('')
+    }
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -425,9 +451,13 @@ function ManualEntryDialog({ year, month, onClose, onSave }: {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Datum</Label>
-            <Input type="date" value={date} onChange={e => setDate(e.target.value)}
-              min={`${year}-${String(month).padStart(2, '0')}-01`}
-              max={`${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`}
+            <Input
+              type="text"
+              inputMode="numeric"
+              value={dateDisplay}
+              onChange={e => handleDateInput(e.target.value)}
+              placeholder="TT.MM.JJJJ"
+              maxLength={10}
             />
           </div>
           <div className="space-y-2">

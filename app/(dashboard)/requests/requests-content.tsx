@@ -84,7 +84,7 @@ export function RequestsContent({ requests, calendarEvents, userId, userName, du
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7.5">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'requests' | 'calendar')}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -110,12 +110,14 @@ export function RequestsContent({ requests, calendarEvents, userId, userName, du
         </div>
 
         <TabsContent value="requests" className="mt-6">
-          <RequestListView
-            requests={requests}
-            userId={userId}
-            onEdit={handleEdit}
-            onWithdraw={handleWithdraw}
-          />
+          <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card p-4 sm:p-6 xl:p-7.5">
+            <RequestListView
+              requests={requests}
+              userId={userId}
+              onEdit={handleEdit}
+              onWithdraw={handleWithdraw}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">

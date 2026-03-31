@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { Breadcrumb } from '@/components/nextadmin'
 import { DocumentsView } from './components/documents-view'
 
 export default async function DocumentsPage() {
@@ -39,9 +40,12 @@ export default async function DocumentsPage() {
   }
 
   return (
-    <DocumentsView
-      userRole={profile.role}
-      employees={employees}
-    />
+    <div>
+      <Breadcrumb pageName="Dokumente" />
+      <DocumentsView
+        userRole={profile.role}
+        employees={employees}
+      />
+    </div>
   )
 }

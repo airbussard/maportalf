@@ -12,22 +12,13 @@ import {
   Clock,
   Trash2,
   CalendarPlus,
-  Filter,
   AlertTriangle,
   Users,
   CheckCircle2,
-  Archive
+  Archive,
+  Eye
 } from 'lucide-react'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/nextadmin'
 import {
   Select,
   SelectContent,
@@ -156,7 +147,11 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
   }
 
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE, dd.MM.yyyy', { locale: de })
+    return format(new Date(dateString), 'dd.MM.yyyy', { locale: de })
+  }
+
+  const formatDayName = (dateString: string) => {
+    return format(new Date(dateString), 'EEEE', { locale: de })
   }
 
   const formatTime = (dateString: string) => {
@@ -174,209 +169,205 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
     return event.customer_first_name || 'Unbekannt'
   }
 
+  const getInitials = (event: CancelledEvent) => {
+    const first = event.customer_first_name?.[0]?.toUpperCase() || ''
+    const last = event.customer_last_name?.[0]?.toUpperCase() || ''
+    if (first || last) return `${first}${last}`
+    return '?'
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        <Select value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Absagen</SelectItem>
-            <SelectItem value="cancelled_by_us">Von uns abgesagt</SelectItem>
-            <SelectItem value="cancelled_by_customer">Vom Kunden abgesagt</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-sm text-muted-foreground ml-2">
-          {filteredEvents.length} {filteredEvents.length === 1 ? 'Termin' : 'Termine'}
-        </span>
-      </div>
-
-      {/* Table */}
-      {filteredEvents.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Keine abgesagten Termine gefunden</p>
+    <>
+      <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 px-7.5 pt-7.5 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Abgesagte Termine</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {filteredEvents.length} {filteredEvents.length === 1 ? 'Termin' : 'Termine'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Select value={filter} onValueChange={(value) => setFilter(value as typeof filter)}>
+              <SelectTrigger className="w-[200px] rounded-lg border-[1.5px] border-border bg-transparent text-sm outline-none transition focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Absagen</SelectItem>
+                <SelectItem value="cancelled_by_us">Von uns abgesagt</SelectItem>
+                <SelectItem value="cancelled_by_customer">Vom Kunden abgesagt</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ursprüngliches Datum</TableHead>
-                <TableHead>Kunde / Event</TableHead>
-                <TableHead>Kontakt</TableHead>
-                <TableHead>Grund</TableHead>
-                <TableHead>Abgesagt am</TableHead>
-                <TableHead>Abgesagt von</TableHead>
-                <TableHead className="text-right">Aktionen</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEvents.map((event) => (
-                <TableRow
-                  key={event.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setDetailEvent(event)}
-                >
-                  {/* Date */}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{formatDate(event.start_time)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatTime(event.start_time)} - {formatTime(event.end_time)} Uhr
+
+        {/* Table */}
+        {filteredEvents.length === 0 ? (
+          <div className="py-16 text-center text-muted-foreground">
+            <Calendar className="mx-auto mb-4 size-12 opacity-30" />
+            <p className="text-sm">Keine abgesagten Termine gefunden</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-t border-border bg-[#F7F9FC] dark:bg-dark-2 [&>th]:py-4 [&>th]:text-sm [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-muted-foreground">
+                  <th className="pl-7.5 text-left min-w-[200px]">Kunde</th>
+                  <th className="text-left min-w-[140px]">Datum</th>
+                  <th className="text-left min-w-[100px]">Uhrzeit</th>
+                  <th className="text-left min-w-[180px]">Grund</th>
+                  <th className="text-left min-w-[160px]">Status</th>
+                  <th className="pr-7.5 text-right min-w-[160px]">Aktionen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.map((event) => (
+                  <tr
+                    key={event.id}
+                    onClick={() => setDetailEvent(event)}
+                    className="border-b border-border transition-colors hover:bg-accent/30 cursor-pointer"
+                  >
+                    {/* Kunde */}
+                    <td className="py-4 pl-7.5">
+                      <div className="flex items-center gap-3.5">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#fbb928] text-sm font-bold text-zinc-900">
+                          {getInitials(event)}
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-foreground leading-tight">
+                            {getEventTitle(event)}
+                          </h5>
+                          {event.customer_email && (
+                            <p className="mt-0.5 text-sm text-muted-foreground truncate max-w-[180px]">
+                              {event.customer_email}
+                            </p>
+                          )}
+                          {event.attendee_count && event.attendee_count > 1 && (
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="size-3" />
+                              {event.attendee_count} Personen
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
+                    </td>
 
-                  {/* Customer */}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
+                    {/* Datum */}
+                    <td className="py-4">
                       <div>
-                        <div className="font-medium">{getEventTitle(event)}</div>
-                        {event.attendee_count && event.attendee_count > 1 && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {event.attendee_count} Personen
-                          </div>
-                        )}
+                        <span className="text-sm font-medium text-foreground">{formatDate(event.start_time)}</span>
+                        <p className="mt-0.5 text-xs text-muted-foreground capitalize">{formatDayName(event.start_time)}</p>
                       </div>
-                    </div>
-                  </TableCell>
+                    </td>
 
-                  {/* Contact */}
-                  <TableCell>
-                    <div className="space-y-1">
-                      {event.customer_email && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3 text-muted-foreground" />
-                          <a href={`mailto:${event.customer_email}`} className="hover:underline">
-                            {event.customer_email}
-                          </a>
-                        </div>
-                      )}
-                      {event.customer_phone && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <a href={`tel:${event.customer_phone}`} className="hover:underline">
-                            {event.customer_phone}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
+                    {/* Uhrzeit */}
+                    <td className="py-4">
+                      <span className="text-sm text-foreground">
+                        {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                      </span>
+                    </td>
 
-                  {/* Reason */}
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Badge
-                          variant={event.cancellation_reason === 'cancelled_by_customer' ? 'destructive' : 'secondary'}
+                    {/* Grund */}
+                    <td className="py-4">
+                      <div className="space-y-1.5">
+                        <StatusBadge
+                          variant={event.cancellation_reason === 'cancelled_by_customer' ? 'error' : 'warning'}
                         >
                           {event.cancellation_reason === 'cancelled_by_us' ? 'Von uns' : 'Vom Kunden'}
-                        </Badge>
-                        {event.mayday_confirmed && (
-                          <Badge className="bg-blue-600 hover:bg-blue-700 text-white">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Bestätigt
-                          </Badge>
-                        )}
-                        {event.rebooked_at && (
-                          <Badge className="bg-green-600 hover:bg-green-700 text-white">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Umgebucht
-                          </Badge>
+                        </StatusBadge>
+                        {event.cancellation_note && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 max-w-[180px]">
+                            {event.cancellation_note}
+                          </p>
                         )}
                       </div>
-                      {event.cancellation_note && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]">
-                          {event.cancellation_note}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
+                    </td>
 
-                  {/* Cancelled At */}
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      {formatCancelledAt(event.cancelled_at)}
-                    </div>
-                  </TableCell>
+                    {/* Status */}
+                    <td className="py-4">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {event.mayday_confirmed ? (
+                          <StatusBadge variant="info">Bestätigt</StatusBadge>
+                        ) : (
+                          <StatusBadge variant="neutral">Offen</StatusBadge>
+                        )}
+                        {event.rebooked_at && (
+                          <StatusBadge variant="success">Umgebucht</StatusBadge>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {formatCancelledAt(event.cancelled_at)}
+                        {event.canceller_name && (
+                          <span className="ml-1">von {event.canceller_name}</span>
+                        )}
+                      </p>
+                    </td>
 
-                  {/* Cancelled By */}
-                  <TableCell>
-                    <span className="text-sm">
-                      {event.canceller_name || 'System'}
-                    </span>
-                  </TableCell>
-
-                  {/* Actions */}
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {!event.mayday_confirmed && (
-                        <Button
-                          variant="outline"
-                          size="sm"
+                    {/* Aktionen */}
+                    <td className="py-4 pr-7.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleManualConfirm(event.id)
+                            setDetailEvent(event)
                           }}
-                          disabled={confirmingEventId === event.id}
-                          title="Manuell bestätigen"
-                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#fbb928]"
+                          title="Details anzeigen"
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          {confirmingEventId === event.id ? 'Wird bestätigt...' : 'Bestätigen'}
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setRescheduleEvent(event)
-                        }}
-                      >
-                        <CalendarPlus className="h-4 w-4 mr-1" />
-                        Neues Datum
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setArchiveEventId(event.id)
-                        }}
-                        title="Archivieren"
-                      >
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeleteEventId(event.id)
-                        }}
-                        title="Endgültig löschen"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                          <Eye className="size-[18px]" />
+                        </button>
+                        {!event.mayday_confirmed && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleManualConfirm(event.id)
+                            }}
+                            disabled={confirmingEventId === event.id}
+                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#3C50E0] disabled:opacity-50"
+                            title="Manuell bestätigen"
+                          >
+                            <CheckCircle2 className="size-[18px]" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setRescheduleEvent(event)
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#219653]"
+                          title="Neues Datum"
+                        >
+                          <CalendarPlus className="size-[18px]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setArchiveEventId(event.id)
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#FF9C55]"
+                          title="Archivieren"
+                        >
+                          <Archive className="size-[18px]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteEventId(event.id)
+                          }}
+                          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#F23030]"
+                          title="Endgültig löschen"
+                        >
+                          <Trash2 className="size-[18px]" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Compensation Notice for customer cancellations */}
       {filteredEvents.some(e => e.cancellation_reason === 'cancelled_by_customer') && (
@@ -445,6 +436,6 @@ export function CancellationsTable({ events }: CancellationsTableProps) {
         open={!!detailEvent}
         onOpenChange={(open) => !open && setDetailEvent(null)}
       />
-    </div>
+    </>
   )
 }

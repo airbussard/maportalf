@@ -12,8 +12,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -21,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { InputGroup } from '@/components/nextadmin'
 import { createEmployee } from '@/app/actions/employees'
 
 interface AddEmployeeDialogProps {
@@ -105,63 +105,48 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* First Name */}
-            <div className="space-y-2">
-              <Label htmlFor="first_name">
-                Vorname <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => handleChange('first_name', e.target.value)}
-                placeholder="Max"
-                disabled={isLoading}
-                required
-              />
-            </div>
+            <InputGroup
+              label="Vorname"
+              value={formData.first_name}
+              onChange={(e) => handleChange('first_name', e.target.value)}
+              placeholder="Max"
+              disabled={isLoading}
+              required
+            />
 
             {/* Last Name */}
-            <div className="space-y-2">
-              <Label htmlFor="last_name">
-                Nachname <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => handleChange('last_name', e.target.value)}
-                placeholder="Mustermann"
-                disabled={isLoading}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              E-Mail <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="max.mustermann@example.com"
+            <InputGroup
+              label="Nachname"
+              value={formData.last_name}
+              onChange={(e) => handleChange('last_name', e.target.value)}
+              placeholder="Mustermann"
               disabled={isLoading}
               required
             />
           </div>
 
+          {/* Email */}
+          <InputGroup
+            label="E-Mail"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="max.mustermann@example.com"
+            disabled={isLoading}
+            required
+          />
+
           {/* Role */}
-          <div className="space-y-2">
-            <Label htmlFor="role">
-              Rolle <span className="text-destructive">*</span>
+          <div className="space-y-3">
+            <Label htmlFor="role" className="block text-sm font-medium text-foreground">
+              Rolle <span className="ml-1 select-none text-destructive">*</span>
             </Label>
             <Select
               value={formData.role}
               onValueChange={(value: 'employee' | 'manager' | 'admin') => handleChange('role', value)}
               disabled={isLoading}
             >
-              <SelectTrigger id="role">
+              <SelectTrigger id="role" className="border-[1.5px] border-border focus:border-[#fbb928] dark:border-muted dark:bg-muted/30 dark:focus:border-[#fbb928]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -173,29 +158,23 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
           </div>
 
           {/* Phone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefon</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
-              placeholder="+49 123 456789"
-              disabled={isLoading}
-            />
-          </div>
+          <InputGroup
+            label="Telefon"
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => handleChange('phone', e.target.value)}
+            placeholder="+49 123 456789"
+            disabled={isLoading}
+          />
 
           {/* Department */}
-          <div className="space-y-2">
-            <Label htmlFor="department">Abteilung</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => handleChange('department', e.target.value)}
-              placeholder="z.B. Vertrieb, IT, HR"
-              disabled={isLoading}
-            />
-          </div>
+          <InputGroup
+            label="Abteilung"
+            value={formData.department}
+            onChange={(e) => handleChange('department', e.target.value)}
+            placeholder="z.B. Vertrieb, IT, HR"
+            disabled={isLoading}
+          />
 
           <DialogFooter>
             <Button

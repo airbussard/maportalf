@@ -64,12 +64,12 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <DashboardHeader role={userRole} userEmail={user?.email} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
         {children}
       </main>
 
       <footer className="border-t py-4 mt-auto">
-        <div className="mx-auto max-w-7xl px-4 text-center text-xs text-muted-foreground tracking-wide uppercase">
+        <div className="mx-auto max-w-screen-2xl px-4 text-center text-xs text-muted-foreground tracking-wide uppercase">
           Konzept &amp; Umsetzung{' '}
           <a href="https://knabe-gmbh.de" target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground hover:text-[#fbb928] transition-colors">
             Knabe GmbH

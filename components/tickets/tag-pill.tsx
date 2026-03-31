@@ -3,12 +3,10 @@ import type { Tag } from '@/lib/types/ticket'
 export function TagPill({ tag }: { tag: Tag }) {
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+      className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
       style={{
-        backgroundColor: `${tag.color}20`,
+        backgroundColor: `${tag.color}14`,
         color: tag.color,
-        borderColor: tag.color,
-        borderWidth: '1px'
       }}
     >
       {tag.name}

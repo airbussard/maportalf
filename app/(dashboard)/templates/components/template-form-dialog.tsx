@@ -15,16 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { InputGroup, TextAreaGroup, SelectGroup } from '@/components/nextadmin'
 import { toast } from 'sonner'
 import { Loader2, X, File, Trash2 } from 'lucide-react'
 
@@ -195,51 +186,38 @@ export function TemplateFormDialog({ mode, template, children }: TemplateFormDia
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z.B. Begrüßung Freundlich"
-              maxLength={100}
-              required
-            />
-          </div>
+          <InputGroup
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="z.B. Begrüßung Freundlich"
+            required
+          />
 
           {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Kategorie *</Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as TemplateCategory)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(CategoryLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SelectGroup
+            label="Kategorie"
+            defaultValue={category}
+            onChange={(e) => setCategory(e.target.value as TemplateCategory)}
+            items={Object.entries(CategoryLabels).map(([key, label]) => ({
+              value: key,
+              label: label,
+            }))}
+          />
 
           {/* Content */}
-          <div className="space-y-2">
-            <Label htmlFor="content">Inhalt *</Label>
-            <Textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Guten Tag,&#10;&#10;vielen Dank für Ihre Anfrage..."
-              rows={10}
-              required
-            />
-          </div>
+          <TextAreaGroup
+            label="Inhalt"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={"Guten Tag,\n\nvielen Dank für Ihre Anfrage..."}
+            rows={10}
+            required
+          />
 
           {/* Attachments */}
           <div className="space-y-2">
-            <Label>Anhänge (optional)</Label>
+            <label className="mb-3 block text-sm font-medium text-foreground">Anhänge (optional)</label>
 
             {/* Existing Attachments */}
             {attachments.length > 0 && (

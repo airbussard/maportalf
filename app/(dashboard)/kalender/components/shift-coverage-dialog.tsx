@@ -37,9 +37,10 @@ interface ShiftCoverageDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   employees: CoverageEmployee[]
+  defaultDate?: Date | null
 }
 
-export function ShiftCoverageDialog({ open, onOpenChange, employees }: ShiftCoverageDialogProps) {
+export function ShiftCoverageDialog({ open, onOpenChange, employees, defaultDate }: ShiftCoverageDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -55,12 +56,15 @@ export function ShiftCoverageDialog({ open, onOpenChange, employees }: ShiftCove
   // Employee Selection - nur EIN State mit Set für O(1) Lookup
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  // Bei Open: Alle auswählen
+  // Bei Open: Alle auswählen und Datum vorbelegen
   useEffect(() => {
     if (open && employees.length > 0) {
       setSelectedIds(new Set(employees.map(e => e.id)))
     }
-  }, [open, employees])
+    if (open && defaultDate) {
+      setRequestDate(defaultDate.toISOString().split('T')[0])
+    }
+  }, [open, employees, defaultDate])
 
   // Derived State: Alle ausgewählt?
   const allSelected = employees.length > 0 && selectedIds.size === employees.length

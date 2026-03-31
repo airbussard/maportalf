@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Play, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
@@ -76,67 +75,63 @@ export function CronJobCard({ title, description, icon, endpoint, onSuccess }: C
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              {icon}
-            </div>
-            <div>
-              <CardTitle className="text-lg">{title}</CardTitle>
-              <CardDescription className="mt-1">{description}</CardDescription>
-            </div>
+    <div className="rounded-[10px] bg-card px-7.5 py-6 shadow-1 dark:shadow-card">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            {icon}
           </div>
-          <Button
-            onClick={handleRun}
-            disabled={isRunning}
-            size="sm"
-            className="ml-4"
-          >
-            {isRunning ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Läuft...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Ausführen
-              </>
-            )}
-          </Button>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
         </div>
-      </CardHeader>
+        <Button
+          onClick={handleRun}
+          disabled={isRunning}
+          size="sm"
+          className="ml-4"
+        >
+          {isRunning ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Läuft...
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 mr-2" />
+              Ausführen
+            </>
+          )}
+        </Button>
+      </div>
 
       {lastResult && (
-        <CardContent>
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
-            {lastResult.success ? (
-              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">
-                {lastResult.success ? 'Erfolgreich' : 'Fehlgeschlagen'}
-              </p>
+        <div className="mt-4 flex items-start gap-3 p-3 rounded-lg bg-muted">
+          {lastResult.success ? (
+            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          ) : (
+            <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">
+              {lastResult.success ? 'Erfolgreich' : 'Fehlgeschlagen'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {lastResult.message}
+            </p>
+            {lastResult.processed !== undefined && lastResult.processed > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                {lastResult.message}
+                {lastResult.processed} Element(e) verarbeitet
               </p>
-              {lastResult.processed !== undefined && lastResult.processed > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {lastResult.processed} Element(e) verarbeitet
-                </p>
-              )}
-              <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                {lastResult.timestamp.toLocaleTimeString('de-DE')}
-              </div>
+            )}
+            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {lastResult.timestamp.toLocaleTimeString('de-DE')}
             </div>
           </div>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   )
 }

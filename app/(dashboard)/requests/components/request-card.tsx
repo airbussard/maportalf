@@ -1,18 +1,17 @@
 /**
  * Request Card Component
  *
- * Displays a single work request with all relevant details
+ * Displays a single work request as a NextAdmin chat-list style item
  * Used in list view and calendar view
  */
 
 'use client'
 
-import { Calendar, Clock, FileText, AlertCircle, Edit2, Trash2 } from 'lucide-react'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { StatusBadge } from './status-badge'
+import { Calendar, Clock, Edit2, Trash2, AlertCircle } from 'lucide-react'
+import { StatusBadge as NextAdminStatusBadge } from '@/components/nextadmin'
 import {
   type WorkRequest,
+  type WorkRequestStatus,
   formatRequestTime,
   formatRequestDateShort,
   getDayName,
@@ -28,6 +27,27 @@ interface RequestCardProps {
   onDelete?: (request: WorkRequest) => void
 }
 
+const statusVariantMap: Record<WorkRequestStatus, 'warning' | 'success' | 'error' | 'neutral'> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+  withdrawn: 'neutral',
+}
+
+const statusLabelMap: Record<WorkRequestStatus, string> = {
+  pending: 'Ausstehend',
+  approved: 'Genehmigt',
+  rejected: 'Abgelehnt',
+  withdrawn: 'Zuruckgezogen',
+}
+
+const statusColorMap: Record<WorkRequestStatus, string> = {
+  pending: '#FFA70B',
+  approved: '#219653',
+  rejected: '#F23030',
+  withdrawn: '#6B7280',
+}
+
 export function RequestCard({
   request,
   userId,
@@ -38,94 +58,90 @@ export function RequestCard({
   const canEdit = canEditRequest(request, userId)
   const canWithdraw = canWithdrawRequest(request, userId)
   const showActions = canEdit || canWithdraw || onDelete
+  const accentColor = statusColorMap[request.status]
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="pt-6">
-        {/* Header: Date + Status */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="font-medium">{getDayName(request.request_date)}</p>
-              <p className="text-sm text-muted-foreground">
-                {formatRequestDateShort(request.request_date)}
-              </p>
-            </div>
+    <div className="border-b border-border last:border-b-0">
+      {/* Main row */}
+      <div className="flex items-center gap-4 px-7.5 py-4 hover:bg-accent/50 transition-colors">
+        {/* Icon circle */}
+        <div
+          className="flex size-11 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${accentColor}10` }}
+        >
+          <Calendar className="size-5" style={{ color: accentColor }} />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-foreground">
+            {getDayName(request.request_date)}, {formatRequestDateShort(request.request_date)}
+          </h3>
+          <div className="flex items-center gap-3 mt-0.5">
+            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Clock className="size-3.5" />
+              {formatRequestTime(request)}
+            </span>
+            {request.reason && (
+              <span className="text-sm text-muted-foreground truncate">
+                {request.reason}
+              </span>
+            )}
           </div>
-          <StatusBadge status={request.status} />
         </div>
 
-        {/* Time Info */}
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{formatRequestTime(request)}</span>
-        </div>
+        {/* Status badge + actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          <NextAdminStatusBadge variant={statusVariantMap[request.status]}>
+            {statusLabelMap[request.status]}
+          </NextAdminStatusBadge>
 
-        {/* Reason */}
-        {request.reason && (
-          <div className="flex items-start gap-2 mb-3">
-            <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {request.reason}
+          {showActions && (
+            <div className="flex items-center gap-0.5 ml-1">
+              {canEdit && onEdit && (
+                <button
+                  onClick={() => onEdit(request)}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#fbb928]"
+                  title="Bearbeiten"
+                >
+                  <Edit2 className="size-4" />
+                </button>
+              )}
+              {canWithdraw && onWithdraw && (
+                <button
+                  onClick={() => onWithdraw(request)}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#F23030]/10 hover:text-[#F23030]"
+                  title="Zuruckziehen"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              )}
+              {onDelete && request.status !== 'pending' && (
+                <button
+                  onClick={() => onDelete(request)}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-[#F23030]/10 hover:text-[#F23030]"
+                  title="Loschen"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Rejection reason banner */}
+      {request.status === 'rejected' && request.rejection_reason && (
+        <div className="flex items-start gap-2 mx-7.5 mb-4 px-4 py-3 rounded-lg bg-[#F23030]/[0.06] dark:bg-[#F23030]/[0.1]">
+          <AlertCircle className="size-4 shrink-0 mt-0.5 text-[#F23030]" />
+          <div>
+            <p className="text-xs font-medium text-[#F23030]">Ablehnungsgrund:</p>
+            <p className="text-sm text-[#F23030]/80 dark:text-[#F56060]">
+              {request.rejection_reason}
             </p>
           </div>
-        )}
-
-        {/* Rejection Reason */}
-        {request.status === 'rejected' && request.rejection_reason && (
-          <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-md">
-            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-red-900 dark:text-red-100">
-                Ablehnungsgrund:
-              </p>
-              <p className="text-sm text-red-700 dark:text-red-300">
-                {request.rejection_reason}
-              </p>
-            </div>
-          </div>
-        )}
-      </CardContent>
-
-      {/* Actions */}
-      {showActions && (
-        <CardFooter className="flex gap-2 pt-0">
-          {canEdit && onEdit && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(request)}
-              className="flex-1"
-            >
-              <Edit2 className="h-3 w-3 mr-2" />
-              Bearbeiten
-            </Button>
-          )}
-          {canWithdraw && onWithdraw && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onWithdraw(request)}
-              className="flex-1"
-            >
-              <Trash2 className="h-3 w-3 mr-2" />
-              Zurückziehen
-            </Button>
-          )}
-          {onDelete && request.status !== 'pending' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(request)}
-              className="flex-1 text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-3 w-3 mr-2" />
-              Löschen
-            </Button>
-          )}
-        </CardFooter>
+        </div>
       )}
-    </Card>
+    </div>
   )
 }

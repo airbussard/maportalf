@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, TrendingUp, TrendingDown, Clock, Users, AlertCircle, Shield, Calendar } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, Clock, Users, AlertCircle, Shield, Calendar, Ticket, Timer, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
@@ -115,15 +115,15 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7.5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+          <h1 className="text-[26px] font-bold leading-[30px] text-foreground flex items-center gap-2">
+            <BarChart3 className="h-7 w-7 text-primary" />
             Ticket-Statistiken
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Umfassende Analysen und Insights
           </p>
         </div>
@@ -152,88 +152,82 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt Tickets</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTickets}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Im gewählten Zeitraum
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 2xl:gap-7.5">
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#3C50E0]/10">
+              <Ticket className="size-6 text-[#3C50E0]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{stats.totalTickets}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Gesamt Tickets</p>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Offene Tickets</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.openTickets}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Aktuell ungelöst
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#FF9C55]/10">
+              <Clock className="size-6 text-[#FF9C55]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{stats.openTickets}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Offene Tickets</p>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ø Antwortzeit</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatHours(stats.avgResponseTime)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Durchschnittlich
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#219653]/10">
+              <Timer className="size-6 text-[#219653]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{formatHours(stats.avgResponseTime)}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Ø Antwortzeit</p>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ø Lösungszeit</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatHours(stats.avgResolutionTime)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Bis zur Lösung
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#fbb928]/10">
+              <CheckCircle2 className="size-6 text-[#fbb928]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{formatHours(stats.avgResolutionTime)}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Ø Lösungszeit</p>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Spam-Rate</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.spamRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Erkannte Spam-Tickets
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#3C50E0]/10">
+              <Shield className="size-6 text-[#3C50E0]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{stats.spamRate.toFixed(1)}%</h4>
+              <p className="text-sm font-medium text-muted-foreground">Spam-Rate</p>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team-Größe</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.teamWorkload.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Aktive Bearbeiter
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#219653]/10">
+              <Users className="size-6 text-[#219653]" />
+            </div>
+            <div>
+              <h4 className="text-heading-6 font-bold text-foreground">{stats.teamWorkload.length}</h4>
+              <p className="text-sm font-medium text-muted-foreground">Team-Größe</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Charts Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="overview">Übersicht</TabsTrigger>
           <TabsTrigger value="distribution">Verteilung</TabsTrigger>
@@ -245,79 +239,73 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket-Volumen über Zeit</CardTitle>
-                <CardDescription>Anzahl Tickets pro Tag</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Ticket-Volumen über Zeit</h2>
+              </div>
+              <div className="-ml-4 -mr-5">
                 <TicketVolumeChart data={stats.ticketsOverTime} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Status-Verteilung</CardTitle>
-                <CardDescription>Aktuelle Ticket-Status</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Status-Verteilung</h2>
+              </div>
+              <div className="-mx-3">
                 <StatusDistributionChart data={stats.statusDistribution} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         {/* Distribution Tab */}
         <TabsContent value="distribution" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Status-Verteilung</CardTitle>
-                <CardDescription>Verteilung nach Ticket-Status</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Status-Verteilung</h2>
+              </div>
+              <div className="-mx-3">
                 <StatusDistributionChart data={stats.statusDistribution} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Prioritäts-Verteilung</CardTitle>
-                <CardDescription>Verteilung nach Priorität</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Prioritäts-Verteilung</h2>
+              </div>
+              <div className="-mx-3">
                 <StatusDistributionChart data={stats.priorityDistribution.map(p => ({
                   status: p.priority,
                   count: p.count,
                   percentage: p.percentage
                 }))} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         {/* Time Analysis Tab */}
         <TabsContent value="time" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Wochentags-Analyse</CardTitle>
-                <CardDescription>Ticket-Verteilung nach Wochentag</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Wochentags-Analyse</h2>
+              </div>
+              <div className="-ml-4 -mr-5">
                 <WeekdayDistributionChart data={stats.weekdayDistribution} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Ticket-Trend</CardTitle>
-                <CardDescription>Entwicklung über den Zeitraum</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-bold text-foreground">Ticket-Trend</h2>
+              </div>
+              <div className="-ml-4 -mr-5">
                 <TicketVolumeChart data={stats.ticketsOverTime} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
@@ -362,72 +350,73 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
           ) : bookingStats ? (
             <>
               <div className={`grid grid-cols-1 ${compareYear && bookingStats.yearOverYearChange !== undefined ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4 mb-4`}>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Gesamt Buchungen</CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{bookingStats.totalBookings}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Im gesamten Zeitraum
-                    </p>
-                  </CardContent>
-                </Card>
+                <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+                  <div className="flex items-center gap-4">
+                    <div className="flex size-12 items-center justify-center rounded-full bg-[#3C50E0]/10">
+                      <Calendar className="size-6 text-[#3C50E0]" />
+                    </div>
+                    <div>
+                      <h4 className="text-heading-6 font-bold text-foreground">{bookingStats.totalBookings}</h4>
+                      <p className="text-sm font-medium text-muted-foreground">Gesamt Buchungen</p>
+                    </div>
+                  </div>
+                </div>
 
                 {bookingStats.availableYears.length > 0 && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Daten verfügbar</CardTitle>
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        {bookingStats.availableYears[bookingStats.availableYears.length - 1]} - {bookingStats.availableYears[0]}
+                  <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+                    <div className="flex items-center gap-4">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-[#FF9C55]/10">
+                        <BarChart3 className="size-6 text-[#FF9C55]" />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {bookingStats.availableYears.length} {bookingStats.availableYears.length === 1 ? 'Jahr' : 'Jahre'}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      <div>
+                        <h4 className="text-heading-6 font-bold text-foreground">
+                          {bookingStats.availableYears[bookingStats.availableYears.length - 1]} - {bookingStats.availableYears[0]}
+                        </h4>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {bookingStats.availableYears.length} {bookingStats.availableYears.length === 1 ? 'Jahr' : 'Jahre'} verfügbar
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {compareYear && bookingStats.yearOverYearChange !== undefined && bookingStats.yearOverYearChange !== null && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">vs. Vorjahr</CardTitle>
-                      {bookingStats.yearOverYearChange >= 0
-                        ? <TrendingUp className="h-4 w-4 text-green-600" />
-                        : <TrendingDown className="h-4 w-4 text-red-500" />
-                      }
-                    </CardHeader>
-                    <CardContent>
-                      <div className={`text-2xl font-bold ${bookingStats.yearOverYearChange >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {bookingStats.yearOverYearChange >= 0 ? '+' : ''}{bookingStats.yearOverYearChange}%
+                  <div className="rounded-[10px] bg-card p-6 shadow-1 dark:shadow-card">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex size-12 items-center justify-center rounded-full ${bookingStats.yearOverYearChange >= 0 ? 'bg-[#219653]/10' : 'bg-[#F23030]/10'}`}>
+                        {bookingStats.yearOverYearChange >= 0
+                          ? <TrendingUp className="size-6 text-[#219653]" />
+                          : <TrendingDown className="size-6 text-[#F23030]" />
+                        }
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Vorjahr: {bookingStats.previousYearTotal} Buchungen
-                      </p>
-                    </CardContent>
-                  </Card>
+                      <div>
+                        <h4 className={`text-heading-6 font-bold ${bookingStats.yearOverYearChange >= 0 ? 'text-[#219653]' : 'text-[#F23030]'}`}>
+                          {bookingStats.yearOverYearChange >= 0 ? '+' : ''}{bookingStats.yearOverYearChange}%
+                        </h4>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Vorjahr: {bookingStats.previousYearTotal} Buchungen
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>
+              <div className="rounded-[10px] bg-card px-7.5 pb-6 pt-7.5 shadow-1 dark:shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                  <h2 className="text-lg font-bold text-foreground">
                     Buchungen pro {bookingGroupBy === 'month' ? 'Monat' : bookingGroupBy === 'week' ? 'Woche' : 'Jahr'}
-                  </CardTitle>
-                  <CardDescription>
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
                     {bookingGroupBy === 'year'
                       ? 'Alle verfügbaren Jahre'
                       : `Letzte ${bookingStats.data.length} ${bookingGroupBy === 'month' ? 'Monate' : 'Wochen'}`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                  </p>
+                </div>
+                <div className="-ml-4 -mr-5">
                   <BookingVolumeChart data={bookingStats.data} groupBy={bookingGroupBy} showComparison={compareYear} />
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </>
           ) : (
             <Card className="p-8 text-center">
@@ -439,15 +428,13 @@ export function StatsContent({ stats, initialTimeRange, bookingStats: initialBoo
 
         {/* Team Tab - Temporarily Hidden */}
         {/* <TabsContent value="team" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team-Auslastung</CardTitle>
-              <CardDescription>Zugewiesene Tickets pro Mitarbeiter</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TeamWorkloadTable data={stats.teamWorkload} />
-            </CardContent>
-          </Card>
+          <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+            <div className="px-7.5 pt-7.5 pb-4">
+              <h2 className="text-lg font-bold text-foreground">Team Auslastung</h2>
+              <p className="text-sm text-muted-foreground mt-1">Zugewiesene Tickets pro Mitarbeiter</p>
+            </div>
+            <TeamWorkloadTable data={stats.teamWorkload} />
+          </div>
         </TabsContent> */}
       </Tabs>
     </div>

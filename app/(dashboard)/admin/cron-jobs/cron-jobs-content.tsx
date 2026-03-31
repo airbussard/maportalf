@@ -1,23 +1,12 @@
 'use client'
 
-import { Settings, Mail, Calendar, RefreshCw, Database } from 'lucide-react'
+import { Mail, Calendar, RefreshCw, Database } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CronJobCard } from './components/cron-job-card'
 
 export function CronJobsContent() {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Settings className="h-8 w-8 text-primary" />
-          Cron Jobs Verwaltung
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Manuelle Ausführung und Überwachung von automatisierten Hintergrund-Jobs
-        </p>
-      </div>
-
       {/* Info Alert */}
       <Alert>
         <RefreshCw className="h-4 w-4" />
@@ -63,7 +52,7 @@ export function CronJobsContent() {
       </div>
 
       {/* Info Text */}
-      <div className="mt-8 p-4 rounded-lg border bg-muted/50">
+      <div className="mt-8 rounded-[10px] bg-card px-7.5 py-6 shadow-1 dark:shadow-card">
         <h3 className="font-semibold mb-2">Hinweise:</h3>
         <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
           <li>Die Cron Jobs werden automatisch alle 5 Minuten von einem externen Service ausgeführt</li>

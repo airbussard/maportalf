@@ -1,12 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+import { InputGroup, NextAlert } from '@/components/nextadmin'
 import { updatePassword } from '@/app/actions/settings'
-import { Key } from 'lucide-react'
+import { Lock } from 'lucide-react'
 
 export function PasswordSection() {
   const [loading, setLoading] = useState(false)
@@ -48,58 +45,67 @@ export function PasswordSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Passwort ändern</CardTitle>
-        <CardDescription>
-          Ändern Sie Ihr Anmeldepasswort
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      <h2 className="border-b border-border px-4 py-4 text-base font-medium text-foreground sm:px-6 xl:px-7.5">
+        Passwort ändern
+      </h2>
+
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 xl:p-7.5">
         {message && (
-          <div className={`mb-4 p-3 rounded-md text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {message.text}
-          </div>
+          <NextAlert
+            variant={message.type === 'success' ? 'success' : 'error'}
+            title={message.type === 'success' ? 'Erfolg' : 'Fehler'}
+            description={message.text}
+            className="mb-5.5"
+          />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new_password">Neues Passwort</Label>
-            <Input
-              id="new_password"
-              type="password"
-              value={formData.newPassword}
-              onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-              disabled={loading}
-              placeholder="Mindestens 6 Zeichen"
-              minLength={6}
-              required
-            />
-          </div>
+        <div className="mb-5.5">
+          <InputGroup
+            label="Neues Passwort"
+            type="password"
+            icon={<Lock className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.newPassword}
+            onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+            disabled={loading}
+            placeholder="Mindestens 6 Zeichen"
+            required
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirm_password">Passwort bestätigen</Label>
-            <Input
-              id="confirm_password"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              disabled={loading}
-              placeholder="Passwort erneut eingeben"
-              required
-            />
-          </div>
+        <div className="mb-5.5">
+          <InputGroup
+            label="Passwort bestätigen"
+            type="password"
+            icon={<Lock className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.confirmPassword}
+            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            disabled={loading}
+            placeholder="Passwort erneut eingeben"
+            required
+          />
+        </div>
 
-          <Button type="submit" disabled={loading} className="w-full md:w-auto">
-            <Key className="w-4 h-4 mr-2" />
+        {/* Action buttons - NextAdmin style */}
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setFormData({ newPassword: '', confirmPassword: '' })}
+            className="rounded-lg border border-border px-6 py-2.5 font-medium text-foreground hover:shadow-1 transition-shadow"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-[#fbb928] px-6 py-2.5 font-medium text-zinc-900 hover:bg-[#e5a820] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {loading ? 'Wird geändert...' : 'Passwort ändern'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }

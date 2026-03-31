@@ -1,13 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
+import { InputGroup, NextAlert } from '@/components/nextadmin'
 import { updateProfile } from '@/app/actions/settings'
 import { updateEmployeeEmail } from '@/app/actions/employees'
-import { Save } from 'lucide-react'
+import { User, Mail, Phone, Building2, MapPin } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -61,105 +58,126 @@ export function ProfileSection({ profile }: { profile: Profile }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Persönliche Informationen</CardTitle>
-        <CardDescription>
-          Aktualisieren Sie Ihre Kontaktdaten und persönlichen Informationen
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      <h2 className="border-b border-border px-4 py-4 text-base font-medium text-foreground sm:px-6 xl:px-7.5">
+        Persönliche Informationen
+      </h2>
+
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 xl:p-7.5">
         {message && (
-          <div className={`mb-4 p-3 rounded-md text-sm ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {message.text}
-          </div>
+          <NextAlert
+            variant={message.type === 'success' ? 'success' : 'error'}
+            title={message.type === 'success' ? 'Erfolg' : 'Fehler'}
+            description={message.text}
+            className="mb-5.5"
+          />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">Vorname</Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                disabled={loading}
-              />
-            </div>
+        {/* Two-column grid for name fields */}
+        <div className="mb-5.5 flex flex-col gap-5.5 sm:flex-row">
+          <InputGroup
+            className="w-full sm:w-1/2"
+            label="Vorname"
+            icon={<User className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.first_name}
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            disabled={loading}
+          />
 
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Nachname</Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-          </div>
+          <InputGroup
+            className="w-full sm:w-1/2"
+            label="Nachname"
+            icon={<User className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.last_name}
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            disabled={loading}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              disabled={loading}
-            />
-            {formData.email !== profile.email && (
-              <p className="text-xs text-amber-600">
-                E-Mail-Adresse wird geändert. Nach dem Speichern müssen Sie sich neu anmelden.
-              </p>
-            )}
-          </div>
+        {/* Email field */}
+        <div className="mb-5.5">
+          <InputGroup
+            label="E-Mail"
+            type="email"
+            icon={<Mail className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            disabled={loading}
+          />
+          {formData.email !== profile.email && (
+            <p className="text-xs text-amber-600 mt-1.5 ml-1">
+              E-Mail-Adresse wird geändert. Nach dem Speichern müssen Sie sich neu anmelden.
+            </p>
+          )}
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                disabled={loading}
-                placeholder="z.B. +49 123 456789"
-              />
-            </div>
+        {/* Two-column grid for phone and department */}
+        <div className="mb-5.5 flex flex-col gap-5.5 sm:flex-row">
+          <InputGroup
+            className="w-full sm:w-1/2"
+            label="Telefon"
+            type="tel"
+            icon={<Phone className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            disabled={loading}
+            placeholder="z.B. +49 123 456789"
+          />
 
-            <div className="space-y-2">
-              <Label htmlFor="department">Abteilung/Position</Label>
-              <Input
-                id="department"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                disabled={loading}
-                placeholder="z.B. Flugsimulator-Techniker"
-              />
-            </div>
-          </div>
+          <InputGroup
+            className="w-full sm:w-1/2"
+            label="Abteilung/Position"
+            icon={<Building2 className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.department}
+            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+            disabled={loading}
+            placeholder="z.B. Flugsimulator-Techniker"
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Adresse</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              disabled={loading}
-              placeholder="Straße, PLZ Stadt"
-            />
-          </div>
+        {/* Address field */}
+        <div className="mb-5.5">
+          <InputGroup
+            label="Adresse"
+            icon={<MapPin className="w-5 h-5" />}
+            iconPosition="left"
+            value={formData.address}
+            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            disabled={loading}
+            placeholder="Straße, PLZ Stadt"
+          />
+        </div>
 
-          <Button type="submit" disabled={loading} className="w-full md:w-auto">
-            <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Wird gespeichert...' : 'Änderungen speichern'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Action buttons - NextAdmin style */}
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setFormData({
+              first_name: profile.first_name || '',
+              last_name: profile.last_name || '',
+              email: profile.email || '',
+              phone: profile.phone || '',
+              department: profile.department || '',
+              address: profile.address || '',
+            })}
+            className="rounded-lg border border-border px-6 py-2.5 font-medium text-foreground hover:shadow-1 transition-shadow"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-[#fbb928] px-6 py-2.5 font-medium text-zinc-900 hover:bg-[#e5a820] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Wird gespeichert...' : 'Speichern'}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }

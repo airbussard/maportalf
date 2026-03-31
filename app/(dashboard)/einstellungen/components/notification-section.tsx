@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { updateNotificationSettings } from '@/app/actions/settings'
@@ -52,45 +51,40 @@ export function NotificationSection({ role, receiveRequestEmails }: Notification
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Benachrichtigungen</CardTitle>
-        <CardDescription>
-          Verwalten Sie Ihre E-Mail-Benachrichtigungen
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between space-x-4">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Mail className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <Label htmlFor="request-emails" className="text-base font-medium cursor-pointer">
-                  Requests per Mail
-                </Label>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Erhalten Sie E-Mails wenn neue Arbeitsanträge eingehen mit direkter Genehmigung/Ablehnung
-                </p>
-              </div>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      <h2 className="border-b border-border px-4 py-4 text-base font-medium text-foreground sm:px-6 xl:px-7.5">
+        Benachrichtigungen
+      </h2>
+      <div className="p-4 sm:p-6 xl:p-7.5">
+        <div className="flex items-center justify-between space-x-4">
+          <div className="flex items-center space-x-3 flex-1">
+            <div className="rounded-full p-2.5 bg-[#fbb928]/10">
+              <Mail className="w-5 h-5 text-[#fbb928]" />
             </div>
-            <Switch
-              id="request-emails"
-              checked={emailEnabled}
-              onCheckedChange={handleToggle}
-              disabled={isLoading}
-            />
+            <div className="flex-1">
+              <Label htmlFor="request-emails" className="text-base font-medium cursor-pointer">
+                Requests per Mail
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Erhalten Sie E-Mails wenn neue Arbeitsanträge eingehen mit direkter Genehmigung/Ablehnung
+              </p>
+            </div>
           </div>
-
-          <div className="pt-4 border-t">
-            <p className="text-xs text-muted-foreground">
-              Diese Einstellung ist nur für Manager und Administratoren verfügbar.
-              E-Mails enthalten Buttons zum direkten Annehmen oder Ablehnen von Arbeitsanträgen.
-            </p>
-          </div>
+          <Switch
+            id="request-emails"
+            checked={emailEnabled}
+            onCheckedChange={handleToggle}
+            disabled={isLoading}
+          />
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="pt-4 mt-4 border-t border-border">
+          <p className="text-xs text-muted-foreground">
+            Diese Einstellung ist nur für Manager und Administratoren verfügbar.
+            E-Mails enthalten Buttons zum direkten Annehmen oder Ablehnen von Arbeitsanträgen.
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }

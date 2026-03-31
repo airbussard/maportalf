@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { checkSystemStatus, type SystemStatus } from '@/app/actions/system'
 import { Database, Server, Zap } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -30,142 +29,105 @@ export function SystemStatusWidget() {
 
   if (loading || !status) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>System-Status</CardTitle>
-          <CardDescription>Prüfe Status...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="rounded-[10px] bg-card py-6 shadow-1 dark:shadow-card">
+        <h2 className="mb-4 px-7.5 text-lg font-bold text-foreground">System-Status</h2>
+        <div className="flex items-center justify-center py-10">
+          <div className="animate-spin rounded-full size-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
     )
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>System-Status</CardTitle>
-        <CardDescription>
-          Letzte Prüfung: {formatDistanceToNow(lastChecked, { addSuffix: true, locale: de })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Database Status */}
-          <div className="relative group">
-            <div className={`
-              relative overflow-hidden rounded-lg border p-4 transition-all duration-300
-              ${status.database.online
-                ? 'bg-gradient-to-br from-green-50/50 to-emerald-50/50 border-green-200 dark:from-green-950/20 dark:to-emerald-950/20 dark:border-green-900'
-                : 'bg-gradient-to-br from-red-50/50 to-rose-50/50 border-red-200 dark:from-red-950/20 dark:to-rose-950/20 dark:border-red-900'
-              }
-            `}>
-              {/* Animated gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+  const services = [
+    {
+      name: 'Datenbank',
+      icon: Database,
+      online: status.database.online,
+      message: status.database.message,
+      metric: status.database.responseTime ? `${status.database.responseTime}ms` : null,
+      metricLabel: 'Antwortzeit',
+    },
+    {
+      name: 'System',
+      icon: Server,
+      online: true,
+      message: `Version ${status.system.version}`,
+      metric: status.system.uptime,
+      metricLabel: 'Betriebszeit',
+      metricIcon: Zap,
+    },
+  ]
 
-              {/* Content */}
-              <div className="relative z-10 space-y-3">
+  return (
+    <div className="rounded-[10px] bg-card py-6 shadow-1 dark:shadow-card">
+      <div className="mb-5 flex items-center justify-between px-7.5">
+        <h2 className="text-lg font-bold text-foreground">System-Status</h2>
+        <span className="text-xs font-medium text-muted-foreground">
+          Letzte Prüfung: {formatDistanceToNow(lastChecked, { addSuffix: true, locale: de })}
+        </span>
+      </div>
+
+      <div className="grid gap-4 px-7.5 pb-1 sm:grid-cols-2 2xl:gap-7.5">
+        {services.map(service => {
+          const Icon = service.icon
+          const MetricIcon = service.metricIcon
+
+          return (
+            <div
+              key={service.name}
+              className={`
+                rounded-[10px] border bg-card p-5 transition-shadow duration-300 hover:shadow-card-2
+                ${!service.online ? 'border-[#F23030]/30' : 'border-border'}
+              `}
+            >
+              <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`
-                    p-2 rounded-lg transition-transform duration-300 group-hover:rotate-12
-                    ${status.database.online
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
+                    flex size-11 items-center justify-center rounded-full
+                    ${service.online
+                      ? 'bg-[#219653]/10 text-[#219653]'
+                      : 'bg-[#F23030]/10 text-[#F23030]'
                     }
                   `}>
-                    <Database className="w-5 h-5" />
+                    <Icon className="size-5" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-sm">Datenbank</h3>
+                  <div>
+                    <h3 className="font-semibold text-sm text-foreground">{service.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{service.message}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Pulsing indicator */}
-                  <div className="relative flex h-3 w-3">
-                    {status.database.online && (
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    )}
-                    <span className={`
-                      relative inline-flex rounded-full h-3 w-3
-                      ${status.database.online ? 'bg-green-500' : 'bg-red-500'}
-                    `}></span>
-                  </div>
-                  <span className={`
-                    font-bold text-sm
-                    ${status.database.online ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}
-                  `}>
-                    {status.database.online ? 'Online' : 'Offline'}
-                  </span>
-                  {status.database.responseTime && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-white/50 dark:bg-black/20">
-                      {status.database.responseTime}ms
-                    </span>
+                {/* Pulsing status dot */}
+                <div className="relative flex size-3 mt-1">
+                  {service.online && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#219653] opacity-75" />
                   )}
+                  <span className={`
+                    relative inline-flex rounded-full size-3
+                    ${service.online ? 'bg-[#219653]' : 'bg-[#F23030]'}
+                  `} />
                 </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {status.database.message}
-                </p>
               </div>
 
-              {/* Glowing effect */}
-              {status.database.online && (
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg opacity-0 group-hover:opacity-20 blur transition duration-300"></div>
-              )}
-            </div>
-          </div>
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`
+                  text-sm font-bold
+                  ${service.online ? 'text-[#219653]' : 'text-[#F23030]'}
+                `}>
+                  {service.online ? 'Online' : 'Offline'}
+                </span>
 
-          {/* System Status */}
-          <div className="relative group">
-            <div className={`
-              relative overflow-hidden rounded-lg border p-4 transition-all duration-300
-              bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-blue-200
-              dark:from-blue-950/20 dark:to-indigo-950/20 dark:border-blue-900
-            `}>
-              {/* Animated gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-
-              {/* Content */}
-              <div className="relative z-10 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 transition-transform duration-300 group-hover:scale-110">
-                    <Server className="w-5 h-5" />
+                {service.metric && (
+                  <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1">
+                    {MetricIcon && <MetricIcon className="size-3 text-muted-foreground" />}
+                    <span className="text-xs font-medium text-muted-foreground">{service.metric}</span>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-sm">System</h3>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {/* Pulsing indicator */}
-                  <div className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                  </div>
-                  <span className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                    Online
-                  </span>
-                  <div className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-white/50 dark:bg-black/20">
-                    <Zap className="w-3 h-3" />
-                    {status.system.uptime}
-                  </div>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Version {status.system.version}
-                </p>
+                )}
               </div>
-
-              {/* Glowing effect */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-20 blur transition duration-300"></div>
             </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          )
+        })}
+      </div>
+    </div>
   )
 }

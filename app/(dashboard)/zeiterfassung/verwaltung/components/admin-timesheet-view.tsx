@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -17,6 +16,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
+import { StatCard, TableCard } from '@/components/nextadmin'
+import { Clock, CalendarDays, Briefcase, Banknote } from 'lucide-react'
 import {
   getTimesheetSummary, regenerateAllTimesheets,
   closeTimesheetMonth, reopenTimesheetMonth, getTimesheetEntries,
@@ -144,12 +145,8 @@ export function AdminTimesheetView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Zeiterfassung Verwaltung</h1>
-          <p className="text-sm text-muted-foreground">Kalenderbasierte Abrechnung - Monatsübersicht</p>
-        </div>
+      {/* Header Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="icon" onClick={prevMonth}>
             <ChevronLeft className="h-4 w-4" />
@@ -182,36 +179,35 @@ export function AdminTimesheetView() {
       {/* Totals */}
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Gesamtstunden</p>
-              <p className="text-xl font-bold">{formatMinutes(Math.round(data.totals.total_hours * 60))}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Arbeitstage</p>
-              <p className="text-xl font-bold">{data.totals.total_days}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Termine</p>
-              <p className="text-xl font-bold">{data.totals.total_bookings}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground">Gesamtkosten</p>
-              <p className="text-xl font-bold">{formatCurrency(data.totals.total_pay)}</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Gesamtstunden"
+            value={formatMinutes(Math.round(data.totals.total_hours * 60))}
+            icon={Clock}
+            iconColor="#fbb928"
+          />
+          <StatCard
+            label="Arbeitstage"
+            value={data.totals.total_days}
+            icon={CalendarDays}
+            iconColor="#3C50E0"
+          />
+          <StatCard
+            label="Termine"
+            value={data.totals.total_bookings}
+            icon={Briefcase}
+            iconColor="#219653"
+          />
+          <StatCard
+            label="Gesamtkosten"
+            value={formatCurrency(data.totals.total_pay)}
+            icon={Banknote}
+            iconColor="#F23030"
+          />
         </div>
       )}
 
       {/* Employee Table */}
-      <Card>
-        <CardContent className="p-0">
+      <TableCard title="Mitarbeiter-Übersicht">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -313,8 +309,7 @@ export function AdminTimesheetView() {
               )}
             </table>
           </div>
-        </CardContent>
-      </Card>
+      </TableCard>
 
       {/* Detail Dialog */}
       {detailEmployee && (

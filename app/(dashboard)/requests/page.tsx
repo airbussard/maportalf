@@ -12,6 +12,7 @@ import { getMyWorkRequests } from '@/app/actions/work-requests'
 import { getCalendarEvents } from '@/app/actions/calendar-events'
 import { RequestsContent } from './requests-content'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export const metadata = {
   title: 'Meine Requests | Flighthour',
@@ -70,7 +71,8 @@ async function RequestsPageContent() {
 
 export default function RequestsPage() {
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-7.5">
+      <Breadcrumb pageName="Requests" />
       <Suspense fallback={<RequestsPageSkeleton />}>
         <RequestsPageContent />
       </Suspense>

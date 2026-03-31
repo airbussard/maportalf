@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import type { Ticket } from '@/lib/types/ticket'
 import { TicketRow } from './ticket-row'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
@@ -101,70 +100,88 @@ export function TicketList({
 
   if (tickets.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
+      <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+        <div className="flex flex-col items-center justify-center py-16">
           <p className="text-muted-foreground">Keine Tickets gefunden</p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
       {/* Bulk Actions Bar */}
       {selectedTickets.size > 0 && (
-        <Card className="border-primary">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="font-medium">
-                  {selectedTickets.size} ausgewählt
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Status ändern..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Offen</SelectItem>
-                    <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                    <SelectItem value="resolved">Gelöst</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleBulkStatusUpdate}
-                  disabled={!bulkStatus || isPending}
-                  variant="outline"
-                >
-                  Status anwenden
-                </Button>
-                <Button
-                  onClick={handleBulkDelete}
-                  disabled={isPending}
-                  variant="destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Löschen
-                </Button>
-              </div>
+        <div className="border-b border-[#eee] dark:border-dark-3 bg-[#fbb928]/[0.04] px-5.5 xl:px-7.5 py-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <span className="text-sm font-medium text-foreground">
+              {selectedTickets.size} ausgewählt
+            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                <SelectTrigger className="w-[180px] h-9 text-sm">
+                  <SelectValue placeholder="Status ändern..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Offen</SelectItem>
+                  <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                  <SelectItem value="resolved">Gelöst</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleBulkStatusUpdate}
+                disabled={!bulkStatus || isPending}
+                variant="outline"
+                size="sm"
+              >
+                Anwenden
+              </Button>
+              <Button
+                onClick={handleBulkDelete}
+                disabled={isPending}
+                variant="destructive"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                Löschen
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          {/* Select All Header */}
-          <div className="p-4 border-b flex items-center gap-3">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm font-medium">Alle auswählen</span>
-          </div>
-
-          <div className="divide-y">
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-[#eee] dark:border-dark-3 bg-[#F7F9FC] dark:bg-dark-2">
+              <th className="py-4 pl-5.5 xl:pl-7.5 w-12 text-left">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+              </th>
+              <th className="py-4 text-left text-sm font-medium text-muted-foreground min-w-[200px]">
+                Titel
+              </th>
+              <th className="py-4 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                Zugewiesen
+              </th>
+              <th className="py-4 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                Status
+              </th>
+              <th className="py-4 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                Priorität
+              </th>
+              <th className="py-4 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                Erstellt
+              </th>
+              <th className="py-4 pr-5.5 xl:pr-7.5 text-right text-sm font-medium text-muted-foreground">
+                Aktionen
+              </th>
+            </tr>
+          </thead>
+          <tbody>
             {tickets.map((ticket) => (
               <TicketRow
                 key={ticket.id}
@@ -175,23 +192,25 @@ export function TicketList({
                 searchParams={searchParams}
               />
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </tbody>
+        </table>
+      </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-5.5 xl:px-7.5 py-4 border-t border-[#eee] dark:border-dark-3">
           <p className="text-sm text-muted-foreground">
             Seite {currentPage} von {totalPages}
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
+              className="h-9 px-3"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4 mr-1" />
               Zurück
             </Button>
             <Button
@@ -199,9 +218,10 @@ export function TicketList({
               size="sm"
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
+              className="h-9 px-3"
             >
               Weiter
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
         </div>

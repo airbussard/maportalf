@@ -27,6 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/nextadmin'
 import { cn } from '@/lib/utils'
 
 interface CalendarEvent {
@@ -210,7 +211,7 @@ export function EventList({
           <p>Keine Termine im ausgewählten Zeitraum</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-border">
           {events.map((event) => {
             const isSelected = selectedEvents.includes(event.id)
             const customerName = getCustomerName(event)
@@ -218,13 +219,12 @@ export function EventList({
             return (
               <div
                 key={event.id}
-                className={`
-                  flex items-center gap-4 p-4 rounded-lg border transition-colors cursor-pointer
-                  ${isSelected
-                    ? 'bg-primary/5 border-primary'
-                    : 'bg-card hover:bg-accent/50'
-                  }
-                `}
+                className={cn(
+                  'flex items-center gap-4 px-7.5 py-4 transition-colors cursor-pointer',
+                  isSelected
+                    ? 'bg-primary/5'
+                    : 'hover:bg-accent/50'
+                )}
                 onClick={() => onSelectEvent(event.id)}
               >
                 <Checkbox
@@ -275,14 +275,9 @@ export function EventList({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge
-                          variant={event.confirmation_status === 'confirmed' ? 'default' : 'secondary'}
-                          className={cn(
-                            'text-xs cursor-help',
-                            event.confirmation_status === 'confirmed'
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100'
-                              : 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-100'
-                          )}
+                        <StatusBadge
+                          variant={event.confirmation_status === 'confirmed' ? 'success' : 'warning'}
+                          className="cursor-help"
                         >
                           {event.confirmation_status === 'confirmed' ? (
                             <>
@@ -295,7 +290,7 @@ export function EventList({
                               Ausstehend
                             </>
                           )}
-                        </Badge>
+                        </StatusBadge>
                       </TooltipTrigger>
                       <TooltipContent>
                         {event.confirmation_status === 'confirmed'

@@ -233,15 +233,12 @@ export function ManageContent({
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-6">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Action Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Requests verwalten</h1>
-          <p className="text-muted-foreground">
-            Genehmige und verwalte Work Requests
-          </p>
-        </div>
+        <p className="text-sm font-medium text-muted-foreground">
+          Genehmige und verwalte Work Requests
+        </p>
         {isAdmin && (
           <Button onClick={() => setDirectCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

@@ -4,6 +4,7 @@ import { TemplateFormDialog } from './components/template-form-dialog'
 import { TemplateCard } from './components/template-card'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export default async function TemplatesPage() {
   const supabase = await createClient()
@@ -40,13 +41,8 @@ export default async function TemplatesPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Antwort-Vorlagen</h1>
-          <p className="text-muted-foreground mt-1">
-            Verwalten Sie wiederverwendbare Textvorlagen mit Anhängen
-          </p>
-        </div>
+      <div className="flex items-center justify-between">
+        <Breadcrumb pageName="Vorlagen" />
         <TemplateFormDialog mode="create">
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -63,7 +59,7 @@ export default async function TemplatesPage() {
               <h2 className="text-xl font-semibold mb-4 text-muted-foreground uppercase tracking-wider">
                 {group.categoryLabel}
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 2xl:gap-7.5">
                 {group.templates.map((template) => (
                   <TemplateCard key={template.id} template={template} />
                 ))}

@@ -5,22 +5,22 @@ import { AlertCircle, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 const priorityConfig: Record<TicketPriority, { label: string; className: string; icon: any }> = {
   urgent: {
     label: 'Dringend',
-    className: 'bg-red-100 text-red-800 border-red-200',
+    className: 'bg-[#F23030]/[0.08] text-[#F23030] dark:bg-[#F23030]/[0.15] dark:text-[#F56060]',
     icon: AlertCircle
   },
   high: {
     label: 'Hoch',
-    className: 'bg-orange-100 text-orange-800 border-orange-200',
+    className: 'bg-[#FF9C55]/[0.08] text-[#FF9C55] dark:bg-[#FF9C55]/[0.15] dark:text-[#FFB380]',
     icon: ArrowUp
   },
   medium: {
     label: 'Mittel',
-    className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    className: 'bg-[#FFA70B]/[0.08] text-[#FFA70B] dark:bg-[#FFA70B]/[0.15] dark:text-[#FFD06B]',
     icon: Minus
   },
   low: {
     label: 'Niedrig',
-    className: 'bg-gray-100 text-gray-800 border-gray-200',
+    className: 'bg-[#6B7280]/[0.08] text-[#6B7280] dark:bg-[#6B7280]/[0.15] dark:text-[#9CA3AF]',
     icon: ArrowDown
   }
 }
@@ -31,7 +31,7 @@ export function PriorityBadge({ priority }: { priority: TicketPriority }) {
 
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border',
+      'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium',
       config.className
     )}>
       <Icon className="w-3 h-3" />

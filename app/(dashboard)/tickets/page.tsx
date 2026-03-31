@@ -2,6 +2,7 @@ import { getTickets } from '@/app/actions/tickets'
 import { createClient } from '@/lib/supabase/server'
 import { TicketList } from './components/ticket-list'
 import { TicketFilters } from './components/ticket-filters'
+import { Breadcrumb } from '@/components/nextadmin'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -38,14 +39,9 @@ export default async function TicketsPage({
   })
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Tickets</h1>
-          <p className="text-muted-foreground mt-1">
-            Verwalten Sie Support-Anfragen
-          </p>
-        </div>
+    <div className="mx-auto max-w-screen-2xl space-y-7.5 py-8 px-4 md:px-6 2xl:px-10">
+      <div className="flex items-center justify-between">
+        <Breadcrumb pageName="Tickets" />
         <Link href="/tickets/new">
           <Button>
             <Plus className="w-4 h-4 mr-2" />
@@ -63,7 +59,7 @@ export default async function TicketsPage({
 
       {resolvedSearchParams.search && (
         <div className="mb-4 text-sm text-muted-foreground">
-          {result.count || 0} Ergebnis{result.count !== 1 ? 'se' : ''} für "{resolvedSearchParams.search}"
+          {result.count || 0} Ergebnis{result.count !== 1 ? 'se' : ''} für &ldquo;{resolvedSearchParams.search}&rdquo;
         </div>
       )}
 

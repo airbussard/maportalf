@@ -1,5 +1,5 @@
 import type { TicketMessage, Ticket, TicketAttachment } from '@/lib/types/ticket'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ShowcaseSection } from '@/components/nextadmin'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { FormattedContent } from '@/components/shared/formatted-content'
 import { AttachmentList } from '@/components/tickets/attachment-list'
@@ -61,11 +61,8 @@ export function TicketTimeline({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Nachrichten</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <ShowcaseSection title="Verlauf">
+      <div className="space-y-4">
         {messages.map((message) => {
           const senderName = getSenderName(message, ticket)
           const initials = getSenderInitials(message, ticket)
@@ -109,7 +106,7 @@ export function TicketTimeline({
             </div>
           )
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </ShowcaseSection>
   )
 }

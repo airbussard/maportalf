@@ -2,18 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, User, Mail, Phone, Calendar, ChevronRight, ChevronLeft } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Search, User, Eye, ChevronRight, ChevronLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import type { Contact } from '@/app/actions/contacts'
@@ -95,155 +84,158 @@ export function ContactsTable({
   const startItem = (page - 1) * pageSize + 1
   const endItem = Math.min(page * pageSize, totalCount)
 
+  const getInitials = (contact: Contact) => {
+    const first = contact.first_name?.[0]?.toUpperCase() || ''
+    const last = contact.last_name?.[0]?.toUpperCase() || ''
+    if (first || last) return `${first}${last}`
+    return contact.email[0]?.toUpperCase() || '?'
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Search and Page Size Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Nach Name, Email oder Telefon suchen..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10"
-          />
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4 px-7.5 pt-7.5 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Kontakte</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {totalCount === 0
+              ? 'Keine Kontakte gefunden'
+              : `${startItem}\u2013${endItem} von ${totalCount} Kontakten`}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Zeige:</span>
-          <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground whitespace-nowrap">pro Seite</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search input */}
+          <div className="relative">
+            <input
+              type="search"
+              placeholder="Nach Name, Email oder Telefon suchen..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full min-w-[240px] rounded-full border border-border bg-accent/30 py-2.5 pl-12 pr-5 text-sm outline-none transition focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2"
+            />
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          {/* Page size selector */}
+          <select
+            value={String(pageSize)}
+            onChange={(e) => handlePageSizeChange(e.target.value)}
+            className="rounded-lg border-[1.5px] border-border bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2"
+          >
+            <option value="10">10 pro Seite</option>
+            <option value="25">25 pro Seite</option>
+            <option value="50">50 pro Seite</option>
+          </select>
         </div>
       </div>
 
-      {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        {totalCount === 0 ? (
-          'Keine Kontakte gefunden'
-        ) : (
-          `${startItem}–${endItem} von ${totalCount} Kontakten`
-        )}
-      </div>
-
-      {/* Contacts List */}
-      {contacts.length === 0 ? (
-        <Card className="p-8 text-center text-muted-foreground">
-          <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Keine Kontakte gefunden</p>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {contacts.map((contact) => (
-            <Card
-              key={contact.email}
-              className="p-4 hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
-              onClick={() => handleContactClick(contact.email)}
-            >
-              {/* Mobile Layout */}
-              <div className="sm:hidden space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {contact.first_name} {contact.last_name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{contact.email}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{contact.event_count} Termine</span>
-                  </div>
-                  {contact.phone && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{contact.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Desktop Layout */}
-              <div className="hidden sm:flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
-                    {contact.first_name} {contact.last_name}
-                  </p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      <span className="truncate">{contact.email}</span>
-                    </div>
-                    {contact.phone && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        <span>{contact.phone}</span>
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-t border-border bg-[#F7F9FC] dark:bg-dark-2 [&>th]:py-4 [&>th]:text-sm [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wide [&>th]:text-muted-foreground">
+              <th className="pl-7.5 text-left min-w-[250px]">Kontakt</th>
+              <th className="text-left min-w-[140px]">Telefon</th>
+              <th className="text-left min-w-[120px]">Buchungen</th>
+              <th className="text-left min-w-[140px]">Letzte Buchung</th>
+              <th className="pr-7.5 text-right min-w-[80px]">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contacts.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                  <User className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>Keine Kontakte gefunden</p>
+                </td>
+              </tr>
+            ) : (
+              contacts.map((contact) => (
+                <tr
+                  key={contact.email}
+                  onClick={() => handleContactClick(contact.email)}
+                  className="border-b border-border transition-colors hover:bg-accent/30 cursor-pointer"
+                >
+                  {/* Avatar + Name + Email */}
+                  <td className="py-4 pl-7.5">
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#fbb928] text-sm font-bold text-zinc-900">
+                        {getInitials(contact)}
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <div>
+                        <h5 className="font-medium text-foreground leading-tight">
+                          {contact.first_name} {contact.last_name}
+                        </h5>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {contact.email}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
 
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  <Badge variant="secondary">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {contact.event_count} Termine
-                  </Badge>
-                  <div className="text-sm text-muted-foreground">
-                    Letzter: {format(new Date(contact.last_event), 'dd.MM.yyyy', { locale: de })}
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                  {/* Phone */}
+                  <td className="py-4 text-sm text-muted-foreground">
+                    {contact.phone || '\u2013'}
+                  </td>
 
-      {/* Pagination Controls */}
+                  {/* Booking count as pill badge */}
+                  <td className="py-4">
+                    <span className="inline-flex items-center rounded-full bg-[#3C50E0]/[0.08] px-3 py-1 text-xs font-medium text-[#3C50E0] dark:bg-[#3C50E0]/[0.15] dark:text-[#6B8AFF]">
+                      {contact.event_count} Termine
+                    </span>
+                  </td>
+
+                  {/* Last booking date */}
+                  <td className="py-4 text-sm text-muted-foreground">
+                    {format(new Date(contact.last_event), 'dd.MM.yyyy', { locale: de })}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-4 pr-7.5">
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleContactClick(contact.email)
+                        }}
+                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#fbb928]"
+                        title="Details anzeigen"
+                      >
+                        <Eye className="size-[18px]" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page <= 1}
-            className="gap-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Zurück
-          </Button>
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between px-7.5 py-4 border-t border-border">
+          <p className="text-sm text-muted-foreground">
             Seite {page} von {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page >= totalPages}
-            className="gap-1"
-          >
-            Weiter
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+            >
+              <ChevronLeft className="size-4" />
+              Zuruck
+            </button>
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+            >
+              Weiter
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

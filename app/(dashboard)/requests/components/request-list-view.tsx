@@ -1,21 +1,13 @@
 /**
  * Request List View Component
  *
- * Displays work requests in a grid/list layout with filtering and sorting
+ * Displays work requests as NextAdmin chat-list style items with filtering and sorting
  */
 
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Filter, SortAsc } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Calendar } from 'lucide-react'
 import { RequestCard } from './request-card'
 import { type WorkRequest, type WorkRequestStatus } from '@/lib/types/work-requests'
 
@@ -66,64 +58,55 @@ export function RequestListView({
   }, [requests, statusFilter, sortBy])
 
   return (
-    <div className="space-y-4">
-      {/* Filters & Sorting */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card">
+      {/* Header with filters */}
+      <div className="flex flex-wrap items-center justify-between gap-4 px-7.5 pt-7.5 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">Meine Requests</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {filteredRequests.length} von {requests.length} Requests
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status filter */}
+          <select
             value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as WorkRequestStatus | 'all')}
+            onChange={(e) => setStatusFilter(e.target.value as WorkRequestStatus | 'all')}
+            className="rounded-lg border-[1.5px] border-border bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2"
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status filtern" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Status</SelectItem>
-              <SelectItem value="pending">Ausstehend</SelectItem>
-              <SelectItem value="approved">Genehmigt</SelectItem>
-              <SelectItem value="rejected">Abgelehnt</SelectItem>
-              <SelectItem value="withdrawn">Zurückgezogen</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <option value="all">Alle Status</option>
+            <option value="pending">Ausstehend</option>
+            <option value="approved">Genehmigt</option>
+            <option value="rejected">Abgelehnt</option>
+            <option value="withdrawn">Zuruckgezogen</option>
+          </select>
 
-        <div className="flex items-center gap-2">
-          <SortAsc className="h-4 w-4 text-muted-foreground" />
-          <Select
+          {/* Sort */}
+          <select
             value={sortBy}
-            onValueChange={(value) => setSortBy(value as SortOption)}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="rounded-lg border-[1.5px] border-border bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2"
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sortieren nach" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date-desc">Datum (neueste zuerst)</SelectItem>
-              <SelectItem value="date-asc">Datum (älteste zuerst)</SelectItem>
-              <SelectItem value="status">Status</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex-1" />
-
-        <div className="text-sm text-muted-foreground self-center">
-          {filteredRequests.length} von {requests.length} Requests
+            <option value="date-desc">Neueste zuerst</option>
+            <option value="date-asc">Alteste zuerst</option>
+            <option value="status">Status</option>
+          </select>
         </div>
       </div>
 
-      {/* Request Grid */}
-      {filteredRequests.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            {statusFilter === 'all'
-              ? 'Keine Requests vorhanden'
-              : 'Keine Requests mit diesem Status'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRequests.map((request) => (
+      {/* List items */}
+      <div className="border-t border-border">
+        {filteredRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Calendar className="size-10 mb-3 opacity-40" />
+            <p>
+              {statusFilter === 'all'
+                ? 'Keine Requests vorhanden'
+                : 'Keine Requests mit diesem Status'}
+            </p>
+          </div>
+        ) : (
+          filteredRequests.map((request) => (
             <RequestCard
               key={request.id}
               request={request}
@@ -132,9 +115,9 @@ export function RequestListView({
               onWithdraw={onWithdraw}
               onDelete={onDelete}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   )
 }

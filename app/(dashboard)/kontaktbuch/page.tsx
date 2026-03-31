@@ -1,6 +1,6 @@
-import { BookUser } from 'lucide-react'
 import { getContacts } from '@/app/actions/contacts'
 import { ContactsTable } from './components/contacts-table'
+import { Breadcrumb } from '@/components/nextadmin'
 
 export const metadata = {
   title: 'Kontaktbuch | Flighthour',
@@ -25,15 +25,7 @@ export default async function KontaktbuchPage({ searchParams }: KontaktbuchPageP
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <BookUser className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kontaktbuch</h1>
-          <p className="text-muted-foreground">
-            Alle Kundenkontakte auf einen Blick
-          </p>
-        </div>
-      </div>
+      <Breadcrumb pageName="Kontaktbuch" />
 
       <ContactsTable
         contacts={result.contacts}

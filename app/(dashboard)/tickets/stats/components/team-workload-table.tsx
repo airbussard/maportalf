@@ -1,90 +1,74 @@
 'use client'
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { StatusBadge } from '@/components/nextadmin'
 
 interface TeamWorkloadTableProps {
-  data: {
-    employeeName: string
-    ticketCount: number
-  }[]
+  data: { employeeName: string; ticketCount: number }[]
 }
 
 export function TeamWorkloadTable({ data }: TeamWorkloadTableProps) {
   if (data.length === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
+      <div className="flex h-[200px] items-center justify-center text-muted-foreground">
         Keine Daten verfügbar
       </div>
     )
   }
 
-  // Calculate total for percentage
   const totalTickets = data.reduce((sum, item) => sum + item.ticketCount, 0)
 
-  // Determine workload level for color coding
-  const getWorkloadLevel = (count: number, total: number) => {
-    const percentage = (count / total) * 100
-    if (percentage >= 30) return 'high'
-    if (percentage >= 15) return 'medium'
-    return 'low'
+  const getWorkloadVariant = (count: number) => {
+    const pct = (count / totalTickets) * 100
+    if (pct >= 30) return 'error' as const
+    if (pct >= 15) return 'warning' as const
+    return 'success' as const
   }
 
-  const getWorkloadBadgeVariant = (level: string): 'destructive' | 'default' | 'secondary' => {
-    switch (level) {
-      case 'high':
-        return 'destructive'
-      case 'medium':
-        return 'default'
-      default:
-        return 'secondary'
-    }
+  const getWorkloadLabel = (count: number) => {
+    const pct = (count / totalTickets) * 100
+    if (pct >= 30) return 'Hoch'
+    if (pct >= 15) return 'Mittel'
+    return 'Niedrig'
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[50px]">Rang</TableHead>
-            <TableHead>Mitarbeiter</TableHead>
-            <TableHead className="text-right">Tickets</TableHead>
-            <TableHead className="text-right">Anteil</TableHead>
-            <TableHead className="text-right">Auslastung</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((item, index) => {
-            const percentage = ((item.ticketCount / totalTickets) * 100).toFixed(1)
-            const workloadLevel = getWorkloadLevel(item.ticketCount, totalTickets)
-            const badgeVariant = getWorkloadBadgeVariant(workloadLevel)
-
-            return (
-              <TableRow key={item.employeeName}>
-                <TableCell className="font-medium text-muted-foreground">
-                  #{index + 1}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {item.employeeName}
-                </TableCell>
-                <TableCell className="text-right font-semibold">
-                  {item.ticketCount}
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {percentage}%
-                </TableCell>
-                <TableCell className="text-right">
-                  <Badge variant={badgeVariant}>
-                    {workloadLevel === 'high' && 'Hoch'}
-                    {workloadLevel === 'medium' && 'Mittel'}
-                    {workloadLevel === 'low' && 'Niedrig'}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <table className="w-full">
+      <thead>
+        <tr className="border-t bg-[#F7F9FC] dark:bg-dark-2 [&>th]:py-4 [&>th]:text-sm [&>th]:font-medium [&>th]:text-muted-foreground">
+          <th className="pl-7.5 text-left w-12">#</th>
+          <th className="text-left min-w-[150px]">Mitarbeiter</th>
+          <th className="text-center">Tickets</th>
+          <th className="text-center">Anteil</th>
+          <th className="pr-7.5 text-right">Auslastung</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((item, index) => {
+          const percentage = ((item.ticketCount / totalTickets) * 100).toFixed(1)
+          return (
+            <tr key={item.employeeName} className="border-b border-border text-base font-medium text-foreground">
+              <td className="py-4 pl-7.5 text-muted-foreground">
+                {index + 1}
+              </td>
+              <td className="py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-[#fbb928] text-zinc-900 text-xs font-bold shrink-0">
+                    {item.employeeName.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </div>
+                  <span>{item.employeeName}</span>
+                </div>
+              </td>
+              <td className="py-4 text-center font-bold">{item.ticketCount}</td>
+              <td className="py-4 text-center text-muted-foreground">{percentage}%</td>
+              <td className="py-4 pr-7.5 text-right">
+                <StatusBadge variant={getWorkloadVariant(item.ticketCount)}>
+                  {getWorkloadLabel(item.ticketCount)}
+                </StatusBadge>
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }

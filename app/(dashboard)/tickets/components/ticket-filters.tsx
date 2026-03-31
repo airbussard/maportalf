@@ -204,115 +204,114 @@ export function TicketFilters({
   }, [debouncedSearch])
 
   return (
-    <div className="space-y-4 mb-6">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          type="text"
-          placeholder="Tickets durchsuchen (Betreff, Beschreibung, E-Mail, Nummer)..."
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          className="pl-10 pr-10"
-        />
-        {searchValue && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearSearch}
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card mb-6">
+      <div className="px-5.5 xl:px-7.5 pt-5.5 xl:pt-7.5 pb-4 space-y-4">
+        {/* Top row: Search + Status filter */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          {/* Search Input - NextAdmin pill style */}
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Tickets durchsuchen (Betreff, Beschreibung, E-Mail, Nummer)..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full rounded-full border border-border bg-accent/30 py-2.5 pl-12 pr-10 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[#fbb928] dark:border-dark-3 dark:bg-dark-2 dark:focus:border-[#fbb928]"
+            />
+            {searchValue && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-      <Tabs value={currentFilter} onValueChange={handleFilterChange}>
-        <TabsList>
-          <TabsTrigger value="all">Alle</TabsTrigger>
-          <TabsTrigger value="assigned">Mir zugewiesen</TabsTrigger>
-          {isManagerOrAdmin && (
-            <TabsTrigger value="spam">Spam</TabsTrigger>
-          )}
-        </TabsList>
-      </Tabs>
-
-      <Select value={currentStatus || 'all'} onValueChange={handleStatusChange}>
-        <SelectTrigger className="w-full md:w-48">
-          <SelectValue placeholder="Status filtern" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Alle Status</SelectItem>
-          <SelectItem value="open">Offen</SelectItem>
-          <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-          <SelectItem value="resolved">Gelöst</SelectItem>
-          <SelectItem value="closed">Geschlossen</SelectItem>
-        </SelectContent>
-      </Select>
-      </div>
-
-      {/* Date Filter */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <label className="text-sm font-medium">Erstelldatum</label>
-          {(datePreset || dateFrom || dateTo) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearDateFilter}
-              className="h-6 px-2 text-xs"
-            >
-              <X className="w-3 h-3 mr-1" />
-              Zurücksetzen
-            </Button>
-          )}
+          {/* Status filter dropdown */}
+          <Select value={currentStatus || 'all'} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full md:w-44 rounded-full border border-border bg-accent/30 px-4 py-2.5 text-sm dark:border-dark-3 dark:bg-dark-2">
+              <SelectValue placeholder="Status filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="open">Offen</SelectItem>
+              <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+              <SelectItem value="resolved">Gelöst</SelectItem>
+              <SelectItem value="closed">Geschlossen</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Preset Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={datePreset === 'today' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleDatePresetChange('today')}
-          >
-            Heute
-          </Button>
-          <Button
-            variant={datePreset === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleDatePresetChange('week')}
-          >
-            Diese Woche
-          </Button>
-          <Button
-            variant={datePreset === 'month' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleDatePresetChange('month')}
-          >
-          Dieser Monat
-          </Button>
-          <Button
-            variant={datePreset === 'custom' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              if (showCustomRange) {
-                setShowCustomRange(false)
-                handleClearDateFilter()
-              } else {
-                handleDatePresetChange('custom')
-              }
-            }}
-          >
-            Benutzerdefiniert
-          </Button>
+        {/* Filter Tabs */}
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+          <Tabs value={currentFilter} onValueChange={handleFilterChange}>
+            <TabsList>
+              <TabsTrigger value="all">Alle</TabsTrigger>
+              <TabsTrigger value="assigned">Mir zugewiesen</TabsTrigger>
+              {isManagerOrAdmin && (
+                <TabsTrigger value="spam">Spam</TabsTrigger>
+              )}
+            </TabsList>
+          </Tabs>
+
+          {/* Date filter row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Button
+              variant={datePreset === 'today' ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 rounded-full text-xs"
+              onClick={() => handleDatePresetChange('today')}
+            >
+              Heute
+            </Button>
+            <Button
+              variant={datePreset === 'week' ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 rounded-full text-xs"
+              onClick={() => handleDatePresetChange('week')}
+            >
+              Diese Woche
+            </Button>
+            <Button
+              variant={datePreset === 'month' ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 rounded-full text-xs"
+              onClick={() => handleDatePresetChange('month')}
+            >
+              Dieser Monat
+            </Button>
+            <Button
+              variant={datePreset === 'custom' ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 rounded-full text-xs"
+              onClick={() => {
+                if (showCustomRange) {
+                  setShowCustomRange(false)
+                  handleClearDateFilter()
+                } else {
+                  handleDatePresetChange('custom')
+                }
+              }}
+            >
+              Benutzerdefiniert
+            </Button>
+            {(datePreset || dateFrom || dateTo) && (
+              <button
+                onClick={handleClearDateFilter}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="Datumsfilter zurücksetzen"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Custom Date Range */}
         {showCustomRange && (
-          <div className="flex flex-col sm:flex-row gap-2 p-3 bg-muted/50 rounded-lg">
+          <div className="flex flex-col sm:flex-row gap-2 p-3 bg-accent/30 rounded-lg dark:bg-dark-2">
             <div className="flex-1">
               <label className="text-xs text-muted-foreground mb-1 block">Von</label>
               <Input
@@ -323,7 +322,7 @@ export function TicketFilters({
                 className="w-full"
               />
             </div>
-            <div className="flex items-center justify-center text-muted-foreground mt-5">
+            <div className="flex items-center justify-center text-muted-foreground mt-5 text-sm">
               bis
             </div>
             <div className="flex-1">
@@ -338,13 +337,11 @@ export function TicketFilters({
             </div>
           </div>
         )}
-      </div>
 
-      {/* Tag Filter */}
-      {availableTags.length > 0 && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Nach Tags filtern</label>
-          <div className="flex flex-wrap gap-2">
+        {/* Tag Filter */}
+        {availableTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Tags:</span>
             {availableTags.map((tag) => {
               const isSelected = selectedTags.includes(tag.id)
               return (
@@ -352,8 +349,8 @@ export function TicketFilters({
                   key={tag.id}
                   onClick={() => handleTagToggle(tag.id)}
                   className={cn(
-                    "transition-all cursor-pointer",
-                    isSelected && "ring-2 ring-primary ring-offset-2"
+                    "transition-all cursor-pointer rounded-full",
+                    isSelected && "ring-2 ring-[#fbb928] ring-offset-1 ring-offset-background"
                   )}
                 >
                   <TagPill tag={tag} />
@@ -361,8 +358,8 @@ export function TicketFilters({
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

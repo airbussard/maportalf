@@ -5,11 +5,10 @@ import type { Ticket } from '@/lib/types/ticket'
 import { StatusBadge } from '@/components/tickets/status-badge'
 import { PriorityBadge } from '@/components/tickets/priority-badge'
 import { TagPill } from '@/components/tickets/tag-pill'
-import { formatDistanceToNow, format } from 'date-fns'
+import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import Link from 'next/link'
 import { Eye, Flag } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { stripHtmlTags } from '@/lib/utils/html'
 import { SpamDialog } from '@/components/tickets/spam-dialog'
@@ -45,7 +44,8 @@ export function TicketRow({
     : 'Nicht zugewiesen'
 
   // Format exact date and time
-  const formattedDate = format(new Date(ticket.created_at), 'dd.MM.yyyy, HH:mm', { locale: de })
+  const formattedDate = format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })
+  const formattedTime = format(new Date(ticket.created_at), 'HH:mm', { locale: de })
 
   // Get message preview (first 100 characters, strip HTML tags)
   const strippedText = ticket.description ? stripHtmlTags(ticket.description) : ''
@@ -71,43 +71,33 @@ export function TicketRow({
   }
 
   return (
-    <div className="p-4 hover:bg-muted/50 transition-colors">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
+    <>
+      <tr className="border-b border-[#eee] dark:border-dark-3 text-base font-medium text-foreground hover:bg-accent/30 transition-colors">
+        {/* Checkbox */}
         {onSelect && (
-          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+          <td className="py-4 pl-5.5 xl:pl-7.5" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelect(ticket.id, checked as boolean)}
             />
-          </div>
+          </td>
         )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-mono text-muted-foreground">
-              {ticketNumber}
-            </span>
-            <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
-          </div>
 
-          <Link
-            href={ticketDetailUrl}
-            className="text-base font-medium hover:underline block mb-2"
-          >
-            {ticket.subject}
+        {/* Title + Preview + Tags (product name column pattern) */}
+        <td className="py-4 min-w-[200px]">
+          <Link href={ticketDetailUrl} className="block group">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-mono text-muted-foreground">
+                {ticketNumber}
+              </span>
+            </div>
+            <h5 className="font-medium text-foreground group-hover:text-[#fbb928] transition-colors">
+              {ticket.subject}
+            </h5>
+            <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
+              {messagePreview}
+            </p>
           </Link>
-
-          {/* Message preview */}
-          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-            {messagePreview}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>Zugewiesen: {assignedName}</span>
-            <span>•</span>
-            <span>{formattedDate}</span>
-          </div>
-
           {ticket.tags && ticket.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {ticket.tags.map((tag) => (
@@ -115,28 +105,52 @@ export function TicketRow({
               ))}
             </div>
           )}
-        </div>
+        </td>
 
-        <div className="flex md:flex-col gap-2">
-          <Link href={ticketDetailUrl}>
-            <Button variant="outline" size="sm">
-              <Eye className="w-4 h-4 mr-2" />
-              Ansehen
-            </Button>
-          </Link>
-          {isManagerOrAdmin && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowSpamDialog(true)}
-              disabled={isMarkingSpam}
+        {/* Assignee */}
+        <td className="py-4 hidden lg:table-cell">
+          <span className="text-sm text-muted-foreground">{assignedName}</span>
+        </td>
+
+        {/* Status Badge */}
+        <td className="py-4 hidden sm:table-cell">
+          <StatusBadge status={ticket.status} />
+        </td>
+
+        {/* Priority Badge */}
+        <td className="py-4 hidden md:table-cell">
+          <PriorityBadge priority={ticket.priority} />
+        </td>
+
+        {/* Date */}
+        <td className="py-4 hidden md:table-cell">
+          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          <p className="text-xs text-muted-foreground/70">{formattedTime} Uhr</p>
+        </td>
+
+        {/* Actions */}
+        <td className="py-4 pr-5.5 xl:pr-7.5">
+          <div className="flex items-center justify-end gap-3">
+            <Link
+              href={ticketDetailUrl}
+              className="text-muted-foreground hover:text-[#fbb928] transition-colors"
+              title="Ansehen"
             >
-              <Flag className="w-4 h-4 mr-2" />
-              Spam
-            </Button>
-          )}
-        </div>
-      </div>
+              <Eye className="size-[18px]" />
+            </Link>
+            {isManagerOrAdmin && (
+              <button
+                className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                onClick={() => setShowSpamDialog(true)}
+                disabled={isMarkingSpam}
+                title="Als Spam markieren"
+              >
+                <Flag className="size-[18px]" />
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
 
       {/* Spam Dialog */}
       <SpamDialog
@@ -146,6 +160,6 @@ export function TicketRow({
         ticketEmail={ticket.created_from_email}
         ticketSubject={ticket.subject}
       />
-    </div>
+    </>
   )
 }

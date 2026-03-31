@@ -32,6 +32,7 @@ interface EventDialogProps {
   onOpenChange: (open: boolean) => void
   event: any | null
   onRefresh?: () => void
+  defaultDate?: Date | null
 }
 
 /**
@@ -48,7 +49,7 @@ function formatDateTimeForInput(isoString: string): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
-export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialogProps) {
+export function EventDialog({ open, onOpenChange, event, onRefresh, defaultDate }: EventDialogProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -144,12 +145,17 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
       })
     } else {
       // Creating new event - reset to defaults
+      // Use defaultDate if provided, otherwise use today
+      const baseDate = defaultDate || new Date()
       const now = new Date()
-      const startTime = new Date(now.getTime() + 60 * 60 * 1000) // +1 hour
+      const startTime = new Date(baseDate)
+      startTime.setHours(now.getHours() + 1, 0, 0, 0) // Next full hour from current time
       const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // +60 minutes (1 hour default)
 
-      // Initialize selectedDate with today
-      setSelectedDate(now.toISOString().slice(0, 10))
+      const dateStr = baseDate.toISOString().slice(0, 10)
+
+      // Initialize selectedDate with the base date
+      setSelectedDate(dateStr)
 
       setFormData({
         event_type: 'booking',
@@ -170,7 +176,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         actual_work_end_time: '',
         is_all_day: false,
         blocker_title: 'Block',
-        booking_date: now.toISOString().slice(0, 10),
+        booking_date: dateStr,
         start_time_only: startTime.toTimeString().slice(0, 5),
         end_time_only: endTime.toTimeString().slice(0, 5),
         duration_mode: 'duration',
@@ -179,7 +185,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh }: EventDialo
         on_site_payment_amount: null
       })
     }
-  }, [event, open])
+  }, [event, open, defaultDate])
 
   // Load employees for FI assignment
   useEffect(() => {

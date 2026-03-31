@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { InputGroup } from '@/components/nextadmin'
 import { createTag, updateTag } from '@/app/actions/tags'
 import { useRouter } from 'next/navigation'
 
@@ -68,37 +67,31 @@ export function TagFormDialog({ tag, children }: TagFormDialogProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="z.B. Bug, Feature, Support..."
-                maxLength={50}
-                required
-                disabled={loading}
-              />
-            </div>
+            <InputGroup
+              label="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z.B. Bug, Feature, Support..."
+              required
+              disabled={loading}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="color">Farbe</Label>
+            <div>
+              <label className="mb-3 block text-sm font-medium text-foreground">Farbe</label>
               <div className="flex gap-2">
                 <input
                   type="color"
-                  id="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="h-10 w-20 cursor-pointer rounded border"
+                  className="h-[46px] w-20 cursor-pointer rounded-lg border-[1.5px] border-border bg-transparent"
                   disabled={loading}
                 />
-                <Input
+                <input
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   placeholder="#3B82F6"
                   disabled={loading}
+                  className="w-full rounded-lg border-[1.5px] border-border bg-transparent px-5 py-3 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-[#fbb928] disabled:cursor-default disabled:bg-muted dark:border-muted dark:bg-muted/30 dark:focus:border-[#fbb928]"
                 />
               </div>
             </div>

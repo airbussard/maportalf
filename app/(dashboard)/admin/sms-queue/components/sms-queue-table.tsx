@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, Phone, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react'
+import { StatCard, TableCard, StatusBadge } from '@/components/nextadmin'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -39,24 +38,24 @@ export function SMSQueueTable({ smsItems }: SMSQueueTableProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Wartend</Badge>
+        return <StatusBadge variant="warning"><Clock className="w-3 h-3 mr-1" /> Wartend</StatusBadge>
       case 'sent':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Gesendet</Badge>
+        return <StatusBadge variant="success"><CheckCircle className="w-3 h-3 mr-1" /> Gesendet</StatusBadge>
       case 'failed':
-        return <Badge variant="secondary" className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" /> Fehlgeschlagen</Badge>
+        return <StatusBadge variant="error"><AlertCircle className="w-3 h-3 mr-1" /> Fehlgeschlagen</StatusBadge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <StatusBadge variant="neutral">{status}</StatusBadge>
     }
   }
 
   const getTypeBadge = (type: string | null) => {
     switch (type) {
       case 'shift':
-        return <Badge variant="outline" className="text-orange-600 border-orange-300">Verschiebung</Badge>
+        return <StatusBadge variant="orange">Verschiebung</StatusBadge>
       case 'cancel':
-        return <Badge variant="outline" className="text-red-600 border-red-300">Absage</Badge>
+        return <StatusBadge variant="error">Absage</StatusBadge>
       default:
-        return <Badge variant="outline">-</Badge>
+        return <StatusBadge variant="neutral">-</StatusBadge>
     }
   }
 
@@ -70,39 +69,11 @@ export function SMSQueueTable({ smsItems }: SMSQueueTableProps) {
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Wartend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Gesendet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.sent}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fehlgeschlagen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-4 2xl:gap-7.5">
+        <StatCard label="Gesamt" value={stats.total} icon={MessageSquare} iconColor="#6B7280" iconBg="#6B728015" />
+        <StatCard label="Wartend" value={stats.pending} icon={Clock} iconColor="#FFA70B" iconBg="#FFA70B15" />
+        <StatCard label="Gesendet" value={stats.sent} icon={CheckCircle} iconColor="#219653" iconBg="#21965315" />
+        <StatCard label="Fehlgeschlagen" value={stats.failed} icon={AlertCircle} iconColor="#F23030" iconBg="#F2303015" />
       </div>
 
       {/* Filter Buttons */}
@@ -147,74 +118,72 @@ export function SMSQueueTable({ smsItems }: SMSQueueTableProps) {
       </div>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-muted/50">
+      <TableCard>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-border bg-muted/50">
+              <tr>
+                <th className="text-left p-3 text-sm font-medium">Telefon</th>
+                <th className="text-left p-3 text-sm font-medium">Nachricht</th>
+                <th className="text-left p-3 text-sm font-medium">Typ</th>
+                <th className="text-left p-3 text-sm font-medium">Status</th>
+                <th className="text-left p-3 text-sm font-medium">Versuche</th>
+                <th className="text-left p-3 text-sm font-medium">Erstellt</th>
+                <th className="text-left p-3 text-sm font-medium">Fehler</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.length === 0 ? (
                 <tr>
-                  <th className="text-left p-3 text-sm font-medium">Telefon</th>
-                  <th className="text-left p-3 text-sm font-medium">Nachricht</th>
-                  <th className="text-left p-3 text-sm font-medium">Typ</th>
-                  <th className="text-left p-3 text-sm font-medium">Status</th>
-                  <th className="text-left p-3 text-sm font-medium">Versuche</th>
-                  <th className="text-left p-3 text-sm font-medium">Erstellt</th>
-                  <th className="text-left p-3 text-sm font-medium">Fehler</th>
+                  <td colSpan={7} className="text-center p-8 text-muted-foreground">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Keine SMS gefunden</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center p-8 text-muted-foreground">
-                      <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Keine SMS gefunden</p>
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="border-b border-border hover:bg-accent/50 transition-colors">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-mono text-sm">
+                          {item.phone_number}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-sm max-w-xs">
+                      <span className="truncate block" title={item.message}>
+                        {item.message.length > 50
+                          ? item.message.substring(0, 50) + '...'
+                          : item.message
+                        }
+                      </span>
+                    </td>
+                    <td className="p-3">{getTypeBadge(item.notification_type)}</td>
+                    <td className="p-3">{getStatusBadge(item.status)}</td>
+                    <td className="p-3 text-sm">
+                      {item.attempts}/3
+                    </td>
+                    <td className="p-3 text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(item.created_at), {
+                        addSuffix: true,
+                        locale: de
+                      })}
+                    </td>
+                    <td className="p-3 text-sm max-w-xs">
+                      {item.error_message && (
+                        <span className="text-red-600 truncate block" title={item.error_message}>
+                          {item.error_message}
+                        </span>
+                      )}
                     </td>
                   </tr>
-                ) : (
-                  filteredItems.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-mono text-sm">
-                            {item.phone_number}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm max-w-xs">
-                        <span className="truncate block" title={item.message}>
-                          {item.message.length > 50
-                            ? item.message.substring(0, 50) + '...'
-                            : item.message
-                          }
-                        </span>
-                      </td>
-                      <td className="p-3">{getTypeBadge(item.notification_type)}</td>
-                      <td className="p-3">{getStatusBadge(item.status)}</td>
-                      <td className="p-3 text-sm">
-                        {item.attempts}/3
-                      </td>
-                      <td className="p-3 text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(item.created_at), {
-                          addSuffix: true,
-                          locale: de
-                        })}
-                      </td>
-                      <td className="p-3 text-sm max-w-xs">
-                        {item.error_message && (
-                          <span className="text-red-600 truncate block" title={item.error_message}>
-                            {item.error_message}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </TableCard>
     </div>
   )
 }

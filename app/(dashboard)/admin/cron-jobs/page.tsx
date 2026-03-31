@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { Breadcrumb } from '@/components/nextadmin'
 import { CronJobsContent } from './cron-jobs-content'
 
 export const metadata = {
@@ -28,6 +29,7 @@ export default async function CronJobsPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      <Breadcrumb pageName="Cron Jobs" items={[{ label: "Admin", href: "/admin" }]} />
       <CronJobsContent />
     </div>
   )

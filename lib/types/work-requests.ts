@@ -182,10 +182,10 @@ export function getStatusLabel(status: WorkRequestStatus): string {
  */
 export function getStatusColor(status: WorkRequestStatus): string {
   const colors: Record<WorkRequestStatus, string> = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    withdrawn: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+    pending: 'bg-[#FFA70B]/[0.08] text-[#FFA70B]',
+    approved: 'bg-[#219653]/[0.08] text-[#219653]',
+    rejected: 'bg-[#F23030]/[0.08] text-[#F23030]',
+    withdrawn: 'bg-[#6B7280]/[0.08] text-[#6B7280]'
   }
   return colors[status]
 }

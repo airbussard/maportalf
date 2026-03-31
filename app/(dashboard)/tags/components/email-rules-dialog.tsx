@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { InputGroup } from '@/components/nextadmin'
 import { getEmailRules, createEmailRule, deleteEmailRule, type EmailRule } from '@/app/actions/tags'
 import { Trash2, Plus } from 'lucide-react'
 
@@ -133,18 +132,15 @@ export function EmailRulesDialog({ tag, onUpdate, children }: EmailRulesDialogPr
           <form onSubmit={handleAddRule} className="space-y-4 pt-4 border-t">
             <h4 className="text-sm font-medium">Neue Regel hinzufügen:</h4>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">E-Mail-Adresse *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="name@example.com"
-                disabled={loading}
-                required
-              />
-            </div>
+            <InputGroup
+              label="E-Mail-Adresse"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="name@example.com"
+              disabled={loading}
+              required
+            />
 
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">

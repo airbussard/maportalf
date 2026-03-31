@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { Breadcrumb } from '@/components/nextadmin'
 import { EmailQueueTable } from './components/email-queue-table'
 
 export default async function EmailQueuePage() {
@@ -41,12 +42,7 @@ export default async function EmailQueuePage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">E-Mail Warteschlange</h1>
-        <p className="text-muted-foreground mt-1">
-          Überwachung und Verwaltung der E-Mail-Versand-Queue
-        </p>
-      </div>
+      <Breadcrumb pageName="E-Mail Queue" items={[{ label: "Admin", href: "/admin" }]} />
 
       <EmailQueueTable emails={emailQueue || []} />
     </div>

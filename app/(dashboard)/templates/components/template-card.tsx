@@ -3,10 +3,8 @@
 import { useState } from 'react'
 import type { TemplateWithAttachments } from '@/lib/types/template'
 import { CategoryLabels } from '@/lib/types/template'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Edit, Trash2, Paperclip } from 'lucide-react'
+import { Pencil, Trash2, ScrollText, Paperclip } from 'lucide-react'
+import { StatusBadge } from '@/components/nextadmin'
 import { TemplateFormDialog } from './template-form-dialog'
 import { deleteTemplate } from '@/app/actions/templates'
 import { useRouter } from 'next/navigation'
@@ -49,50 +47,61 @@ export function TemplateCard({ template }: TemplateCardProps) {
   }
 
   return (
-    <Card className="hover:border-primary transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <h3 className="font-semibold text-lg line-clamp-1">{template.name}</h3>
-            <Badge variant="outline" className="mt-2">
+    <div className="rounded-[10px] bg-card shadow-1 dark:shadow-card hover:shadow-card-2 transition-shadow">
+      {/* Header */}
+      <div className="border-b border-border px-7.5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#fbb928]/10">
+            <ScrollText className="size-5 text-[#fbb928]" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-medium text-foreground truncate">{template.name}</h3>
+            <StatusBadge variant="neutral" className="mt-1">
               {CategoryLabels[template.category]}
-            </Badge>
+            </StatusBadge>
           </div>
         </div>
-      </CardHeader>
+        {template.attachments && template.attachments.length > 0 && (
+          <StatusBadge variant="info" className="shrink-0 ml-3">
+            <Paperclip className="size-3 mr-1" />
+            {template.attachments.length} Anhang{template.attachments.length !== 1 ? 'e' : ''}
+          </StatusBadge>
+        )}
+      </div>
 
-      <CardContent className="pb-3">
+      {/* Content */}
+      <div className="px-7.5 py-4">
         <p className="text-sm text-muted-foreground line-clamp-3 whitespace-pre-wrap">
           {template.content}
         </p>
+      </div>
 
-        {template.attachments && template.attachments.length > 0 && (
-          <div className="flex items-center gap-1 mt-3 text-xs text-muted-foreground">
-            <Paperclip className="w-3 h-3" />
-            <span>{template.attachments.length} Anhang{template.attachments.length !== 1 ? 'e' : ''}</span>
-          </div>
-        )}
-      </CardContent>
-
-      <CardFooter className="pt-3 border-t flex gap-2">
+      {/* Footer with actions */}
+      <div className="border-t border-border px-7.5 py-3 flex items-center justify-end gap-1">
         <TemplateFormDialog mode="edit" template={template}>
-          <Button variant="outline" size="sm" className="flex-1">
-            <Edit className="w-4 h-4 mr-2" />
-            Bearbeiten
-          </Button>
+          <button
+            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#fbb928]"
+            title="Bearbeiten"
+          >
+            <Pencil className="size-[18px]" />
+          </button>
         </TemplateFormDialog>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={isDeleting}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <button
+              disabled={isDeleting}
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-[#F23030] disabled:opacity-50"
+              title="Löschen"
+            >
+              <Trash2 className="size-[18px]" />
+            </button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Vorlage löschen?</AlertDialogTitle>
               <AlertDialogDescription>
-                Möchten Sie die Vorlage "{template.name}" wirklich löschen?
+                Möchten Sie die Vorlage &quot;{template.name}&quot; wirklich löschen?
                 Diese Aktion kann nicht rückgängig gemacht werden.
                 {template.attachments && template.attachments.length > 0 && (
                   <>
@@ -113,7 +122,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   )
 }
