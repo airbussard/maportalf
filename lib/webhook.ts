@@ -5,7 +5,7 @@
  * Errors are logged but never block the calling operation.
  */
 
-const WEBHOOK_URL = process.env.OPS_WEBHOOK_URL || 'https://flight.knabe-gmbh.de/api/webhook/ops'
+const WEBHOOK_URL = process.env.TAKEOFF_WEBHOOK_URL || process.env.OPS_WEBHOOK_URL || 'https://flight.knabe-gmbh.de/api/webhook/ops'
 const WEBHOOK_KEY = process.env.OPS_WEBHOOK_KEY || process.env.SHOP_API_KEY
 
 type WebhookEvent = 'booking.cancelled' | 'booking.updated' | 'booking.deleted'
