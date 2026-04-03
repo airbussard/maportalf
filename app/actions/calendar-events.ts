@@ -19,6 +19,7 @@ import { fullSync } from '@/lib/google-calendar/sync'
 import type { CalendarEventData, SyncResult } from '@/lib/google-calendar/types'
 import { generateBookingConfirmationEmail } from '@/lib/email-templates/booking-confirmation'
 import { generateCancellationNotificationEmail } from '@/lib/email-templates/cancellation-notification'
+import { sendWebhook, buildBookingPayload } from '@/lib/webhook'
 
 /**
  * Helper: Convert empty strings to null for UUID fields
@@ -454,6 +455,11 @@ export async function updateCalendarEvent(
       revalidatePath('/kalender')
       revalidatePath('/dashboard')
 
+      // Webhook: booking.updated (only for bookings with shop reference)
+      if (data && data.event_type === 'booking') {
+        sendWebhook('booking.updated', buildBookingPayload(data))
+      }
+
       return data
     }
 
@@ -542,6 +548,11 @@ export async function deleteCalendarEvent(id: string) {
 
     revalidatePath('/kalender')
     revalidatePath('/dashboard')
+
+    // Webhook: booking.deleted (fire before returning, but don't await)
+    if (existingEvent.event_type === 'booking') {
+      sendWebhook('booking.deleted', buildBookingPayload(existingEvent))
+    }
 
     return { success: true }
 
@@ -837,6 +848,11 @@ export async function cancelCalendarEvent(
     revalidatePath('/kalender')
     revalidatePath('/cancellations')
     revalidatePath('/dashboard')
+
+    // Webhook: booking.cancelled
+    if (data && data.event_type === 'booking') {
+      sendWebhook('booking.cancelled', buildBookingPayload(data))
+    }
 
     return { success: true, data }
 

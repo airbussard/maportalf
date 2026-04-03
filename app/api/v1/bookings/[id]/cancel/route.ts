@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
+import { sendWebhook, buildBookingPayload } from '@/lib/webhook'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -96,6 +97,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Continue even if Google fails
       }
     }
+
+    // Webhook: booking.cancelled
+    sendWebhook('booking.cancelled', buildBookingPayload(data))
 
     return successResponse({
       success: true,

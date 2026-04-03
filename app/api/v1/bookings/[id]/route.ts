@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server'
 import { validateApiKey, unauthorizedResponse, errorResponse, successResponse } from '@/lib/api-auth'
+import { sendWebhook, buildBookingPayload } from '@/lib/webhook'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deleteGoogleCalendarEvent } from '@/lib/google-calendar/service'
 
@@ -35,7 +36,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // 1. Load booking
     const { data: booking, error: fetchError } = await supabase
       .from('calendar_events')
-      .select('id, event_type, google_event_id, status')
+      .select('*')
       .eq('id', id)
       .single()
 
@@ -70,6 +71,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     console.log(`[Delete API] Booking deleted: ${id}`)
+
+    // Webhook: booking.deleted
+    sendWebhook('booking.deleted', buildBookingPayload(booking))
 
     return successResponse({
       success: true,
