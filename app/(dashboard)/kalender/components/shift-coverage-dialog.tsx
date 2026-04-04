@@ -62,7 +62,7 @@ export function ShiftCoverageDialog({ open, onOpenChange, employees, defaultDate
       setSelectedIds(new Set(employees.map(e => e.id)))
     }
     if (open && defaultDate) {
-      setRequestDate(defaultDate.toISOString().split('T')[0])
+      setRequestDate(`${defaultDate.getFullYear()}-${String(defaultDate.getMonth() + 1).padStart(2, '0')}-${String(defaultDate.getDate()).padStart(2, '0')}`)
     }
   }, [open, employees, defaultDate])
 

@@ -254,10 +254,15 @@ export function EventList({
                       </span>
                     )}
                     {event.customer_phone && (
-                      <span className="flex items-center gap-1">
+                      <a
+                        href={`tel:${event.customer_phone.replace(/[^\d+]/g, '')}`}
+                        onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[#3C50E0] hover:text-[#3C50E0]/80 transition-colors"
+                        title={`${event.customer_phone} anrufen`}
+                      >
                         <Phone className="h-3 w-3" />
                         {event.customer_phone}
-                      </span>
+                      </a>
                     )}
                   </div>
                 </div>

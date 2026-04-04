@@ -152,7 +152,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh, defaultDate 
       startTime.setHours(now.getHours() + 1, 0, 0, 0) // Next full hour from current time
       const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // +60 minutes (1 hour default)
 
-      const dateStr = baseDate.toISOString().slice(0, 10)
+      const dateStr = `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-${String(baseDate.getDate()).padStart(2, '0')}`
 
       // Initialize selectedDate with the base date
       setSelectedDate(dateStr)
@@ -213,7 +213,7 @@ export function EventDialog({ open, onOpenChange, event, onRefresh, defaultDate 
             customer_email: formData.customer_email,
             start_time: startTime,
             end_time: endTime,
-            duration: formData.duration,
+            duration: formData.duration_mode === 'duration' ? formData.duration_preset : formData.duration,
             attendee_count: formData.attendee_count,
             location: formData.location,
             remarks: formData.remarks,

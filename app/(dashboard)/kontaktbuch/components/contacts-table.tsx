@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, User, Eye, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Search, User, Eye, ChevronRight, ChevronLeft, Phone } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import type { Contact } from '@/app/actions/contacts'
@@ -175,7 +175,17 @@ export function ContactsTable({
 
                   {/* Phone */}
                   <td className="py-4 text-sm text-muted-foreground">
-                    {contact.phone || '\u2013'}
+                    {contact.phone ? (
+                      <a
+                        href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
+                        onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 text-sm text-[#3C50E0] hover:text-[#3C50E0]/80 transition-colors"
+                        title={`${contact.phone} anrufen`}
+                      >
+                        <Phone className="size-3.5" />
+                        {contact.phone}
+                      </a>
+                    ) : '\u2013'}
                   </td>
 
                   {/* Booking count as pill badge */}

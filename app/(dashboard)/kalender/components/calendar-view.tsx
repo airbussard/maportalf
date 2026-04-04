@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import { Calendar, Plus, RefreshCw, Clock, Users, Video, Euro } from 'lucide-react'
+import { Calendar, Plus, RefreshCw, Clock, Users, Video, Euro, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -626,11 +626,16 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
             {displayedEvents
               .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
               .map(event => {
-                const startTime = new Date(event.start_time)
-                const endTime = new Date(event.end_time)
-                const timeStr = event.is_all_day
-                  ? 'Ganztägig'
-                  : `${startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+                let timeStr: string
+                if (event.is_all_day) {
+                  timeStr = 'Ganztägig'
+                } else if (event.event_type === 'fi_assignment' && event.actual_work_start_time && event.actual_work_end_time) {
+                  timeStr = `${event.actual_work_start_time.slice(0, 5)} – ${event.actual_work_end_time.slice(0, 5)} Uhr`
+                } else {
+                  const startTime = new Date(event.start_time)
+                  const endTime = new Date(event.end_time)
+                  timeStr = `${startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} – ${endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+                }
 
                 const iconColor =
                   event.event_type === 'fi_assignment' ? '#FFA70B' :
@@ -671,6 +676,18 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                           )}
                         </div>
                       </div>
+
+                      {/* Phone call button */}
+                      {event.event_type === 'booking' && event.customer_phone && (
+                        <a
+                          href={`tel:${event.customer_phone.replace(/[^\d+]/g, '')}`}
+                          onClick={e => e.stopPropagation()}
+                          className="hidden sm:flex size-8 shrink-0 items-center justify-center rounded-full text-[#3C50E0] hover:bg-[#3C50E0]/10 transition-colors"
+                          title={`${event.customer_phone} anrufen`}
+                        >
+                          <Phone className="size-4" />
+                        </a>
+                      )}
 
                       {/* Video & Payment indicators */}
                       {event.event_type === 'booking' && (

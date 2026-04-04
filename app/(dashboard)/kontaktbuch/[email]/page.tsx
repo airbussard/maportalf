@@ -88,8 +88,12 @@ export default async function ContactDetailPage({ params }: ContactDetailPagePro
                 </div>
                 {contact.phone && (
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    <a href={`tel:${contact.phone}`} className="hover:underline">
+                    <a
+                      href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`}
+                      className="inline-flex items-center gap-1.5 text-[#3C50E0] hover:text-[#3C50E0]/80 transition-colors"
+                      title={`${contact.phone} anrufen`}
+                    >
+                      <Phone className="size-4" />
                       {contact.phone}
                     </a>
                   </div>

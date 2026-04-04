@@ -40,7 +40,7 @@ Ihre Buchungsdetails:
 • Ort: ${booking.location}
 • Anzahl Personen: ${booking.attendee_count}
 ${booking.has_video_recording ? '• Video-Aufnahme: Ja' : ''}
-${booking.on_site_payment_amount ? `• Zahlbetrag vor Ort: ${booking.on_site_payment_amount}€` : ''}
+${booking.on_site_payment_amount ? `• Zahlbetrag vor Ort: ${booking.on_site_payment_amount}€\n\nBitte denken Sie daran, dass wir kein EC Kartengerät vor Ort haben und nur Barzahlung möglich ist. Bitte bringen Sie die Summe möglichst passend.` : ''}
 
 ${booking.remarks ? `Bemerkungen:\n${booking.remarks}\n` : ''}
 Im Anhang finden Sie unseren Pocket Guide mit wichtigen Informationen für Ihren Besuch.
@@ -201,7 +201,7 @@ USt-IdNr.: DE354227080
         <p><strong>Ort:</strong> ${booking.location}</p>
         <p><strong>Anzahl Personen:</strong> ${booking.attendee_count}</p>
         ${booking.has_video_recording ? '<p><strong>Video-Aufnahme:</strong> Ja</p>' : ''}
-        ${booking.on_site_payment_amount ? `<p><strong>Zahlbetrag vor Ort:</strong> ${booking.on_site_payment_amount}€</p>` : ''}
+        ${booking.on_site_payment_amount ? `<p><strong>Zahlbetrag vor Ort:</strong> ${booking.on_site_payment_amount}€</p><p style="margin-top: 10px; padding: 12px; background-color: #FFF8E1; border-left: 4px solid #fbb928; border-radius: 4px; font-size: 14px;">⚠️ Bitte denken Sie daran, dass wir kein EC Kartengerät vor Ort haben und nur Barzahlung möglich ist. Bitte bringen Sie die Summe möglichst passend.</p>` : ''}
         ${booking.remarks ? `<p style="margin-top: 15px;"><strong>Bemerkungen:</strong><br>${booking.remarks}</p>` : ''}
       </div>
 

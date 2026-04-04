@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Calendar, User, Phone, Mail, Clock, MapPin, FileText,
-  Loader2, Users, Info, Video, Euro, CalendarX2
+  Loader2, Users, Info, Video, Euro, CalendarX2, MessageSquare
 } from 'lucide-react'
 import { convertToISOWithTimezone, addSecondsToTime, isValidTimeFormat, extractLocalTimeFromISO, trimSecondsFromTime } from '@/lib/utils/timezone'
 import { Breadcrumb, InputGroup, TextAreaGroup, StatusBadge } from '@/components/nextadmin'
@@ -384,16 +384,27 @@ export function EventDetail({ event, employees }: EventDetailProps) {
                     />
                   </div>
                   <div className="flex flex-col gap-5.5 sm:flex-row">
-                    <InputGroup
-                      className="w-full sm:w-1/2"
-                      label="Telefon"
-                      type="tel"
-                      value={formData.customer_phone}
-                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                      placeholder="+49 123 456789"
-                      icon={<Phone className="size-5" />}
-                      iconPosition="left"
-                    />
+                    <div className="flex gap-2 items-end w-full sm:w-1/2">
+                      <InputGroup
+                        className="flex-1"
+                        label="Telefon"
+                        type="tel"
+                        value={formData.customer_phone}
+                        onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                        placeholder="+49 123 456789"
+                        icon={<Phone className="size-5" />}
+                        iconPosition="left"
+                      />
+                      {formData.customer_phone && (
+                        <a
+                          href={`tel:${formData.customer_phone.replace(/[^\d+]/g, '')}`}
+                          className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#3C50E0] text-[#3C50E0] hover:bg-[#3C50E0]/10 transition-colors mb-[1px]"
+                          title={`${formData.customer_phone} anrufen`}
+                        >
+                          <Phone className="size-4" />
+                        </a>
+                      )}
+                    </div>
                     <InputGroup
                       className="w-full sm:w-1/2"
                       label="E-Mail"
@@ -883,6 +894,23 @@ export function EventDetail({ event, employees }: EventDetailProps) {
                       E-Mail erneut senden
                     </>
                   )}
+                </button>
+              )}
+
+              {formData.event_type === 'booking' && formData.customer_email && (
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams({
+                      email: formData.customer_email,
+                      subject: `Buchung: ${formData.customer_first_name} ${formData.customer_last_name}`,
+                      description: `Ihre Buchung am ${formData.booking_date}\n\nSehr geehrte/r ${formData.customer_first_name} ${formData.customer_last_name},\n\n`,
+                    })
+                    router.push(`/tickets/new?${params.toString()}`)
+                  }}
+                  className="w-full rounded-lg border border-[#3C50E0] px-6 py-2.5 font-medium text-[#3C50E0] hover:bg-[#3C50E0]/10 transition-colors"
+                >
+                  <MessageSquare className="inline size-4 mr-2" />
+                  Kunden kontaktieren
                 </button>
               )}
 

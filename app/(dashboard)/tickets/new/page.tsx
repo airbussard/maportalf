@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Breadcrumb, ShowcaseSection } from '@/components/nextadmin'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,16 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
 export default function NewTicketPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewTicketForm />
+    </Suspense>
+  )
+}
+
+function NewTicketForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -28,6 +37,21 @@ export default function NewTicketPage() {
   })
   const [attachments, setAttachments] = useState<File[]>([])
   const [isManagerOrAdmin, setIsManagerOrAdmin] = useState(false)
+
+  // Pre-fill from URL params (e.g. from calendar "Kunden kontaktieren")
+  useEffect(() => {
+    const email = searchParams.get('email')
+    const subject = searchParams.get('subject')
+    const description = searchParams.get('description')
+    if (email || subject || description) {
+      setFormData(prev => ({
+        ...prev,
+        ...(email && { recipient_email: email }),
+        ...(subject && { subject }),
+        ...(description && { description }),
+      }))
+    }
+  }, [searchParams])
 
   // Check if user is Manager or Admin
   useEffect(() => {
