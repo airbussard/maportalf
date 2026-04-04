@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                 const hasActualTimes = event.actual_work_start_time && event.actual_work_end_time
                 const timeStr = hasActualTimes
                   ? `${event.actual_work_start_time?.slice(0, 5)} – ${event.actual_work_end_time?.slice(0, 5)} Uhr`
-                  : event.is_all_day
+                  : (event.is_all_day || (event.event_type === 'fi_assignment' && !hasActualTimes))
                     ? 'Ganztägig'
                     : `${formatInTimeZone(start, tz, 'HH:mm')} – ${formatInTimeZone(new Date(event.end_time), tz, 'HH:mm')} Uhr`
 
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
                   const hasActualTimes = event.actual_work_start_time && event.actual_work_end_time
                   const timeRange = hasActualTimes
                     ? `${event.actual_work_start_time?.slice(0, 5)} – ${event.actual_work_end_time?.slice(0, 5)} Uhr`
-                    : event.is_all_day
+                    : (event.is_all_day || (isFI && !hasActualTimes))
                       ? 'Ganztägig'
                       : `${formatInTimeZone(start, tz, 'HH:mm')} – ${formatInTimeZone(end, tz, 'HH:mm')} Uhr`
 
