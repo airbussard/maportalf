@@ -631,6 +631,8 @@ export function CalendarView({ events: initialEvents, lastSync, userName, syncAc
                   timeStr = 'Ganztägig'
                 } else if (event.event_type === 'fi_assignment' && event.actual_work_start_time && event.actual_work_end_time) {
                   timeStr = `${event.actual_work_start_time.slice(0, 5)} – ${event.actual_work_end_time.slice(0, 5)} Uhr`
+                } else if (event.event_type === 'fi_assignment') {
+                  timeStr = 'Ganztägig'
                 } else {
                   const startTime = new Date(event.start_time)
                   const endTime = new Date(event.end_time)

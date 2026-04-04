@@ -95,7 +95,7 @@ export async function syncGoogleCalendarToDatabase(
 
       const { data, error } = await supabase
         .from('calendar_events')
-        .select('id, google_event_id')
+        .select('id, google_event_id, actual_work_start_time, actual_work_end_time, assigned_instructor_id, is_all_day, has_video_recording, on_site_payment_amount, attendee_count, request_id')
         .in('google_event_id', batch)
 
       if (error) {
@@ -118,9 +118,9 @@ export async function syncGoogleCalendarToDatabase(
       })))
     }
 
-    // Create map: google_event_id -> database id
-    const existingEventMap = new Map<string, string>(
-      existingEvents.map((e: any) => [e.google_event_id, e.id])
+    // Create map: google_event_id -> { id, local-only fields }
+    const existingEventMap = new Map<string, any>(
+      existingEvents.map((e: any) => [e.google_event_id, e])
     )
     console.log(`[Sync] Created map with ${existingEventMap.size} existing events`)
 
@@ -279,12 +279,12 @@ async function handleDeletedEvent(
  *
  * @param googleEvent - The Google Calendar event
  * @param userId - The user ID to assign the event to
- * @param existingEventMap - Map of google_event_id to database id
+ * @param existingEventMap - Map of google_event_id to existing event data (id + local-only fields)
  */
 function prepareEventData(
   googleEvent: GoogleCalendarEvent,
   userId: string,
-  existingEventMap: Map<string, string>
+  existingEventMap: Map<string, any>
 ): any | null {
   // Skip cancelled events (handled separately by handleDeletedEvent)
   if (googleEvent.status === 'cancelled') {
@@ -365,11 +365,12 @@ function prepareEventData(
     (new Date(endTime).getTime() - new Date(startTime).getTime()) / (1000 * 60)
   )
 
-  // Get existing ID from map or generate new UUID
-  const existingId = existingEventMap.get(googleEvent.id)
-  const eventId = existingId || crypto.randomUUID()
+  // Get existing event data from map or generate new UUID
+  const existingEvent = existingEventMap.get(googleEvent.id)
+  const eventId = existingEvent?.id || crypto.randomUUID()
 
   // Prepare event data (always includes id field)
+  // For existing events: preserve local-only fields that don't come from Google
   return {
     id: eventId, // Use existing ID or generate new UUID
     user_id: userId, // Required by schema
@@ -381,14 +382,20 @@ function prepareEventData(
     customer_last_name: lastName,
     customer_phone: parsedData.customer_phone,
     customer_email: parsedData.customer_email,
-    assigned_instructor_id: null, // We don't have the DB ID from Google
+    // Preserve local-only fields from existing events (not available in Google Calendar)
+    assigned_instructor_id: existingEvent?.assigned_instructor_id || null,
     assigned_instructor_name: assignedInstructorName || null,
     assigned_instructor_number: assignedInstructorNumber,
-    is_all_day: !googleEvent.start.dateTime, // dateTime missing means all-day
+    is_all_day: existingEvent ? existingEvent.is_all_day : !googleEvent.start.dateTime,
     start_time: startTime,
     end_time: endTime,
+    actual_work_start_time: existingEvent?.actual_work_start_time || null,
+    actual_work_end_time: existingEvent?.actual_work_end_time || null,
     duration,
-    attendee_count: parsedData.attendee_count || 1,
+    attendee_count: existingEvent?.attendee_count || parsedData.attendee_count || 1,
+    has_video_recording: existingEvent?.has_video_recording || false,
+    on_site_payment_amount: existingEvent?.on_site_payment_amount || null,
+    request_id: existingEvent?.request_id || null,
     remarks: parsedData.remarks,
     location: googleEvent.location || 'FLIGHTHOUR Flugsimulator',
     status: googleEvent.status,
