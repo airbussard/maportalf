@@ -333,9 +333,18 @@ export async function updateCalendarEvent(
     throw new Error('Unauthorized')
   }
 
+  // Verify user is manager or admin
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'manager' && profile?.role !== 'admin') {
+    throw new Error('Unauthorized - Manager or Admin access required')
+  }
+
+  // Use admin client for DB operations
+  const adminSupabase = createAdminClient()
+
   try {
     // Get existing event
-    const { data: existingEvent, error: fetchError } = await supabase
+    const { data: existingEvent, error: fetchError } = await adminSupabase
       .from('calendar_events')
       .select('*')
       .eq('id', id)
@@ -405,7 +414,7 @@ export async function updateCalendarEvent(
       )
 
       // Update in Supabase with new etag
-      const { data, error } = await supabase
+      const { data, error } = await adminSupabase
         .from('calendar_events')
         .update({
           ...sanitizeTimeFields(sanitizeUuidFields(eventData)),
@@ -434,7 +443,7 @@ export async function updateCalendarEvent(
 
     } else {
       // No Google event ID - just update locally
-      const { data, error } = await supabase
+      const { data, error } = await adminSupabase
         .from('calendar_events')
         .update({
           ...sanitizeTimeFields(sanitizeUuidFields(eventData)),
@@ -482,9 +491,18 @@ export async function deleteCalendarEvent(id: string) {
     throw new Error('Unauthorized')
   }
 
+  // Verify user is manager or admin
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'manager' && profile?.role !== 'admin') {
+    throw new Error('Unauthorized - Manager or Admin access required')
+  }
+
+  // Use admin client for DB operations
+  const adminSupabase = createAdminClient()
+
   try {
     // Get existing event
-    const { data: existingEvent, error: fetchError } = await supabase
+    const { data: existingEvent, error: fetchError } = await adminSupabase
       .from('calendar_events')
       .select('*')
       .eq('id', id)
@@ -505,7 +523,7 @@ export async function deleteCalendarEvent(id: string) {
     }
 
     // Delete from Supabase
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from('calendar_events')
       .delete()
       .eq('id', id)
@@ -724,9 +742,18 @@ export async function cancelCalendarEvent(
     throw new Error('Unauthorized')
   }
 
+  // Verify user is manager or admin
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'manager' && profile?.role !== 'admin') {
+    throw new Error('Unauthorized - Manager or Admin access required')
+  }
+
+  // Use admin client for DB operations (bypasses RLS issues with overlapping policies)
+  const adminSupabase = createAdminClient()
+
   try {
     // Get existing event
-    const { data: existingEvent, error: fetchError } = await supabase
+    const { data: existingEvent, error: fetchError } = await adminSupabase
       .from('calendar_events')
       .select('*')
       .eq('id', id)
@@ -746,8 +773,6 @@ export async function cancelCalendarEvent(
       }
 
       // Clear email_queue FK references BEFORE setting google_event_id to null
-      // This prevents FK constraint violation
-      const adminSupabase = createAdminClient()
       await adminSupabase
         .from('email_queue')
         .update({ calendar_google_event_id: null })
@@ -755,7 +780,7 @@ export async function cancelCalendarEvent(
     }
 
     // Update status to cancelled in Supabase
-    const { data, error } = await supabase
+    const { data, error } = await adminSupabase
       .from('calendar_events')
       .update({
         status: 'cancelled',
